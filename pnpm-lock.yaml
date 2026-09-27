@@ -230,6 +230,9 @@ importers:
       '@greencircuits/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@greencircuits/feed':
+        specifier: workspace:*
+        version: link:../../packages/feed
       '@greencircuits/market':
         specifier: workspace:*
         version: link:../../packages/market
@@ -332,9 +335,15 @@ importers:
 
   apps/web:
     dependencies:
+      '@greencircuits/backtest':
+        specifier: workspace:*
+        version: link:../../packages/backtest
       '@greencircuits/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@greencircuits/feed':
+        specifier: workspace:*
+        version: link:../../packages/feed
       '@greencircuits/market':
         specifier: workspace:*
         version: link:../../packages/market
@@ -415,6 +424,28 @@ importers:
         specifier: ^5
         version: 5.9.3
 
+  packages/backtest:
+    dependencies:
+      '@greencircuits/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@greencircuits/market':
+        specifier: workspace:*
+        version: link:../market
+    devDependencies:
+      '@types/node':
+        specifier: ^22
+        version: 22.20.4
+      tsx:
+        specifier: ^4
+        version: 4.23.15
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+      vitest:
+        specifier: ^5.0.2
+        version: 5.0.2(@types/node@22.20.4)(vite@7.3.6(@types/node@22.20.4)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.1))
+
   packages/contracts:
     dependencies:
       '@greencircuits/market':
@@ -458,6 +489,25 @@ importers:
       typescript:
         specifier: ^5
         version: 5.9.3
+
+  packages/feed:
+    dependencies:
+      '@greencircuits/backtest':
+        specifier: workspace:*
+        version: link:../backtest
+      '@greencircuits/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@greencircuits/market':
+        specifier: workspace:*
+        version: link:../market
+    devDependencies:
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+      vitest:
+        specifier: ^5.0.2
+        version: 5.0.2(@types/node@22.20.4)(vite@7.3.6(@types/node@22.20.4)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.1))
 
   packages/market:
     devDependencies:

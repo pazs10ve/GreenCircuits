@@ -166,7 +166,8 @@ def simulate_rebalance(
     bonds = capital * (1 - w)
     fy = _financial_year(s.dates[start])
     values = np.zeros(n - start)
-    trades = [Trade(0, units, s.dates[start], float(s.close[start]))]
+    # No equity, no opening trade (a trade of zero shares isn't one).
+    trades = [Trade(0, units, s.dates[start], float(s.close[start]))] if units > 0 else []
     rebalances = 0
     for k, i in enumerate(range(start, n)):
         if k:

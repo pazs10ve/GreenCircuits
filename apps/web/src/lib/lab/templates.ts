@@ -6,7 +6,7 @@ import type { Instrument } from "@greencircuits/market/types"
 /**
  * The questions the lab starts from. Each is a template from the contracts
  * package applied to a sensible instrument, with a test period that fits the
- * history the demo market has for it.
+ * history the demo market has for it (real data goes back further).
  */
 
 export interface Question {
@@ -65,7 +65,7 @@ export const QUESTIONS: Question[] = [
   },
 ]
 
-/** How far back the demo market's history goes: ten years for indices, five for everything else. */
+/** How far back the demo market's history goes: ten years for indices, five for everything else. Live mode asks the API. */
 export function historyYears(inst: Instrument | undefined): number {
   return inst?.kind === "INDEX" ? 10 : 5
 }

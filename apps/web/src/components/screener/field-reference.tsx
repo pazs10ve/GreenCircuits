@@ -97,7 +97,7 @@ export function FieldReference({
           })}
         </div>
         <p className="border-t px-3 py-2 text-[11px] text-muted-foreground">
-          Click a field to insert it at the cursor. Ratios use yesterday&apos;s close; fields marked live follow the simulated feed.
+          Click a field to insert it at the cursor. Ratios use the last close; fields marked live follow the price feed.
         </p>
       </PopoverContent>
     </Popover>

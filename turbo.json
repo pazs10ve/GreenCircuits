@@ -13,7 +13,10 @@
     },
     "dev": {
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "passThroughEnv": [
+        "FEED_PROVIDER"
+      ]
     },
     "lint": {},
     "test": {

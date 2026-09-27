@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo } from "react"
+import type { Dataset, Source } from "@greencircuits/contracts"
 import { openingQuotes } from "@greencircuits/market/session"
 import type { Quote } from "@greencircuits/market/types"
 import { connectLive } from "./live"
@@ -37,12 +38,18 @@ export function StreamProvider({
   seed,
   snapshot,
   streamUrl,
+  source,
+  dataset,
+  today,
   children,
 }: {
   mode: MarketMode
   seed: number
   snapshot?: Quote[]
   streamUrl?: string
+  source: Source
+  dataset: Dataset
+  today: string
   children: React.ReactNode
 }) {
   const live = mode === "live" && !!streamUrl && !!snapshot?.length
@@ -62,6 +69,12 @@ export function StreamProvider({
     return () => document.removeEventListener("visibilitychange", onVisibility)
   }, [live, streamUrl, initial, seed])
 
-  const value = useMemo(() => ({ mode: live ? ("live" as const) : ("demo" as const), seed, initial }), [live, seed, initial])
+  const value = useMemo(
+    () =>
+      live
+        ? { mode: "live" as const, source, dataset, today, seed, initial }
+        : { mode: "demo" as const, source: "SIMULATED" as const, dataset: "sample" as const, today, seed, initial },
+    [live, source, dataset, today, seed, initial],
+  )
   return <MarketContext value={value}>{children}</MarketContext>
 }

@@ -1,7 +1,7 @@
 import { createRequire } from "node:module"
 import type * as UWS from "uWebSockets.js"
 import { Redis } from "ioredis"
-import { KEYS, MAX_SUBSCRIPTIONS, toWire, type ClientFrame, type ServerFrame, type WireQuote } from "@greencircuits/contracts"
+import { KEYS, MAX_SUBSCRIPTIONS, readSession, toWire, type ClientFrame, type ServerFrame, type Source, type WireQuote } from "@greencircuits/contracts"
 import type { Quote } from "@greencircuits/market/types"
 
 /**
@@ -34,6 +34,8 @@ const clients = new Set<UWS.WebSocket<Client>>()
 const latest = new Map<number, Quote>()
 let framesSent = 0
 let framesDropped = 0
+/** What the feed says its prices are: simulated, or real and delayed, or closing prices. */
+let feedSource: Source = "SIMULATED"
 
 function send(ws: UWS.WebSocket<Client>, frame: ServerFrame): boolean {
   const status = ws.send(JSON.stringify(frame), false, frame.t === "q")
@@ -54,6 +56,7 @@ async function main() {
   const valkey = new Redis(VALKEY_URL)
   const subscriber = new Redis(VALKEY_URL)
   for (const [id, v] of Object.entries(await valkey.hgetall(KEYS.quotes))) latest.set(Number(id), JSON.parse(v) as Quote)
+  feedSource = readSession(await valkey.get(KEYS.session))?.source ?? feedSource
 
   await subscriber.subscribe(KEYS.ticks)
   subscriber.on("message", (_channel, message) => {
@@ -99,7 +102,7 @@ async function main() {
 
     open: (ws) => {
       clients.add(ws)
-      send(ws, { t: "hello", source: "SIMULATED", flushMs: 250 })
+      send(ws, { t: "hello", source: feedSource, flushMs: 250 })
     },
 
     message: (ws, message) => {
@@ -145,7 +148,7 @@ async function main() {
   })
 
   app.get("/health", (res) => {
-    res.writeHeader("content-type", "application/json").end(JSON.stringify({ status: "ok", clients: clients.size, instruments: latest.size }))
+    res.writeHeader("content-type", "application/json").end(JSON.stringify({ status: "ok", source: feedSource, clients: clients.size, instruments: latest.size }))
   })
   app.any("/*", (res) => {
     res.writeStatus("404 Not Found").end()
@@ -158,6 +161,15 @@ async function main() {
     }
     log("listening", { port: PORT, instruments: latest.size })
   })
+
+  // The feed's source changes when the market opens or closes, or when a different feed starts.
+  setInterval(async () => {
+    const source = readSession(await valkey.get(KEYS.session).catch(() => null))?.source
+    if (!source || source === feedSource) return
+    feedSource = source
+    for (const ws of clients) send(ws, { t: "hello", source, flushMs: 250 })
+    log("source changed", { source })
+  }, 15_000)
 
   setInterval(() => {
     log("stats", { clients: clients.size, framesSent, framesDropped })

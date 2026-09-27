@@ -11,6 +11,13 @@ export async function seedIpos(db: Db): Promise<Record<string, number>> {
   const now = new Date()
   const ipos = getIpos(now)
 
+  // Issues the real-data loader added (docs/adr/0007) would outlive a reseed under these issuers'
+  // fictional names; the demo calendar replaces them, and alerts on them go too.
+  const keep = ipos.map((_, i) => i + 1)
+  await db.deleteFrom("app.alert").where("ipo_issue_id", "not in", keep).execute()
+  await db.deleteFrom("ipo.listing").where("issue_id", "not in", keep).execute()
+  await db.deleteFrom("ipo.issue").where("id", "not in", keep).execute()
+
   await upsertFixedIds(db, "ref.issuer", ipos.map((ipo, i) => ({ id: ISSUER_BASE + i, name: ipo.name, issuer_type: "COMPANY", fs_format: "GENERAL", description: ipo.about })))
 
   const rows = ipos.map((ipo, i) => ({

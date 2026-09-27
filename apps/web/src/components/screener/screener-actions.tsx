@@ -35,7 +35,7 @@ export function ScreenerActions() {
     // Prices as of the click, straight from the store (this is an event handler, not render).
     const matches = toLiveRows(rows, (id) => quoteStore.get(id))
       .filter(applied.test)
-      .sort((a, b) => b.mcapCr - a.mcapCr)
+      .sort((a, b) => (b.mcapCr ?? 0) - (a.mcapCr ?? 0))
     const fields = [getField("sector"), ...columns.filter((c) => c !== "sector").map(getField)]
     const date = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date())
     const filename = `greencircuits-${slug(active?.name ?? (applied.empty ? "all-stocks" : "custom-screen"))}-${date}.csv`

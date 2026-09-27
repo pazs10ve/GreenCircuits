@@ -3,7 +3,7 @@
 import Link from "next/link"
 import type { RunSummary } from "@greencircuits/contracts/lab"
 import { Skeleton } from "@/components/ui/skeleton"
-import { useLabAvailable, useRuns } from "@/lib/lab/client"
+import { useRuns } from "@/lib/lab/client"
 import { alternativeOf, kindLabel, pct } from "@/lib/lab/describe"
 import { yearly } from "@/lib/lab/report"
 import { cn } from "@/lib/utils"
@@ -32,18 +32,10 @@ function Outcome({ run }: { run: RunSummary }) {
 
 /** The visitor's recent tests, newest first. */
 export function YourTests() {
-  const available = useLabAvailable()
   const { data: runs, isPending, isError } = useRuns()
 
-  if (!available) {
-    return (
-      <p className="max-w-[40em] text-[0.9375rem] text-ink-2">
-        Tests run on the backend, which is off in this demo. When it&apos;s running, the tests you run show up here, kept for this browser without any sign-in.
-      </p>
-    )
-  }
   if (isError) return <p className="text-[0.9375rem] text-ink-2">Couldn&apos;t load your tests just now.</p>
-  if (isPending) {
+  if (isPending || !runs) {
     return (
       <div className="space-y-3" aria-busy="true">
         {[0, 1, 2].map((i) => (

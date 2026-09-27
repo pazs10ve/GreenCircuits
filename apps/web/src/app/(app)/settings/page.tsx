@@ -1,8 +1,6 @@
-import type { Metadata } from "next"
-import { SettingsView } from "@/components/settings/settings-view"
+import { redirect } from "next/navigation"
 
-export const metadata: Metadata = { title: "Settings" }
-
+/** Settings moved into the account page. */
 export default function SettingsPage() {
-  return <SettingsView />
+  redirect("/account")
 }

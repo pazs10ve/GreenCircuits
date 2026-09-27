@@ -1,0 +1,24 @@
+{
+  "name": "@greencircuits/feed",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The personalised feed: what moved, what's coming and what your rules would do, for the stocks you follow. Runs on the API and, in demo mode, in the browser.",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@greencircuits/backtest": "workspace:*",
+    "@greencircuits/contracts": "workspace:*",
+    "@greencircuits/market": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5",
+    "vitest": "^5.0.2"
+  }
+}

@@ -36,19 +36,22 @@ src/
 │   ├── today/        the daily brief's sections
 │   ├── company/      company and index page sections
 │   ├── lab/          the lab's builder, list of tests and report
+│   ├── account/      sign-in and sign-up, the account menu and page, feed tuning
 │   ├── editorial/    sections and experiment cards
 │   ├── viz/          SVG line charts and small multiples
 │   ├── market/       prices and changes
 │   └── ui/           shadcn/ui primitives (Radix)
 ├── lib/
 │   ├── data/         data access: the API first, the generators as the fallback
-│   ├── lab/          strategies in plain words, the builder's draft, the report's narrative
+│   ├── lab/          the builder's draft, the report's narrative, the browser runner
+│   ├── account/      the session, sign-in and sign-out (a full reload re-syncs every store)
+│   ├── feed/         the feed, from the API or built in the browser
 │   ├── stream/       live and demo quote sources, the Web Worker, hooks
 │   └── stores/       persisted client state and its sync to the API
 └── hooks/
 ```
 
-The screener, F&O, portfolio, watchlists, alerts and settings pages, and their component folders, are still in the first design and are next to be redone.
+The screener, F&O, portfolio, watchlists and alerts pages, and their component folders, are still in the first design and are next to be redone.
 
 ## Conventions
 

@@ -1,7 +1,7 @@
 import { createServer } from "node:http"
 import { sql } from "kysely"
 import { Redis } from "ioredis"
-import { KEYS } from "@greencircuits/contracts"
+import { KEYS, type FeedSession } from "@greencircuits/contracts"
 import { createDb, DEFAULT_DATABASE_URL, type Db } from "@greencircuits/db"
 import { FLUSH_MS, createEngine, type Engine } from "@greencircuits/market/engine"
 import { intradayCandles } from "@greencircuits/market/history"
@@ -9,11 +9,15 @@ import { marketSeed } from "@greencircuits/market/session"
 import type { Instrument, Quote } from "@greencircuits/market/types"
 import { BarAggregator, type Bar } from "./bars"
 import { loadUniverse } from "./universe"
+import { hasRealData, runYahooFeed } from "./yahoo"
 
 /**
- * The market feed. Today it runs the simulator, which trades around the clock;
- * a broker adapter will sit behind the same loop. Every 250 ms it publishes
- * the quotes that changed; every few seconds it writes 1-minute bars.
+ * The market feed. FEED_PROVIDER picks the source: "simulator" runs the market
+ * simulator, which trades around the clock, publishing the quotes that changed
+ * every 250 ms and writing 1-minute bars every few seconds; "yahoo" polls real
+ * prices for local use (./yahoo.ts). Unset, it's "yahoo" once the real-data
+ * loader has filled the database and "simulator" before. A broker adapter
+ * would be a third.
  */
 
 process.env.SERVICE_NAME ??= "ingestor"
@@ -22,6 +26,7 @@ const VALKEY_URL = process.env.VALKEY_URL ?? "redis://localhost:6380"
 /** How much intraday history to backfill on start: one session's length. */
 const BACKFILL_MINUTES = 375
 const HEALTH_PORT = Number(process.env.PORT ?? 4010)
+const PROVIDER = process.env.FEED_PROVIDER || "auto"
 
 const log = (msg: string, extra: Record<string, unknown> = {}) =>
   console.log(JSON.stringify({ t: new Date().toISOString(), svc: "ingestor", msg, ...extra }))
@@ -84,6 +89,9 @@ async function backfill(db: Db, universe: Instrument[], opening: Quote[], now: n
 async function main() {
   const db = createDb(DATABASE_URL, 4)
   const valkey = new Redis(VALKEY_URL, { maxRetriesPerRequest: null })
+  const provider = PROVIDER === "auto" ? ((await hasRealData(db)) ? "yahoo" : "simulator") : PROVIDER
+  if (provider === "yahoo") return runYahooFeed(db, valkey, log, HEALTH_PORT)
+  if (provider !== "simulator") throw new Error(`Unknown FEED_PROVIDER "${provider}": use simulator or yahoo`)
   const universe = await loadUniverse(db)
   if (universe.length === 0) throw new Error("No instruments in ref.instrument. Run the loader: pnpm --filter @greencircuits/db seed")
 
@@ -99,7 +107,7 @@ async function main() {
       .multi()
       .del(KEYS.quotes)
       .hset(KEYS.quotes, Object.fromEntries(stamped.map((q) => [q.id, JSON.stringify(q)])))
-      .set(KEYS.session, JSON.stringify({ seed, day, startedAt: now, instruments: universe.length }))
+      .set(KEYS.session, JSON.stringify({ provider: "simulator", source: "SIMULATED", seed, day, startedAt: now, instruments: universe.length } satisfies FeedSession))
       .set(KEYS.heartbeat, String(now))
       .exec()
     bars.update(stamped)

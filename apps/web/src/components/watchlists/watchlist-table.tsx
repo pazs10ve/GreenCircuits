@@ -19,6 +19,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { getInstrument } from "@greencircuits/market/catalog"
 import { sparkline } from "@greencircuits/market/history"
+import { useUniverse } from "@/lib/data/client"
+import { useMarket } from "@/lib/stream/market-context"
 import type { Instrument, Quote } from "@greencircuits/market/types"
 import { formatCompact, formatNumber } from "@greencircuits/market/format"
 import { useQuoteReader } from "@/lib/stream/hooks"
@@ -50,7 +52,13 @@ export function WatchlistTable({ list }: { list: Watchlist }) {
   const removeItem = useWatchlists((s) => s.removeItem)
   const add = useWatchlists((s) => s.add)
 
-  const sparks = useMemo(() => new Map(list.ids.map((id) => [id, sparkline(getInstrument(id)!, 30)])), [list.ids])
+  // A month of closes: the API's in live mode, the generators' in the demo.
+  const { mode } = useMarket()
+  const universe = useUniverse()
+  const sparks = useMemo(
+    () => new Map(list.ids.map((id) => [id, mode === "live" ? (universe.data?.byId.get(id)?.spark ?? []) : sparkline(getInstrument(id)!, 30)])),
+    [list.ids, mode, universe.data],
+  )
   const rows = useMemo<Row[]>(() => {
     return list.ids
       .map((id, index) => ({ index, inst: getInstrument(id)!, q: read(id), spark: sparks.get(id) ?? [] }))

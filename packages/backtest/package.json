@@ -1,0 +1,26 @@
+{
+  "name": "@greencircuits/backtest",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The backtest engine in TypeScript, so the lab runs in the browser when the backend is off. Golden files keep it in step with the Python engine.",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p .",
+    "test": "vitest run",
+    "fixtures": "tsx scripts/fixtures.ts"
+  },
+  "dependencies": {
+    "@greencircuits/contracts": "workspace:*",
+    "@greencircuits/market": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "tsx": "^4",
+    "typescript": "^5",
+    "vitest": "^5.0.2"
+  }
+}

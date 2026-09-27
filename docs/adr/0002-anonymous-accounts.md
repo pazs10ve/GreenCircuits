@@ -1,7 +1,7 @@
 # 2. Anonymous accounts held by a signed cookie
 
 - Date: 2026-09-27
-- Status: accepted
+- Status: accepted; the cookie part is replaced by [ADR 0006](0006-accounts-and-sessions.md), which moves visitors onto server-side sessions
 
 ## Context
 

@@ -32,7 +32,8 @@ export function periodLabel(fiscalYear: number, fiscalPeriod: number | null): st
 /** The fiscal quarter label for a quarter-end date: 2026-06-30 → 'Q1 FY27'. */
 export function quarterLabelOf(periodEnd: string): string {
   const [y, m] = periodEnd.split("-").map(Number) as [number, number]
-  const q = m === 6 ? 1 : m === 9 ? 2 : m === 12 ? 3 : 4
+  // April to June is Q1 of the financial year that ends the next March.
+  const q = m <= 3 ? 4 : Math.ceil((m - 3) / 3)
   const fy = m >= 4 ? y + 1 : y
   return periodLabel(fy, q)
 }

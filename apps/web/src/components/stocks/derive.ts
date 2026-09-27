@@ -191,7 +191,8 @@ export interface StockStatic {
   spark: number[]
   low52: number
   high52: number
-  eps: number
+  /** Trailing twelve months; null when the company hasn't reported enough. */
+  eps: number | null
 }
 
 export interface IndexStatic {
@@ -199,7 +200,7 @@ export interface IndexStatic {
   spark: number[]
   low52: number
   high52: number
-  /** Members inside the simulated universe. */
+  /** Members among the stocks the site follows. */
   members: number
   lot?: number
 }

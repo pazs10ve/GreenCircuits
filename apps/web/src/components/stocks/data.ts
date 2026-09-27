@@ -4,6 +4,7 @@ import { fiftyTwoWeek, sparkline } from "@greencircuits/market/history"
 import { upcomingEvents } from "@greencircuits/market/reference"
 import type { Instrument } from "@greencircuits/market/types"
 import { formatCrore, formatNumber, formatPct } from "@greencircuits/market/format"
+import type { Universe } from "@/lib/data/universe"
 import { between, rngFor, roundTo } from "@greencircuits/market/random"
 import {
   closeSessionsAgo,
@@ -19,13 +20,21 @@ import {
 } from "./derive"
 
 /**
- * Server-side assembly of the sample data the stock pages need. Everything
- * here is deterministic per symbol; the client overlays live quotes.
+ * Server-side assembly of what the stock pages need: from the API's universe
+ * when the backend runs, otherwise from the demo generators (deterministic per
+ * symbol). The client overlays live quotes.
  */
 
 const DAY = 86_400_000
 
-export function directoryStocks(): StockStatic[] {
+export function directoryStocks(universe: Universe | null): StockStatic[] {
+  if (universe) {
+    const rows = new Map(universe.instruments.map((r) => [r.id, r]))
+    return EQUITIES.flatMap((inst) => {
+      const r = rows.get(inst.id)
+      return r ? [{ id: inst.id, spark: r.spark, low52: r.low52, high52: r.high52, eps: universe.eps[inst.id] ?? null }] : []
+    })
+  }
   return EQUITIES.map((inst) => {
     const year = fiftyTwoWeek(inst)
     return {
@@ -38,7 +47,14 @@ export function directoryStocks(): StockStatic[] {
   })
 }
 
-export function directoryIndices(): IndexStatic[] {
+export function directoryIndices(universe: Universe | null): IndexStatic[] {
+  if (universe) {
+    const rows = new Map(universe.instruments.map((r) => [r.id, r]))
+    return INDICES.flatMap((inst) => {
+      const r = rows.get(inst.id)
+      return r ? [{ id: inst.id, spark: r.spark, low52: r.low52, high52: r.high52, members: universe.members[inst.id]?.length ?? 0, lot: lotSize(inst) }] : []
+    })
+  }
   return INDICES.map((inst) => {
     const year = fiftyTwoWeek(inst)
     return {

@@ -6,10 +6,10 @@ import { niftyAttribution } from "@greencircuits/market/research/market-story"
 import { useQuoteReader } from "@/lib/stream/hooks"
 import { cn } from "@/lib/utils"
 
-/** Sectors ranked by today's move, drawn as bars either side of zero. */
-export function SectorsToday() {
+/** Sectors ranked by the day's move, drawn as bars either side of zero. */
+export function SectorsToday({ members }: { members?: number[] }) {
   const read = useQuoteReader(3000)
-  const sectors = useMemo(() => niftyAttribution(read).sectors, [read])
+  const sectors = useMemo(() => niftyAttribution(read, members).sectors, [read, members])
   const max = Math.max(...sectors.map((s) => Math.abs(s.changePct)), 0.5)
 
   return (

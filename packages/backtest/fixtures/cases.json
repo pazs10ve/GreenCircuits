@@ -1,0 +1,297 @@
+[
+ {
+  "to": "2026-06-29",
+  "capital": 1000000,
+  "slippageBps": 5,
+  "name": "sip in the index",
+  "from": "2024-07-01",
+  "definition": {
+   "type": "sip",
+   "instrumentId": 1,
+   "monthly": 10000
+  }
+ },
+ {
+  "to": "2026-06-29",
+  "capital": 1000000,
+  "slippageBps": 5,
+  "name": "sip in a stock",
+  "from": "2024-07-01",
+  "definition": {
+   "type": "sip",
+   "instrumentId": 100,
+   "monthly": 5000
+  }
+ },
+ {
+  "to": "2026-06-29",
+  "capital": 1000000,
+  "slippageBps": 5,
+  "name": "sip that waits for dips",
+  "from": "2024-07-01",
+  "definition": {
+   "type": "sip",
+   "instrumentId": 1,
+   "monthly": 10000,
+   "dip": {
+    "fallPct": 5,
+    "cashRatePct": 6
+   }
+  }
+ },
+ {
+  "to": "2026-06-29",
+  "capital": 1000000,
+  "slippageBps": 5,
+  "name": "sip before a listing",
+  "from": "2024-01-01",
+  "definition": {
+   "type": "sip",
+   "instrumentId": 106,
+   "monthly": 10000
+  }
+ },
+ {
+  "to": "2026-06-29",
+  "capital": 1000000,
+  "slippageBps": 5,
+  "name": "60/40 mix",
+  "from": "2024-04-01",
+  "definition": {
+   "type": "rebalance",
+   "instrumentId": 1,
+   "equityPct": 60,
+   "bondRatePct": 7
+  }
+ },
+ {
+  "to": "2026-06-29",
+  "capital": 500000,
+  "slippageBps": 5,
+  "name": "30/70 mix in a stock",
+  "from": "2024-04-01",
+  "definition": {
+   "type": "rebalance",
+   "instrumentId": 101,
+   "equityPct": 30,
+   "bondRatePct": 6.5
+  }
+ },
+ {
+  "to": "2026-06-29",
+  "capital": 1000000,
+  "slippageBps": 5,
+  "name": "all bonds",
+  "from": "2024-04-01",
+  "definition": {
+   "type": "rebalance",
+   "instrumentId": 1,
+   "equityPct": 0,
+   "bondRatePct": 7
+  }
+ },
+ {
+  "to": "2026-06-29",
+  "capital": 1000000,
+  "slippageBps": 5,
+  "name": "rsi dip",
+  "from": "2024-07-01",
+  "definition": {
+   "type": "rules",
+   "universe": [
+    100
+   ],
+   "entry": [
+    {
+     "left": {
+      "kind": "rsi",
+      "period": 14
+     },
+     "op": "crosses_below",
+     "right": {
+      "kind": "value",
+      "value": 35
+     }
+    }
+   ],
+   "entryLogic": "ALL",
+   "exit": {
+    "targetPct": 8,
+    "maxBars": 40
+   },
+   "maxPositions": 1,
+   "costs": "DELIVERY",
+   "cashRatePct": 6
+  }
+ },
+ {
+  "to": "2026-06-29",
+  "capital": 1000000,
+  "slippageBps": 5,
+  "name": "trend on the index",
+  "from": "2024-07-01",
+  "definition": {
+   "type": "rules",
+   "universe": [
+    1
+   ],
+   "entry": [
+    {
+     "left": {
+      "kind": "price"
+     },
+     "op": "crosses_above",
+     "right": {
+      "kind": "sma",
+      "period": 100
+     }
+    }
+   ],
+   "entryLogic": "ALL",
+   "exit": {
+    "when": [
+     {
+      "left": {
+       "kind": "price"
+      },
+      "op": "crosses_below",
+      "right": {
+       "kind": "sma",
+       "period": 100
+      }
+     }
+    ]
+   },
+   "maxPositions": 1,
+   "costs": "DELIVERY",
+   "cashRatePct": 4
+  }
+ },
+ {
+  "to": "2026-06-29",
+  "capital": 1000000,
+  "slippageBps": 10,
+  "name": "breakouts with a late listing",
+  "from": "2024-07-01",
+  "definition": {
+   "type": "rules",
+   "universe": [
+    100,
+    101,
+    103,
+    106
+   ],
+   "entry": [
+    {
+     "left": {
+      "kind": "price"
+     },
+     "op": ">",
+     "right": {
+      "kind": "high",
+      "period": 120
+     }
+    }
+   ],
+   "entryLogic": "ALL",
+   "exit": {
+    "trailPct": 8
+   },
+   "maxPositions": 2,
+   "costs": "DELIVERY",
+   "cashRatePct": 0
+  }
+ },
+ {
+  "to": "2026-06-29",
+  "capital": 1000000,
+  "slippageBps": 0,
+  "name": "averages or oversold, without costs",
+  "from": "2024-07-01",
+  "definition": {
+   "type": "rules",
+   "universe": [
+    100,
+    101,
+    103
+   ],
+   "entry": [
+    {
+     "left": {
+      "kind": "ema",
+      "period": 10
+     },
+     "op": "crosses_above",
+     "right": {
+      "kind": "ema",
+      "period": 30
+     }
+    },
+    {
+     "left": {
+      "kind": "rsi",
+      "period": 14
+     },
+     "op": "<",
+     "right": {
+      "kind": "value",
+      "value": 25
+     }
+    }
+   ],
+   "entryLogic": "ANY",
+   "exit": {
+    "stopPct": 6,
+    "targetPct": 15,
+    "when": [
+     {
+      "left": {
+       "kind": "ema",
+       "period": 10
+      },
+      "op": "crosses_below",
+      "right": {
+       "kind": "ema",
+       "period": 30
+      }
+     }
+    ]
+   },
+   "maxPositions": 3,
+   "costs": "NONE",
+   "cashRatePct": 0
+  }
+ },
+ {
+  "to": "2026-06-29",
+  "capital": 1000000,
+  "slippageBps": 5,
+  "name": "new lows for ten days",
+  "from": "2024-07-01",
+  "definition": {
+   "type": "rules",
+   "universe": [
+    103
+   ],
+   "entry": [
+    {
+     "left": {
+      "kind": "price"
+     },
+     "op": "<",
+     "right": {
+      "kind": "low",
+      "period": 20
+     }
+    }
+   ],
+   "entryLogic": "ALL",
+   "exit": {
+    "maxBars": 10
+   },
+   "maxPositions": 1,
+   "costs": "DELIVERY",
+   "cashRatePct": 0
+  }
+ }
+]

@@ -221,7 +221,7 @@ export function WatchlistsView() {
               </Panel>
 
               {summary && summary.rows.length > 1 && (
-                <Panel title="Today at a glance" description="Each tile is coloured by today's change">
+                <Panel title="At a glance" description="Each tile is coloured by the day's change">
                   <div className="grid grid-cols-[repeat(auto-fill,minmax(112px,1fr))] gap-1.5 p-3">
                     {summary.rows.map(({ inst, q }) => (
                       <Link

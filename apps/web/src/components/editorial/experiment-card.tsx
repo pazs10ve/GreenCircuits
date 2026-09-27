@@ -1,6 +1,7 @@
 import Link from "next/link"
 import type { Experiment } from "@greencircuits/market/research/experiments"
 import { MiniLines } from "@/components/viz/mini-lines"
+import { PricesNote } from "./prices-note"
 import { cn } from "@/lib/utils"
 
 const TONE = { ink: "var(--ink)", accent: "var(--accent-ink)" } as const
@@ -55,7 +56,9 @@ export function ExperimentCard({ experiment: e, className }: { experiment: Exper
         <summary className="cursor-pointer list-none hover:text-ink-2">
           <span className="underline decoration-dotted underline-offset-2">How this was tested</span>
         </summary>
-        <p className="mt-2 leading-relaxed">{e.assumptions} Prices are from the demo market, not real history.</p>
+        <p className="mt-2 leading-relaxed">
+          {e.assumptions} <PricesNote />
+        </p>
       </details>
       <Link href={e.labHref} className="link mt-4 inline-flex w-fit items-center gap-1 text-sm font-medium">
         Change the rules and run it yourself <span aria-hidden="true">→</span>

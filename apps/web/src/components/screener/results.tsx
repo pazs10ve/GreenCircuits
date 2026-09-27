@@ -22,6 +22,7 @@ import { ChangePill, LivePrice } from "@/components/market/price"
 import { Panel } from "@/components/shell/page-header"
 import { formatCrore, formatNumber, formatPct } from "@greencircuits/market/format"
 import { useQuote, useQuoteReader } from "@/lib/stream/hooks"
+import { useMarket } from "@/lib/stream/market-context"
 import { cn } from "@/lib/utils"
 import { FIELD_GROUPS, FIELDS, getField, type FieldDef, type LiveRow } from "./fields"
 import { PRESETS } from "./presets"
@@ -92,6 +93,7 @@ const COLUMNS = new Map(FIELDS.map((f) => [f.name, columnFor(f)]))
 
 /** The matching stocks, with live price and change, a column picker and sortable headers. */
 export function ScreenResults({ className }: { className?: string }) {
+  const { dataset } = useMarket()
   const { rows, applied, columns, toggleColumn, resetColumns, tableKey, run } = useScreener()
   const read = useQuoteReader(2000)
   const ready = read(rows[0]!.id) != null
@@ -190,8 +192,10 @@ export function ScreenResults({ className }: { className?: string }) {
         />
       )}
       <p className="border-t px-4 py-2 text-[11px] text-muted-foreground">
-        Fundamentals are sample data at yesterday&apos;s close; price and change come from the simulated feed. {getField("debt_equity").label} is
-        not reported for banks and financials.
+        {dataset === "real"
+          ? "Fundamentals come from company results at the last close; price and change follow the price feed."
+          : "Fundamentals are sample data at yesterday’s close; price and change come from the simulated feed."}{" "}
+        {getField("debt_equity").label} is not reported for banks and financials.
       </p>
     </Panel>
   )

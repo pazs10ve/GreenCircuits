@@ -1,3 +1,4 @@
+import type { Source } from "@greencircuits/contracts"
 import type { Quote } from "@greencircuits/market/types"
 
 /**
@@ -14,6 +15,8 @@ class QuoteStore {
   private any = new Set<Listener>()
   private version = 0
   status: "idle" | "connecting" | "live" | "paused" = "idle"
+  /** What the gateway last said its prices are; null until it has said. */
+  source: Source | null = null
 
   get(id: number | undefined): Quote | undefined {
     return id == null ? undefined : this.quotes.get(id)
@@ -36,6 +39,13 @@ class QuoteStore {
 
   setStatus(status: QuoteStore["status"]): void {
     this.status = status
+    this.version++
+    this.any.forEach((l) => l())
+  }
+
+  setSource(source: Source): void {
+    if (source === this.source) return
+    this.source = source
     this.version++
     this.any.forEach((l) => l())
   }

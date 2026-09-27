@@ -2,10 +2,11 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { AccountMenu } from "@/components/account/account-menu"
 import { Logo } from "@/components/brand/logo"
 import { cn } from "@/lib/utils"
 import { CommandMenu } from "./command-menu"
-import { DemoMarker } from "./demo-marker"
+import { FeedMarker } from "./feed-marker"
 import { SITE_NAV } from "./nav"
 
 export function Masthead() {
@@ -36,7 +37,8 @@ export function Masthead() {
         </nav>
         <div className="ml-auto flex items-center gap-4">
           <CommandMenu />
-          <DemoMarker className="hidden lg:flex" />
+          <FeedMarker className="hidden lg:flex" />
+          <AccountMenu />
         </div>
       </div>
     </header>

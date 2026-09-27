@@ -4,21 +4,23 @@ import { Section } from "@/components/editorial/section"
 import { YourTests } from "@/components/lab/your-tests"
 import { Button } from "@/components/ui/button"
 import { getInstrument } from "@greencircuits/market/catalog"
+import { getFeed } from "@/lib/data/market"
 import { QUESTIONS } from "@/lib/lab/templates"
 
 export const metadata: Metadata = {
   title: "Lab",
-  description: "Test an investing idea on years of the demo market's prices, with Indian charges, against a sensible alternative.",
+  description: "Test an investing idea on years of daily prices, with Indian charges, against a sensible alternative.",
 }
 
-export default function LabPage() {
+export default async function LabPage() {
+  const { dataset } = await getFeed()
   return (
     <div className="mx-auto max-w-[1200px] px-5 pt-8 pb-16 md:pt-12">
       <header className="max-w-[46rem]">
         <p className="text-[13px] text-ink-2">Lab</p>
         <h1 className="mt-3 font-serif text-[2.375rem] leading-[1.04] font-semibold tracking-[-0.02em] md:text-[3.25rem]">Test an idea before you risk money on it</h1>
         <p className="mt-5 font-serif text-[1.3125rem] leading-snug text-ink-2">
-          Describe a way of investing: a monthly SIP, a mix of equity and bonds, or rules for when to buy and sell. The lab runs it over years of the demo market, charges what an
+          Describe a way of investing: a monthly SIP, a mix of equity and bonds, or rules for when to buy and sell. The lab runs it over {dataset === "real" ? "up to ten years of real prices" : "years of the demo market"}, charges what an
           Indian investor would pay, and puts it next to the obvious alternative.
         </p>
         <Button asChild size="lg" className="mt-7">

@@ -1,3 +1,4 @@
+import type { Dataset } from "./index"
 import type { StrategyDefinition } from "./strategy"
 
 /**
@@ -115,7 +116,22 @@ export interface RunInfo {
   slippage_bps: number
   error: string | null
   engine_version: string
+  /** The last price date the run saw, and whether the prices were real: see dataVersionOf. */
   data_version: string
+}
+
+/**
+ * A run's data version: "2026-09-25" for sample prices, "2026-09-25 real" for
+ * real ones. It is part of the result cache key, so a result computed on
+ * sample prices is never reused for real ones.
+ */
+export function dataVersionOf(lastDate: string, dataset: Dataset): string {
+  return dataset === "real" ? `${lastDate} real` : lastDate
+}
+
+export function readDataVersion(version: string): { lastDate: string; dataset: Dataset } {
+  const [lastDate = version, tag] = version.split(" ")
+  return { lastDate, dataset: tag === "real" ? "real" : "sample" }
 }
 
 /** GET /v1/me/backtests/:id. While a run waits or runs there is no result yet. */

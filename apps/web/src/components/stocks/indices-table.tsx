@@ -6,6 +6,7 @@ import { EQUITIES, INDICES } from "@greencircuits/market/catalog"
 import type { Instrument, Quote } from "@greencircuits/market/types"
 import { formatNumber } from "@greencircuits/market/format"
 import { useQuoteReader } from "@/lib/stream/hooks"
+import { useMarket } from "@/lib/stream/market-context"
 import { DataTable } from "@/components/data/data-table"
 import { Change, Price } from "@/components/market/price"
 import { Sparkline } from "@/components/market/sparkline"
@@ -75,7 +76,7 @@ const columns: ColumnDef<Row>[] = [
     accessorFn: (r) => r.s.members,
     cell: ({ row }) =>
       row.original.s.members > 0 ? (
-        <span title="Members inside the simulated universe">{row.original.s.members}</span>
+        <span title="Members among the stocks this site follows">{row.original.s.members}</span>
       ) : (
         <span className="text-muted-foreground">–</span>
       ),
@@ -99,6 +100,7 @@ const columns: ColumnDef<Row>[] = [
 
 /** All indices with live levels, trend and where they sit in their ranges. */
 export function IndicesTable({ data }: { data: IndexStatic[] }) {
+  const { dataset } = useMarket()
   const read = useQuoteReader(1000)
   const statics = useMemo(() => new Map(data.map((d) => [d.id, d])), [data])
 
@@ -129,8 +131,9 @@ export function IndicesTable({ data }: { data: IndexStatic[] }) {
         getRowHref={(r) => `/stocks/${r.inst.slug}`}
       />
       <p className="border-t px-4 py-2 text-[11px] text-muted-foreground">
-        Members counts only constituents inside the simulated {EQUITIES.length}-stock universe; where there are members, the
-        simulator builds the index level from them.
+        {dataset === "real"
+          ? `Members counts only constituents among the ${EQUITIES.length} stocks this site follows.`
+          : `Members counts only constituents inside the simulated ${EQUITIES.length}-stock universe; where there are members, the simulator builds the index level from them.`}
       </p>
     </div>
   )

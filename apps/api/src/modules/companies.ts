@@ -154,9 +154,13 @@ export async function loadCompany(db: Db, slug: string) {
 
   const metric = (code: string): number | null => metricRows.filter((m) => m.metric_code === code).at(-1)?.value ?? null
 
-  const byQuarter = new Map<string, Shareholding>()
+  // One pattern per quarter: holdings come oldest first, so a later filing in the same quarter replaces an earlier one.
+  const byQuarter = new Map<string, Shareholding & { end: string }>()
   for (const h of holdings) {
-    const s = byQuarter.get(h.period_end) ?? { label: quarterLabelOf(h.period_end), promoter: 0, fpi: 0, dii: 0, government: 0, retail: 0, pledged: 0 }
+    const label = quarterLabelOf(h.period_end)
+    const prior = byQuarter.get(label)
+    const fresh = { label, end: h.period_end, promoter: 0, fpi: 0, dii: 0, government: 0, retail: 0, pledged: 0 }
+    const s = prior && prior.end === h.period_end ? prior : fresh
     const pct = h.holding_pct
     if (h.category === "PROMOTER") {
       s.promoter += pct
@@ -165,9 +169,13 @@ export async function loadCompany(db: Db, slug: string) {
     else if (h.category.startsWith("DII")) s.dii += pct
     else if (h.category === "GOVERNMENT") s.government += pct
     else s.retail += pct
-    byQuarter.set(h.period_end, s)
+    byQuarter.set(label, s)
   }
-  const shareholding = [...byQuarter.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, s]) => s)
+  // The last two years: enough to see a trend, few enough to label every quarter.
+  const shareholding = [...byQuarter.values()]
+    .sort((a, b) => a.end.localeCompare(b.end))
+    .map(({ end: _end, ...s }) => s)
+    .slice(-8)
 
   const lastClose = candles.at(-1)!.close
   const ttm = quarters.slice(-4)

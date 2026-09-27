@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
+import { useLocalRuns } from "@/lib/lab/local"
 import { useMarket } from "@/lib/stream/market-context"
 import { useAlerts } from "./alerts"
 import { usePortfolio } from "./portfolio"
@@ -22,6 +23,7 @@ export function StoreHydration() {
         useAlerts.persist.rehydrate(),
         usePreferences.persist.rehydrate(),
         usePortfolio.persist.rehydrate(),
+        useLocalRuns.persist.rehydrate(),
       ])
       if (mode === "live") await startRemoteSync()
     })()

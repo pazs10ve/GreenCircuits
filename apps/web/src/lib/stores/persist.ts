@@ -33,3 +33,6 @@ export const safeStorage = createJSONStorage(() => safe, {
   reviver: (_key, value) =>
     typeof value === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/.test(value) ? new Date(value) : value,
 })
+
+/** Plain JSON, for records whose timestamps should stay strings. */
+export const plainStorage = createJSONStorage(() => safe)

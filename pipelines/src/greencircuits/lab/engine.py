@@ -8,6 +8,8 @@ one transaction, or marks the run FAILED with the error.
 
 from __future__ import annotations
 
+from collections.abc import Callable, Iterable
+from dataclasses import dataclass
 from datetime import UTC, date, datetime, time, timedelta, timezone
 from typing import Any
 
@@ -20,6 +22,7 @@ from .metrics import downsample, drawdown_series, monthly_returns, summarise
 from .simulate import (
     Series,
     SimResult,
+    Trade,
     simulate_deposit,
     simulate_hold,
     simulate_rebalance,
@@ -62,13 +65,10 @@ def alternative(
     return "buy_and_hold", simulate_hold({i: data[i] for i in ids}, start, capital, costs)
 
 
-def load_series(conn: psycopg.Connection, ids: list[int], start: date, end: date) -> dict[int, Series]:
-    """Daily bars for each instrument on one shared calendar, forward-filling any gaps."""
-    rows = conn.execute(
-        "SELECT instrument_id, trade_date, open, high, low, close FROM md.candle_1d "
-        "WHERE instrument_id = ANY(%s) AND trade_date BETWEEN %s AND %s ORDER BY trade_date",
-        (ids, start, end),
-    ).fetchall()
+def series_from_rows(rows: Iterable[dict[str, Any]], ids: list[int]) -> dict[int, Series]:
+    """Daily bars for each instrument on one shared calendar, forward-filling any gaps.
+    Before an instrument's first bar its prices are NaN, so indicators and the start date skip it."""
+    rows = list(rows)
     dates = sorted({r["trade_date"] for r in rows})
     index = {d: k for k, d in enumerate(dates)}
     out: dict[int, Series] = {}
@@ -82,6 +82,15 @@ def load_series(conn: psycopg.Connection, ids: list[int], start: date, end: date
                 arr[:, k] = arr[3, k - 1]
         out[i] = Series(dates, arr[0], arr[1], arr[2], arr[3])
     return out
+
+
+def load_series(conn: psycopg.Connection, ids: list[int], start: date, end: date) -> dict[int, Series]:
+    rows = conn.execute(
+        "SELECT instrument_id, trade_date, open, high, low, close FROM md.candle_1d "
+        "WHERE instrument_id = ANY(%s) AND trade_date BETWEEN %s AND %s ORDER BY trade_date",
+        (ids, start, end),
+    ).fetchall()
+    return series_from_rows(rows, ids)
 
 
 def _epoch(d: date) -> int:
@@ -101,12 +110,14 @@ def execute(dsn: str, run_id: str, worker_id: str) -> str:
         conn.commit()
         if run is None:
             return "SKIPPED"  # cancelled, or already finished by another worker
+        version = conn.execute(
+            "SELECT definition FROM lab.strategy_version WHERE strategy_id = %s AND version = %s",
+            (run["strategy_id"], run["strategy_version"]),
+        ).fetchone()
+        if version is None:
+            return "SKIPPED"  # deleted with its strategy or its owner after it was claimed
         try:
-            definition = conn.execute(
-                "SELECT definition FROM lab.strategy_version WHERE strategy_id = %s AND version = %s",
-                (run["strategy_id"], run["strategy_version"]),
-            ).fetchone()["definition"]
-            _write(conn, run, definition)
+            _write(conn, run, version["definition"])
             conn.commit()
             return "SUCCEEDED"
         except Exception as err:
@@ -124,22 +135,38 @@ def _progress(conn: psycopg.Connection, run_id: str, pct: float) -> None:
     conn.commit()
 
 
-def _write(conn: psycopg.Connection, run: dict[str, Any], d: dict[str, Any]) -> None:
-    run_id = run["id"]
-    capital = float(run["initial_capital"])
+@dataclass
+class Backtest:
+    """Everything a run produces, before it's written anywhere."""
+
+    metrics: dict[str, Any]
+    oos_from: date
+    sample: list[dict[str, float]]
+    monthly: dict[str, float]
+    benchmark: dict[str, Any]
+    trades: list[Trade]
+
+
+def backtest(
+    d: dict[str, Any],
+    data: dict[int, Series],
+    date_from: date,
+    capital: float,
+    slippage_bps: float,
+    progress: Callable[[float], None] = lambda _pct: None,
+) -> Backtest:
+    """Run a strategy definition over daily bars. Pure: no database, so the browser's
+    TypeScript engine can be checked against it on the same inputs (see parity.py)."""
     ids = instruments_of(d)
-    data = load_series(
-        conn, sorted({*ids, BENCHMARK_ID}), run["date_from"] - timedelta(days=WARMUP_DAYS), run["date_to"]
-    )
     dates = data[ids[0]].dates
     # Start on the requested date, or later if an instrument (or the benchmark) has no prices yet.
     first_valid = max(
         int(np.flatnonzero(~np.isnan(data[i].close))[0]) for i in data if np.any(~np.isnan(data[i].close))
     )
-    start = next((k for k, x in enumerate(dates) if x >= run["date_from"] and k >= first_valid), None)
+    start = next((k for k, x in enumerate(dates) if x >= date_from and k >= first_valid), None)
     if start is None or len(dates) - start < 20:
         raise ValueError("Not enough price history in the chosen date range")
-    _progress(conn, run_id, 20)
+    progress(20)
 
     sim: SimResult
     if d["type"] == "sip":
@@ -147,11 +174,11 @@ def _write(conn: psycopg.Connection, run: dict[str, Any], d: dict[str, Any]) -> 
     elif d["type"] == "rebalance":
         sim = simulate_rebalance(data[ids[0]], start, capital, float(d["equityPct"]), float(d["bondRatePct"]))
     else:
-        sim = simulate_rules({i: data[i] for i in ids}, start, d, capital, float(run["slippage_bps"]))
+        sim = simulate_rules({i: data[i] for i in ids}, start, d, capital, slippage_bps)
     for tr in sim.trades:
         if tr.instrument_id == 0:
             tr.instrument_id = ids[0]
-    _progress(conn, run_id, 70)
+    progress(70)
 
     rets = time_weighted(sim.values, sim.flows)
     ret_dates = sim.dates[1:]
@@ -205,17 +232,37 @@ def _write(conn: psycopg.Connection, run: dict[str, Any], d: dict[str, Any]) -> 
             point["b"] = round(float(bench_values[k]), 2)
         sample.append(point)
 
+    return Backtest(
+        _finite(metrics), oos_from, sample, monthly_returns(rets, ret_dates), _finite(benchmark), sim.trades
+    )
+
+
+def _write(conn: psycopg.Connection, run: dict[str, Any], d: dict[str, Any]) -> None:
+    run_id = run["id"]
+    ids = instruments_of(d)
+    data = load_series(
+        conn, sorted({*ids, BENCHMARK_ID}), run["date_from"] - timedelta(days=WARMUP_DAYS), run["date_to"]
+    )
+    result = backtest(
+        d,
+        data,
+        run["date_from"],
+        float(run["initial_capital"]),
+        float(run["slippage_bps"]),
+        lambda pct: _progress(conn, run_id, pct),
+    )
+
     conn.execute("DELETE FROM lab.backtest_trade WHERE run_id = %s", (run_id,))
     conn.execute("DELETE FROM lab.backtest_result WHERE run_id = %s", (run_id,))
     conn.execute(
         "INSERT INTO lab.backtest_result (run_id, metrics, oos_from, equity_sample, monthly_returns, benchmark) VALUES (%s, %s, %s, %s, %s, %s)",
         (
             run_id,
-            Jsonb(_finite(metrics)),
-            oos_from,
-            Jsonb(sample),
-            Jsonb(monthly_returns(rets, ret_dates)),
-            Jsonb(_finite(benchmark)),
+            Jsonb(result.metrics),
+            result.oos_from,
+            Jsonb(result.sample),
+            Jsonb(result.monthly),
+            Jsonb(result.benchmark),
         ),
     )
     with conn.cursor() as cur:
@@ -241,7 +288,7 @@ def _write(conn: psycopg.Connection, run: dict[str, Any], d: dict[str, Any]) -> 
                     round(tr.pnl, 2) if tr.pnl is not None else None,
                     tr.exit_reason,
                 )
-                for no, tr in enumerate(sim.trades, start=1)
+                for no, tr in enumerate(result.trades, start=1)
             ],
         )
     conn.execute(

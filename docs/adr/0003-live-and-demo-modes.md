@@ -22,4 +22,4 @@ Both modes open the day's market in the same state. The seed is derived from the
 - There are two data paths. They stay small because the browser, the database loader and the ingestor share `@greencircuits/market`.
 - Prices are simulated in both modes, so the masthead reads "Demo market" in both. What differs is where the simulator runs and where your data is kept.
 - In demo mode, alerts fire only while a tab is open.
-- Backtests need price history in the database and a worker, so they run only in live mode. In demo mode the lab still shows its questions and the builder, and says the backend is off. The site's worked examples ("Would it have worked?") are computed in TypeScript from the same generated history, so they work in both modes. Running the lab's tests in demo mode is still open: it could show saved runs, or run a TypeScript engine in the browser.
+- Backtests run on the server's Python workers in live mode. In demo mode a TypeScript copy of the engine runs them in the browser, kept in step with the Python one by golden files ([ADR 0005](0005-backtest-engine-in-the-browser.md)).

@@ -6,7 +6,7 @@ import { useNow } from "@/hooks/use-now"
 import { getInstrument } from "@greencircuits/market/catalog"
 import { dailyCandles, intradayCandles } from "@greencircuits/market/history"
 import { formatDateIST, formatPct, formatPrice, formatSigned, formatTimeIST } from "@greencircuits/market/format"
-import { useQuote } from "@/lib/stream/hooks"
+import { useQuote, useSession } from "@/lib/stream/hooks"
 import { useDailyBars, useIntradayBars } from "@/lib/data/client"
 import { useMarket } from "@/lib/stream/market-context"
 import { quoteStore } from "@/lib/stream/store"
@@ -33,8 +33,11 @@ export function PricePanel({ id, defaultRange = "1Y" }: { id: number; defaultRan
   const now = useNow(60_000)
   const [range, setRange] = useState<Range>(defaultRange)
   const [scrub, setScrub] = useState<ScrubPoint | null>(null)
+  const { closed } = useSession()
   const minute = now?.getTime() ?? null
   const spec = RANGES.find((r) => r.id === range)!
+  // Index levels are points, not rupees.
+  const currency = inst.kind === "INDEX" ? "" : "₹"
   const intraday = useIntradayBars(id, 5)
   const daily = useDailyBars(id, spec.sessions, range !== "1D")
 
@@ -56,8 +59,13 @@ export function PricePanel({ id, defaultRange = "1Y" }: { id: number; defaultRan
   const points = useMemo(() => {
     if (!base || !q || minute == null) return null
     if (range === "1D") return [...base.slice(0, -1), { t: base.at(-1)!.t, v: q.ltp }]
-    return [...base, { t: Math.floor(minute / 1000), v: q.ltp }]
-  }, [base, q, range, minute])
+    // The latest price is its session's close: it replaces a stored bar for that day rather than adding a day.
+    const day = (t: number) => new Date(t * 1000).toISOString().slice(0, 10)
+    const quoteDay = new Date(q.ts + 5.5 * 3600 * 1000).toISOString().slice(0, 10)
+    const last = base.at(-1)!
+    if (mode === "live" && day(last.t) === quoteDay) return [...base.slice(0, -1), { t: last.t, v: q.ltp }]
+    return [...base, { t: Math.floor((mode === "live" ? q.ts : minute) / 1000), v: q.ltp }]
+  }, [base, q, range, minute, mode])
 
   const annotations = useMemo<ChartAnnotation[]>(() => {
     if (!points || range === "1D") return []
@@ -68,10 +76,10 @@ export function PricePanel({ id, defaultRange = "1Y" }: { id: number; defaultRan
       if (p.v < lo.v) lo = p
     }
     return [
-      { t: hi.t, label: `High ₹${formatPrice(hi.v, inst.tick)}` },
-      { t: lo.t, label: `Low ₹${formatPrice(lo.v, inst.tick)}` },
+      { t: hi.t, label: `High ${currency}${formatPrice(hi.v, inst.tick)}` },
+      { t: lo.t, label: `Low ${currency}${formatPrice(lo.v, inst.tick)}` },
     ]
-  }, [points, range, inst.tick])
+  }, [points, range, inst.tick, currency])
 
   const start = range === "1D" ? q?.prevClose : points?.[0]?.v
   const shown = scrub?.values[0] ?? q?.ltp
@@ -82,14 +90,16 @@ export function PricePanel({ id, defaultRange = "1Y" }: { id: number; defaultRan
     ? range === "1D"
       ? `at ${formatTimeIST(scrub.t * 1000)}`
       : `on ${formatDateIST(scrub.t * 1000, "medium")}`
-    : spec.phrase
+    : range === "1D" && closed
+      ? `at the close ${closed}`
+      : spec.phrase
 
   return (
     <div>
       <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
         <div>
           <p className="figure text-[2.75rem] leading-none md:text-[3.25rem]">
-            <span className="mr-1 text-[0.6em] text-ink-2">₹</span>
+            {currency && <span className="mr-1 text-[0.6em] text-ink-2">{currency}</span>}
             {shown != null ? formatPrice(shown, inst.tick) : "–"}
           </p>
           <p className="mt-2 flex flex-wrap items-baseline gap-x-2 text-[0.9375rem]">

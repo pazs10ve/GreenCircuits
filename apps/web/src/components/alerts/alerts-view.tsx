@@ -19,6 +19,7 @@ import { getInstrument } from "@greencircuits/market/catalog"
 import type { Instrument, Quote } from "@greencircuits/market/types"
 import { formatDateIST, formatNumber, formatPct, formatPrice, formatTimeIST } from "@greencircuits/market/format"
 import { useQuoteReader } from "@/lib/stream/hooks"
+import { useMarket } from "@/lib/stream/market-context"
 import { CONDITION_LABEL, isPercent, useAlerts, type Alert, type AlertChannel } from "@/lib/stores/alerts"
 import { cn } from "@/lib/utils"
 
@@ -57,6 +58,7 @@ function level(a: Alert, inst: Instrument): string {
 }
 
 export function AlertsView() {
+  const { mode } = useMarket()
   const alerts = useAlerts((s) => s.alerts)
   const update = useAlerts((s) => s.update)
   const remove = useAlerts((s) => s.remove)
@@ -342,8 +344,11 @@ export function AlertsView() {
               </li>
             </ul>
             <p className="border-t px-4 py-3 text-[11px] text-muted-foreground">
-              In the demo, alerts are checked in this browser against the simulated feed. Turn on a sound in{" "}
-              <Link href="/settings" className="text-primary hover:underline">
+              {mode === "live"
+                ? "The alert engine checks alerts on the server against the price feed; they show up here as they fire."
+                : "In the demo, alerts are checked in this browser against the simulated feed."}{" "}
+              Turn on a sound in{" "}
+              <Link href="/account" className="text-primary hover:underline">
                 settings
               </Link>
               .

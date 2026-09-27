@@ -21,7 +21,7 @@ import { SITE_NAV } from "./nav"
 const MORE_PAGES = [
   { label: "Watchlists", href: "/watchlists" },
   { label: "Alerts", href: "/alerts" },
-  { label: "Settings", href: "/settings" },
+  { label: "Your account", href: "/account" },
 ]
 
 function hrefFor(inst: Instrument): string {

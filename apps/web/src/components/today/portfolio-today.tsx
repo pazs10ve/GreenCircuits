@@ -4,7 +4,7 @@ import Link from "next/link"
 import { useMemo } from "react"
 import { INDEX, getInstrument } from "@greencircuits/market/catalog"
 import { formatINR, formatNumber, formatPct } from "@greencircuits/market/format"
-import { useQuoteReader } from "@/lib/stream/hooks"
+import { useQuoteReader, useSession } from "@/lib/stream/hooks"
 import { usePortfolio } from "@/lib/stores/portfolio"
 import { cn } from "@/lib/utils"
 
@@ -13,6 +13,8 @@ export function PortfolioToday() {
   const holdings = usePortfolio((s) => s.holdings)
   const source = usePortfolio((s) => s.source)
   const read = useQuoteReader(2000)
+  const { closed } = useSession()
+  const when = closed ?? "today"
 
   const view = useMemo(() => {
     const rows = holdings
@@ -38,14 +40,17 @@ export function PortfolioToday() {
         <Link href="/portfolio" className="link">
           Import them from your broker
         </Link>{" "}
-        to see how they did today.
+        to see how they did {when}.
       </p>
     )
   }
 
   const up = view.day >= 0
   const maxAbs = Math.max(...view.rows.map((r) => Math.abs(r.day)), 1)
-  const lead = `${up ? "Up" : "Down"} ${formatINR(Math.abs(view.day), 0)} today, ${formatNumber(Math.abs(view.vsNifty), 1)} points ${view.vsNifty >= 0 ? "better" : "worse"} than the Nifty 50.`
+  const against = Math.abs(view.vsNifty) < 0.05
+    ? "in line with the Nifty 50"
+    : `${formatNumber(Math.abs(view.vsNifty), 1)} points ${view.vsNifty > 0 ? "better" : "worse"} than the Nifty 50`
+  const lead = `${up ? "Up" : "Down"} ${formatINR(Math.abs(view.day), 0)} ${when}, ${against}.`
   const who = [
     view.best && view.best.day > 0 ? `${view.best.inst.name} added the most (${formatINR(view.best.day, 0)})` : null,
     view.worst && view.worst.day < 0 ? `${view.worst.inst.name} cost you ${formatINR(Math.abs(view.worst.day), 0)}` : null,
@@ -58,7 +63,7 @@ export function PortfolioToday() {
         <p className="figure text-[2.5rem] leading-none">{formatINR(view.value, 0)}</p>
         <p className={cn("num mt-2 text-[0.9375rem]", up ? "text-up" : "text-down")}>
           {up ? "+" : "−"}
-          {formatINR(Math.abs(view.day), 0)} ({formatPct(view.dayPct)}) today
+          {formatINR(Math.abs(view.day), 0)} ({formatPct(view.dayPct)}) {when}
         </p>
         <p className="mt-4 max-w-[30em] text-[0.9375rem] leading-relaxed text-ink-2">{sentence}</p>
         {source === "sample" && (

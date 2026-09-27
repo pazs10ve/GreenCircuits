@@ -1,6 +1,9 @@
 "use client"
 
-import { useCallback, useSyncExternalStore } from "react"
+import { useCallback, useMemo, useSyncExternalStore } from "react"
+import type { Source } from "@greencircuits/contracts"
+import { INDEX } from "@greencircuits/market/catalog"
+import { istDate, isTrading, sessionWhen } from "@greencircuits/market/session"
 import type { Quote } from "@greencircuits/market/types"
 import { useMarket } from "./market-context"
 import { quoteStore } from "./store"
@@ -59,6 +62,40 @@ export function useQuoteReader(intervalMs = 1000): (id: number) => Quote | undef
     (id: number) => (version === 0 ? initial.get(id) : (quoteStore.get(id) ?? initial.get(id))),
     [version, initial],
   )
+}
+
+/** What the prices on screen are now: the gateway's word once it has spoken, the server's until then. */
+export function useSource(): Source {
+  const { source } = useMarket()
+  return useSyncExternalStore(
+    (cb) => quoteStore.subscribeAll(cb),
+    () => quoteStore.source ?? source,
+    () => source,
+  )
+}
+
+export interface Session {
+  /** Whether the session on screen is still trading. */
+  open: boolean
+  /** When a finished session ended, in words: "today", "yesterday", "on Friday". Null while it trades. */
+  closed: string | null
+}
+
+/**
+ * Whether the prices on screen are from a session still trading, judged by
+ * the feed's source and the Nifty's last trade. The render date comes from
+ * the server, so the first render matches on both sides.
+ */
+export function useSession(): Session {
+  const { today } = useMarket()
+  const source = useSource()
+  const nifty = useQuote(INDEX.NIFTY)
+  const ts = nifty?.ts
+  return useMemo(() => {
+    const now = Date.parse(`${today}T06:30:00Z`)
+    if (isTrading(source, ts, now)) return { open: true, closed: null }
+    return { open: false, closed: sessionWhen(ts != null ? istDate(ts) : today, today) }
+  }, [today, source, ts])
 }
 
 export function useStreamStatus(): typeof quoteStore.status {

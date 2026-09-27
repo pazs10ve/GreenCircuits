@@ -98,64 +98,71 @@ async function syncWatchlists() {
 
 // ---------------------------------------------------------------------- alerts
 
-async function syncAlerts() {
-  // What the server holds, by id: the baseline local edits are diffed against.
-  const synced = new Map<string, Alert>()
-  let applying = false
-  const adopt = (alerts: Alert[]) => {
-    synced.clear()
-    for (const a of alerts) synced.set(a.id, a)
-    applying = true
-    useAlerts.setState({ alerts })
-    applying = false
-  }
+/**
+ * What the server holds, by id: the baseline local edits are diffed against.
+ * Everything that comes from the server goes through adoptAlerts, so an id
+ * missing here is always an alert made in this browser, never a server one.
+ */
+const syncedAlerts = new Map<string, Alert>()
+/** Local alerts being created on the server now, so a second change can't post them twice. */
+const posting = new Set<string>()
+let applyingAlerts = false
 
+function adoptAlerts(alerts: Alert[]) {
+  syncedAlerts.clear()
+  for (const a of alerts) syncedAlerts.set(a.id, a)
+  applyingAlerts = true
+  useAlerts.setState({ alerts })
+  applyingAlerts = false
+}
+
+const alertBody = (a: Alert) =>
+  JSON.stringify({ instrumentId: a.instrumentId, condition: a.condition, value: a.value, channels: a.channels, repeat: a.repeat, note: a.note })
+
+async function syncAlerts() {
   const server = await api<{ alerts: ServerAlert[] }>("/me/alerts")
   if (server.alerts.length) {
-    adopt(server.alerts.map(revive))
+    adoptAlerts(server.alerts.map(revive))
   } else {
     // First visit: upload what this browser has (the samples, or alerts made before the backend was up).
     const local = useAlerts.getState().alerts.filter((a) => a.status !== "TRIGGERED")
     const created: Alert[] = []
     for (const a of local) {
-      const res = await api<{ alert: ServerAlert }>("/me/alerts", {
-        method: "POST",
-        body: JSON.stringify({ instrumentId: a.instrumentId, condition: a.condition, value: a.value, channels: a.channels, repeat: a.repeat, note: a.note }),
-      })
+      const res = await api<{ alert: ServerAlert }>("/me/alerts", { method: "POST", body: alertBody(a) })
       created.push(revive(res.alert))
     }
-    adopt(created)
+    adoptAlerts(created)
   }
 
   useAlerts.subscribe((state) => {
-    if (applying) return
+    if (applyingAlerts) return
     void (async () => {
       const next = state.alerts
       const ids = new Set(next.map((a) => a.id))
-      for (const [id] of synced) {
+      for (const [id] of syncedAlerts) {
         if (!ids.has(id)) {
-          synced.delete(id)
+          syncedAlerts.delete(id)
           await api(`/me/alerts/${id}`, { method: "DELETE" }).catch(() => toast.error("Couldn't delete the alert on the server"))
         }
       }
       for (const a of next) {
-        const before = synced.get(a.id)
+        const before = syncedAlerts.get(a.id)
         if (!before) {
-          const res = await api<{ alert: ServerAlert }>("/me/alerts", {
-            method: "POST",
-            body: JSON.stringify({ instrumentId: a.instrumentId, condition: a.condition, value: a.value, channels: a.channels, repeat: a.repeat, note: a.note }),
-          }).catch(() => null)
+          if (posting.has(a.id)) continue
+          posting.add(a.id)
+          const res = await api<{ alert: ServerAlert }>("/me/alerts", { method: "POST", body: alertBody(a) }).catch(() => null)
+          posting.delete(a.id)
           if (!res) {
             toast.error("Couldn't save the alert on the server")
             continue
           }
           const saved = revive(res.alert)
-          synced.set(saved.id, saved)
-          applying = true
+          syncedAlerts.set(saved.id, saved)
+          applyingAlerts = true
           useAlerts.setState({ alerts: useAlerts.getState().alerts.map((x) => (x.id === a.id ? saved : x)) })
-          applying = false
+          applyingAlerts = false
         } else if (before.status !== a.status && (a.status === "ACTIVE" || a.status === "PAUSED")) {
-          synced.set(a.id, a)
+          syncedAlerts.set(a.id, a)
           await api(`/me/alerts/${a.id}`, { method: "PATCH", body: JSON.stringify({ status: a.status }) }).catch(() => toast.error("Couldn't update the alert"))
         }
       }
@@ -166,7 +173,7 @@ async function syncAlerts() {
 /** Re-read alerts after the server fires one, so statuses and trigger prices show up. */
 export async function refreshAlerts(): Promise<void> {
   const server = await api<{ alerts: ServerAlert[] }>("/me/alerts")
-  useAlerts.setState({ alerts: server.alerts.map(revive) })
+  adoptAlerts(server.alerts.map(revive))
 }
 
 // ------------------------------------------------------------------- portfolio

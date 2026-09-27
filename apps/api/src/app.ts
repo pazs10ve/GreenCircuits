@@ -8,7 +8,9 @@ import { jsonSchemaTransform, serializerCompiler, validatorCompiler, type ZodTyp
 import type { Redis } from "ioredis"
 import type { Db } from "@greencircuits/db"
 import type { Env } from "./env"
+import { authRoutes } from "./modules/auth"
 import { companyRoutes } from "./modules/companies"
+import { feedRoutes } from "./modules/feed"
 import { healthRoutes } from "./modules/health"
 import { instrumentRoutes } from "./modules/instruments"
 import { labRoutes } from "./modules/lab"
@@ -16,11 +18,13 @@ import { marketRoutes } from "./modules/market"
 import { meRoutes } from "./modules/me"
 import { quoteRoutes } from "./modules/quotes"
 import { referenceRoutes } from "./modules/reference"
+import { universeRoutes } from "./modules/universe"
 
 declare module "fastify" {
   interface FastifyInstance {
     db: Db
     valkey: Redis
+    env: Env
   }
 }
 
@@ -42,6 +46,7 @@ export async function buildApp({ db, valkey, env, logger = false }: AppDeps) {
   app.setSerializerCompiler(serializerCompiler)
   app.decorate("db", db)
   app.decorate("valkey", valkey)
+  app.decorate("env", env)
 
   await app.register(cookie, { secret: env.SESSION_SECRET })
   await app.register(cors, { origin: env.WEB_ORIGINS.split(",").map((o) => o.trim()), credentials: true })
@@ -64,7 +69,8 @@ export async function buildApp({ db, valkey, env, logger = false }: AppDeps) {
         { name: "market" },
         { name: "ipos" },
         { name: "bonds" },
-        { name: "me", description: "Your data. The first request creates an anonymous account and sets a signed cookie." },
+        { name: "auth", description: "Email and password accounts. Signing up keeps what the visitor made anonymously." },
+        { name: "me", description: "Your data. The first write creates an anonymous account and a session cookie." },
         { name: "lab", description: "Backtests, queued on BullMQ and run by the Python engine." },
       ],
     },
@@ -86,8 +92,11 @@ export async function buildApp({ db, valkey, env, logger = false }: AppDeps) {
       await v1.register(quoteRoutes)
       await v1.register(companyRoutes)
       await v1.register(marketRoutes)
+      await v1.register(universeRoutes)
       await v1.register(referenceRoutes)
+      await v1.register(authRoutes)
       await v1.register(meRoutes)
+      await v1.register(feedRoutes)
       await v1.register(labRoutes)
     },
     { prefix: "/v1" },

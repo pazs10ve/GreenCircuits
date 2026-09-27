@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { LiveChange, LivePrice } from "@/components/market/price"
 import { formatCrore, formatNumber, formatPct } from "@greencircuits/market/format"
+import { useMarket } from "@/lib/stream/market-context"
 import { cn } from "@/lib/utils"
 
 export interface PeerRow {
@@ -18,6 +19,7 @@ export interface PeerRow {
 
 /** The company against the largest companies in its sector, on the numbers that matter most. */
 export function Peers({ rows, currentId }: { rows: PeerRow[]; currentId: number }) {
+  const { dataset } = useMarket()
   return (
     <div className="scrollbar-thin overflow-x-auto">
       <table className="w-full min-w-[720px] text-sm">
@@ -30,7 +32,7 @@ export function Peers({ rows, currentId }: { rows: PeerRow[]; currentId: number 
               Price
             </th>
             <th scope="col" className="pb-2 text-right font-normal">
-              Today
+              Day
             </th>
             <th scope="col" className="pb-2 text-right font-normal">
               Market value
@@ -79,7 +81,7 @@ export function Peers({ rows, currentId }: { rows: PeerRow[]; currentId: number 
           })}
         </tbody>
       </table>
-      <p className="mt-2 text-xs text-ink-3">Profit growth is the three-year annual rate. Sample figures.</p>
+      <p className="mt-2 text-xs text-ink-3">Profit growth is the three-year annual rate.{dataset === "real" ? "" : " Sample figures."}</p>
     </div>
   )
 }

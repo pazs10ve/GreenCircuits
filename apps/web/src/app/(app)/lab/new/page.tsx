@@ -6,7 +6,7 @@ import { fromTemplate } from "@/lib/lab/templates"
 
 export const metadata: Metadata = {
   title: "New test",
-  description: "Describe an investing idea and test it on the demo market's history.",
+  description: "Describe an investing idea and test it on years of daily prices.",
 }
 
 const param = (v: string | string[] | undefined) => (typeof v === "string" ? v : undefined)

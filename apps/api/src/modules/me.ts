@@ -1,7 +1,11 @@
 import { sql } from "kysely"
 import { z } from "zod"
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod"
-import { ensureUser, sessionUserId } from "../lib/session"
+import { Preferences, passwordProblem } from "@greencircuits/contracts/account"
+import { audit } from "../lib/audit"
+import { hashPassword, verifyPassword } from "../lib/passwords"
+import { endSession, ensureUser, getSession, userIdOf } from "../lib/session"
+import { publicUser } from "../lib/users"
 import { istToday } from "../lib/dates"
 
 /**
@@ -39,11 +43,34 @@ export const meRoutes: FastifyPluginAsyncZod = async (app) => {
       ? new Set((await db.selectFrom("ref.instrument").select("id").where("id", "in", ids).execute()).map((r) => r.id))
       : new Set<number>()
 
-  app.get("/me", { schema: { tags: ["me"], summary: "The current (anonymous) user" } }, async (req, reply) => {
+  app.get("/me", { schema: { tags: ["me"], summary: "The current user, anonymous until they sign up" } }, async (req, reply) => {
     const id = await ensureUser(req, reply)
-    const user = await db.selectFrom("app.users").select(["id", "is_anonymous", "created_at"]).where("id", "=", id).executeTakeFirstOrThrow()
-    return { id: user.id, anonymous: user.is_anonymous, createdAt: user.created_at }
+    reply.header("cache-control", "no-store")
+    return publicUser(db, id)
   })
+
+  app.patch(
+    "/me",
+    {
+      schema: {
+        tags: ["me"],
+        summary: "Update your name or feed preferences",
+        body: z.object({ name: z.string().trim().max(60).optional(), preferences: Preferences.optional() }),
+      },
+    },
+    async (req, reply) => {
+      const id = await ensureUser(req, reply)
+      const { name, preferences } = req.body
+      if (name !== undefined || preferences) {
+        await db
+          .updateTable("app.users")
+          .set({ ...(name !== undefined ? { name: name || null } : {}), ...(preferences ? { preferences: JSON.stringify(preferences) } : {}), updated_at: new Date() })
+          .where("id", "=", id)
+          .execute()
+      }
+      return publicUser(db, id)
+    },
+  )
 
   // ------------------------------------------------------------------ watchlists
 
@@ -65,8 +92,8 @@ export const meRoutes: FastifyPluginAsyncZod = async (app) => {
     return [...lists.values()]
   }
 
-  app.get("/me/watchlists", { schema: { tags: ["me"], summary: "Your watchlists" } }, async (req) => {
-    const userId = sessionUserId(req)
+  app.get("/me/watchlists", { schema: { tags: ["me"], summary: "Your watchlists" } }, async (req, reply) => {
+    const userId = await userIdOf(req, reply)
     return { lists: userId ? await readWatchlists(userId) : [] }
   })
 
@@ -139,8 +166,8 @@ export const meRoutes: FastifyPluginAsyncZod = async (app) => {
 
   const announce = (userId: string) => app.valkey.publish(ALERTS_CHANGED, userId).catch(() => {})
 
-  app.get("/me/alerts", { schema: { tags: ["me"], summary: "Your price and day-change alerts" } }, async (req) => {
-    const userId = sessionUserId(req)
+  app.get("/me/alerts", { schema: { tags: ["me"], summary: "Your price and day-change alerts" } }, async (req, reply) => {
+    const userId = await userIdOf(req, reply)
     return { alerts: userId ? await readAlerts(userId) : [] }
   })
 
@@ -217,7 +244,7 @@ export const meRoutes: FastifyPluginAsyncZod = async (app) => {
       },
     },
     async (req, reply) => {
-      const userId = sessionUserId(req)
+      const userId = await userIdOf(req, reply)
       reply.header("cache-control", "no-store")
       if (!userId) return { notifications: [] }
       let q = db
@@ -252,8 +279,8 @@ export const meRoutes: FastifyPluginAsyncZod = async (app) => {
     return rows.rows.map((r) => ({ instrumentId: r.instrument_id, qty: r.qty, avgPrice: r.avg_price }))
   }
 
-  app.get("/me/portfolio", { schema: { tags: ["me"], summary: "Your holdings" } }, async (req) => {
-    const userId = sessionUserId(req)
+  app.get("/me/portfolio", { schema: { tags: ["me"], summary: "Your holdings" } }, async (req, reply) => {
+    const userId = await userIdOf(req, reply)
     if (!userId) return { holdings: [] }
     const portfolio = await db.selectFrom("app.portfolio").select("id").where("user_id", "=", userId).orderBy("created_at").executeTakeFirst()
     return { holdings: portfolio ? await readHoldings(portfolio.id) : [] }
@@ -289,6 +316,95 @@ export const meRoutes: FastifyPluginAsyncZod = async (app) => {
         }
       })
       return { holdings: await readHoldings(portfolioId) }
+    },
+  )
+
+  // --------------------------------------------------------------------- account
+
+  const passwordHashOf = async (id: string) =>
+    (await db.selectFrom("app.users").select(["password_hash", "email"]).where("id", "=", id).where("is_anonymous", "=", false).executeTakeFirst()) ?? null
+
+  app.post(
+    "/me/password",
+    {
+      config: { rateLimit: { max: app.env.AUTH_RATE_LIMIT_PER_MINUTE, timeWindow: "1 minute" } },
+      schema: { tags: ["me"], summary: "Change your password; signs out your other sessions", body: z.object({ current: z.string().max(128), next: z.string().max(128) }) },
+    },
+    async (req, reply) => {
+      const session = await getSession(req, reply)
+      const account = session && !session.anonymous ? await passwordHashOf(session.userId) : null
+      if (!session || !account) return reply.code(401).send({ error: "signed_out", message: "Sign in to change your password." })
+      if (!(await verifyPassword(req.body.current, account.password_hash))) {
+        return reply.code(403).send({ error: "wrong_password", message: "Your current password isn't right." })
+      }
+      const problem = passwordProblem(req.body.next, account.email ?? undefined)
+      if (problem) return reply.code(400).send({ error: "weak_password", message: problem })
+      await db.updateTable("app.users").set({ password_hash: await hashPassword(req.body.next), updated_at: new Date() }).where("id", "=", session.userId).execute()
+      await db.deleteFrom("app.session").where("user_id", "=", session.userId).where("id", "<>", session.id).execute()
+      audit(req, session.userId, "password_change")
+      return reply.code(204).send()
+    },
+  )
+
+  app.delete("/me/sessions", { schema: { tags: ["me"], summary: "Sign out everywhere else" } }, async (req, reply) => {
+    const session = await getSession(req, reply)
+    if (!session) return reply.code(204).send()
+    const ended = await db.deleteFrom("app.session").where("user_id", "=", session.userId).where("id", "<>", session.id).executeTakeFirst()
+    audit(req, session.userId, "sessions_revoked", { count: Number(ended.numDeletedRows) })
+    return reply.code(204).send()
+  })
+
+  // Everything the account holds, in one JSON file.
+  app.get("/me/export", { schema: { tags: ["me"], summary: "Download your data" } }, async (req, reply) => {
+    const userId = await userIdOf(req, reply)
+    if (!userId) return reply.code(401).send({ error: "signed_out", message: "There's nothing saved for this browser yet." })
+    const portfolio = await db.selectFrom("app.portfolio").select("id").where("user_id", "=", userId).orderBy("created_at").executeTakeFirst()
+    const [user, watchlists, alerts, transactions, strategies, notifications] = await Promise.all([
+      publicUser(db, userId),
+      readWatchlists(userId),
+      readAlerts(userId),
+      portfolio
+        ? db
+            .selectFrom("app.portfolio_txn")
+            .select(["instrument_id", "txn_type", "trade_date", "quantity", "price", "source"])
+            .where("portfolio_id", "=", portfolio.id)
+            .orderBy("trade_date")
+            .execute()
+        : [],
+      db
+        .selectFrom("lab.strategy as s")
+        .innerJoin("lab.strategy_version as v", "v.strategy_id", "s.id")
+        .select(["s.name", "v.version", "v.definition", "v.created_at"])
+        .where("s.user_id", "=", userId)
+        .orderBy("s.name")
+        .orderBy("v.version")
+        .execute(),
+      db.selectFrom("app.notification").select(["kind", "title", "body", "created_at"]).where("user_id", "=", userId).orderBy("created_at", "desc").limit(500).execute(),
+    ])
+    audit(req, userId, "data_export")
+    reply.header("cache-control", "no-store")
+    reply.header("content-disposition", `attachment; filename="greencircuits-${istToday()}.json"`)
+    return { exportedAt: new Date().toISOString(), user, watchlists, alerts, portfolio: { transactions }, strategies, notifications }
+  })
+
+  // Deleting an account removes the user row; everything else goes with it (ON DELETE CASCADE).
+  app.delete(
+    "/me",
+    { config: { rateLimit: { max: app.env.AUTH_RATE_LIMIT_PER_MINUTE, timeWindow: "1 minute" } }, schema: { tags: ["me"], summary: "Delete your account and everything in it", body: z.object({ password: z.string().max(128).optional() }).optional() } },
+    async (req, reply) => {
+      const session = await getSession(req, reply)
+      if (!session) return reply.code(204).send()
+      if (!session.anonymous) {
+        const account = await passwordHashOf(session.userId)
+        if (!(await verifyPassword(req.body?.password ?? "", account?.password_hash))) {
+          return reply.code(403).send({ error: "wrong_password", message: "Enter your password to delete the account." })
+        }
+      }
+      await endSession(req, reply)
+      await db.deleteFrom("app.users").where("id", "=", session.userId).execute()
+      await announce(session.userId)
+      audit(req, session.userId, session.anonymous ? "anonymous_data_deleted" : "account_deleted")
+      return reply.code(204).send()
     },
   )
 }

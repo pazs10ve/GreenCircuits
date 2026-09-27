@@ -3,12 +3,12 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import type { RunInfo, RunResult, RunTrade } from "@greencircuits/contracts/lab"
+import { readDataVersion, type RunInfo, type RunResult, type RunTrade } from "@greencircuits/contracts/lab"
 import { Section } from "@/components/editorial/section"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatNumber } from "@greencircuits/market/format"
-import { LabError, useDeleteRun, useLabAvailable, useRun } from "@/lib/lab/client"
+import { LabError, useDeleteRun, useRun } from "@/lib/lab/client"
 import { alternativeOf, describe, kindLabel, pct } from "@/lib/lab/describe"
 import { holdUp, lede, verdict, worstFall } from "@/lib/lab/report"
 import { cn } from "@/lib/utils"
@@ -58,21 +58,8 @@ function Plan({ run }: { run: RunInfo }) {
 
 /** A test by id: waiting, running, failed or finished. */
 export function RunView({ id }: { id: string }) {
-  const available = useLabAvailable()
   const { data, error, isPending } = useRun(id)
 
-  if (!available) {
-    return (
-      <div className="max-w-[40em] pt-4">
-        <Breadcrumb />
-        <h1 className="mt-3 font-serif text-[2.25rem] leading-tight font-semibold">This test lives on the backend</h1>
-        <p className="mt-4 text-ink-2">The backend is off in this demo, so saved tests can&apos;t be shown. The questions on the lab&apos;s front page show what the lab does.</p>
-        <Button asChild variant="outline" className="mt-6">
-          <Link href="/lab">Back to the lab</Link>
-        </Button>
-      </div>
-    )
-  }
   if (error) {
     const missing = error instanceof LabError && error.status === 404
     return (
@@ -252,7 +239,12 @@ function Report({ run, result, trades }: { run: RunInfo; result: RunResult; trad
 
         <Section title="How this was tested">
           <ul className="max-w-[44em] list-disc space-y-2 pl-5 text-[0.9375rem] leading-relaxed text-ink-2 marker:text-ink-3">
-            <li>Prices are the demo market&apos;s simulated history, not real prices. Returns are before tax.</li>
+            <li>
+              {readDataVersion(run.data_version).dataset === "real"
+                ? "Prices are real daily closes from Yahoo Finance, adjusted for splits and bonus issues; dividends are left out."
+                : "Prices are the demo market’s simulated history, not real prices."}{" "}
+              Returns are before tax.
+            </li>
             {d.type === "sip" && <li>Each instalment is invested at the close on the first trading day of the month{d.dip ? ", or held in cash until the dip rule is met" : ""}.</li>}
             {d.type === "rebalance" && <li>The mix is set at the first day&apos;s close and reset at the close on the first trading day of each April. Bonds earn {formatNumber(d.bondRatePct, 1)}% a year, compounded daily.</li>}
             {d.type === "rules" && (
@@ -273,7 +265,8 @@ function Report({ run, result, trades }: { run: RunInfo; result: RunResult; trad
               {m.alternative.kind === "deposit" ? ", compounding at 7% a year" : ""}. Returns a year are {d.type === "sip" ? "money-weighted (XIRR) in the headline and table" : "compound annual growth (CAGR)"}; risk figures are time-weighted.
             </li>
             <li>
-              Engine {run.engine_version}, with prices up to {longDate(run.data_version)}
+              Run {run.engine_version.startsWith("ts") ? "in your browser by the TypeScript engine" : "on the server by the Python engine"} ({run.engine_version}), with prices up
+              to {longDate(readDataVersion(run.data_version).lastDate)}
               {tookSeconds != null ? `; it took ${formatNumber(Math.max(tookSeconds, 0.1), 1)} seconds` : ""}.
             </li>
           </ul>

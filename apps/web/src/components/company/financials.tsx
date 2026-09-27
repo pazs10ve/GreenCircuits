@@ -3,6 +3,7 @@
 import { useState } from "react"
 import type { Fundamentals, PeriodRow } from "@greencircuits/market/fundamentals"
 import { formatNumber } from "@greencircuits/market/format"
+import { useMarket } from "@/lib/stream/market-context"
 import { cn } from "@/lib/utils"
 
 type Period = "annual" | "quarterly"
@@ -116,10 +117,13 @@ const LINES: { key: keyof PeriodRow; label: string; strong?: boolean }[] = [
 ]
 
 function Statement({ rows }: { rows: PeriodRow[] }) {
+  const { dataset } = useMarket()
   return (
     <div className="scrollbar-thin mt-4 overflow-x-auto">
       <table className="w-full min-w-[640px] text-sm">
-        <caption className="mb-2 text-left text-xs text-ink-3">₹ crore, except earnings per share. Sample figures.</caption>
+        <caption className="mb-2 text-left text-xs text-ink-3">
+          ₹ crore, except earnings per share. {dataset === "real" ? "From the company's results, via Yahoo Finance." : "Sample figures."}
+        </caption>
         <thead>
           <tr className="border-b border-ink">
             <th scope="col" className="py-2 pr-4 text-left font-normal text-ink-3">

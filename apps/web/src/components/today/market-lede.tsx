@@ -2,12 +2,17 @@
 
 import { useMemo } from "react"
 import { marketStory } from "@greencircuits/market/research/market-story"
-import { useQuoteReader } from "@/lib/stream/hooks"
+import { useQuoteReader, useSession } from "@/lib/stream/hooks"
 
-/** Today's headline and standfirst, rewritten from the quotes every few seconds. */
-export function MarketLede() {
+/**
+ * The day's headline and standfirst, rewritten from the quotes every few
+ * seconds, in the past tense once the session is over. `members` are the
+ * Nifty 50's, from the API; the demo universe's without them.
+ */
+export function MarketLede({ members }: { members?: number[] }) {
   const read = useQuoteReader(8000)
-  const story = useMemo(() => marketStory(read), [read])
+  const { closed } = useSession()
+  const story = useMemo(() => marketStory(read, { members, closed }), [read, members, closed])
   if (!story) return null
   return (
     <div>

@@ -22,7 +22,7 @@ interface Row {
   high52: number
   ltp: number
   mcap: number
-  pe: number
+  pe: number | null
   /** Position in the 52-week range, 0–1. */
   pos52: number
   relVol: number | undefined
@@ -72,7 +72,7 @@ const columns: ColumnDef<Row>[] = [
     id: "pe",
     header: "P/E",
     accessorFn: (r) => r.pe,
-    cell: ({ row }) => formatNumber(row.original.pe, 1),
+    cell: ({ row }) => (row.original.pe == null ? <span className="text-muted-foreground">–</span> : formatNumber(row.original.pe, 1)),
     meta: { align: "right" },
   },
   {
@@ -143,7 +143,8 @@ export function StocksTable({
         high52,
         ltp,
         mcap: marketCapCr(inst, ltp),
-        pe: ltp / s.eps,
+        // A loss makes the P/E meaningless rather than negative.
+        pe: s.eps != null && s.eps > 0 ? ltp / s.eps : null,
         pos52: (ltp - low52) / Math.max(high52 - low52, 1e-9),
         relVol: q ? q.volume / inst.avgVolume : undefined,
       })

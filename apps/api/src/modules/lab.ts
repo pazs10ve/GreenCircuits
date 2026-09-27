@@ -2,9 +2,11 @@ import { createHash } from "node:crypto"
 import { Queue } from "bullmq"
 import { sql } from "kysely"
 import { z } from "zod"
+import { dataVersionOf } from "@greencircuits/contracts/lab"
 import { BacktestRequest, type StrategyDefinition } from "@greencircuits/contracts/strategy"
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod"
-import { ensureUser, sessionUserId } from "../lib/session"
+import { datasetOf } from "../lib/dataset"
+import { ensureUser, userIdOf } from "../lib/session"
 
 /**
  * Backtests. The run's durable record is lab.backtest_run; the BullMQ
@@ -38,7 +40,7 @@ export const labRoutes: FastifyPluginAsyncZod = async (app) => {
       .groupBy("instrument_id")
       .execute()
     if (coverage.length !== new Set(ids).size) return reply.code(400).send({ error: "bad_request", message: "Some instruments have no price history." })
-    const dataVersion = coverage.map((c) => c.last).sort().at(-1)!
+    const dataVersion = dataVersionOf(coverage.map((c) => c.last).sort().at(-1)!, await datasetOf(db))
 
     const cacheKey = createHash("sha256")
       .update(stable({ definition: b.definition, from: b.from, to: b.to, capital: b.capital, slippage: b.slippageBps, dataVersion, engine: ENGINE_VERSION }))
@@ -108,8 +110,8 @@ export const labRoutes: FastifyPluginAsyncZod = async (app) => {
     return reply.code(202).send({ runId, status: "QUEUED", cached: false })
   })
 
-  app.get("/me/backtests", { schema: { tags: ["lab"], summary: "Your recent backtests" } }, async (req) => {
-    const userId = sessionUserId(req)
+  app.get("/me/backtests", { schema: { tags: ["lab"], summary: "Your recent backtests" } }, async (req, reply) => {
+    const userId = await userIdOf(req, reply)
     if (!userId) return { runs: [] }
     const runs = await db
       .selectFrom("lab.backtest_run as r")
@@ -142,7 +144,7 @@ export const labRoutes: FastifyPluginAsyncZod = async (app) => {
     "/me/backtests/:id",
     { schema: { tags: ["lab"], summary: "A backtest's status, results and trades", params: z.object({ id: z.uuid() }) } },
     async (req, reply) => {
-      const userId = sessionUserId(req)
+      const userId = await userIdOf(req, reply)
       if (!userId) return reply.code(404).send({ error: "not_found" })
       const run = await db
         .selectFrom("lab.backtest_run as r")
@@ -192,7 +194,7 @@ export const labRoutes: FastifyPluginAsyncZod = async (app) => {
     "/me/backtests/:id",
     { schema: { tags: ["lab"], summary: "Delete a backtest", params: z.object({ id: z.uuid() }) } },
     async (req, reply) => {
-      const userId = sessionUserId(req)
+      const userId = await userIdOf(req, reply)
       if (!userId) return reply.code(404).send({ error: "not_found" })
       // A queued job for it finds no row and is skipped by the worker.
       const deleted = await db.deleteFrom("lab.backtest_run").where("id", "=", req.params.id).where("user_id", "=", userId).returning("id").executeTakeFirst()

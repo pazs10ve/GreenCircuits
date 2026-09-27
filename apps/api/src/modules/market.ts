@@ -48,7 +48,10 @@ export async function comingUp(db: Db, today = istToday(), days = 30): Promise<M
       date: (x.status === "OPEN" ? x.close_date : x.open_date) ?? today,
       kind: "IPO" as const,
       title: `${x.name} IPO ${x.status === "OPEN" ? "closes" : "opens"}`,
-      detail: `₹${x.price_band_low}–${x.price_band_high} · lot ${x.lot_size}`,
+      // NSE's lists sometimes lack the band, and never give the lot size; say only what's known.
+      detail: [x.price_band_low != null && x.price_band_high != null ? `₹${x.price_band_low}–${x.price_band_high}` : null, x.lot_size != null ? `lot ${x.lot_size}` : null]
+        .filter(Boolean)
+        .join(" · "),
     })),
   ]
   const now = new Date()

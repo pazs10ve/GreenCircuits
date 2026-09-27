@@ -9,10 +9,12 @@ const Env = z.object({
   VALKEY_URL: z.string().default("redis://localhost:6380"),
   /** Comma-separated origins allowed to call the API from a browser. */
   WEB_ORIGINS: z.string().default("http://localhost:3100,http://localhost:3000"),
-  /** Signs the anonymous-session cookie. Set a long random value in production. */
+  /** Signs cookies (and verifies the signed ones from before sessions). Set a long random value in production. */
   SESSION_SECRET: z.string().min(32).default("development-only-session-secret-change-me"),
   /** Requests per minute per client IP. */
   RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(1200),
+  /** Sign-up, sign-in and password attempts per minute per client IP. */
+  AUTH_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(10),
 })
 
 export type Env = z.infer<typeof Env>

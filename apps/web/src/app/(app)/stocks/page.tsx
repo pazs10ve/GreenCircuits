@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { PageHeader } from "@/components/shell/page-header"
 import { SampleBadge, SourceBadge } from "@/components/market/source-badge"
 import { directoryIndices, directoryStocks } from "@/components/stocks/data"
+import { getUniverse } from "@/lib/data/universe"
 import { StocksDirectory, type DirectoryView } from "@/components/stocks/stocks-directory"
 
 export const metadata: Metadata = {
@@ -26,6 +27,7 @@ export default async function StocksPage({ searchParams }: PageProps<"/stocks">)
   const sector = one(params.sector)
   const initialView = VIEWS.includes(view as DirectoryView) ? (view as DirectoryView) : "stocks"
   const initialSector = SECTORS.find((s) => s.toLowerCase() === sector?.toLowerCase()) ?? "all"
+  const universe = await getUniverse()
 
   return (
     <div className="flex flex-col gap-4">
@@ -33,7 +35,7 @@ export default async function StocksPage({ searchParams }: PageProps<"/stocks">)
         eyebrow={
           <>
             <SourceBadge />
-            <SampleBadge />
+            <SampleBadge hideWhenReal />
             <span>NSE · BSE</span>
           </>
         }
@@ -52,8 +54,8 @@ export default async function StocksPage({ searchParams }: PageProps<"/stocks">)
         }
       />
       <StocksDirectory
-        stocks={directoryStocks()}
-        indices={directoryIndices()}
+        stocks={directoryStocks(universe)}
+        indices={directoryIndices(universe)}
         initialView={initialView}
         initialSector={initialSector as Sector | "all"}
         initialQuery={one(params.q) ?? ""}

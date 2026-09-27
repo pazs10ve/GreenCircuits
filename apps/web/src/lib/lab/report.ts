@@ -1,7 +1,9 @@
-import type { AlternativeMetrics, RunInfo, RunMetrics, RunResult, Summary } from "@greencircuits/contracts/lab"
+import type { RunInfo, RunResult, Summary } from "@greencircuits/contracts/lab"
 import { INDEX } from "@greencircuits/market/catalog"
 import { formatNumber } from "@greencircuits/market/format"
-import { alternativeOf, money, pct, points } from "./describe"
+import { alternativeOf, money, pct, points, verdictOf, yearly, type Tone } from "./describe"
+
+export { yearly }
 
 /**
  * The report's words, written from the numbers: a lede that says what
@@ -10,11 +12,6 @@ import { alternativeOf, money, pct, points } from "./describe"
  */
 
 const capitalise = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
-
-/** Money-weighted for SIPs (what a fund statement shows), time-weighted otherwise. */
-export function yearly(m: RunMetrics | AlternativeMetrics, sip: boolean): number {
-  return sip ? (m.xirr ?? m.cagr) : m.cagr
-}
 
 export function lede(run: RunInfo, result: RunResult): string {
   const d = run.definition
@@ -47,18 +44,9 @@ export function lede(run: RunInfo, result: RunResult): string {
   return sentences.join(" ")
 }
 
-export type Tone = "up" | "down" | "flat"
-
 /** "Beat a fixed deposit by 2.1 points a year", coloured by the outcome. */
 export function verdict(run: RunInfo, result: RunResult): { tone: Tone; text: string } {
-  const sip = run.definition.type === "sip"
-  const m = result.metrics
-  const other = alternativeOf(m.alternative.kind, run.definition)
-  const diff = yearly(m, sip) - yearly(m.alternative, sip)
-  if (Math.abs(diff) < 0.0025) return { tone: "flat", text: `Level with ${other.versus}` }
-  return diff > 0
-    ? { tone: "up", text: `Beat ${other.versus} by ${points(diff)} a year` }
-    : { tone: "down", text: `Trailed ${other.versus} by ${points(-diff)} a year` }
+  return verdictOf(run.definition, result.metrics)
 }
 
 /** Whether an edge in the first part of the period survived in the held-out part. */

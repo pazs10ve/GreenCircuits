@@ -15,6 +15,7 @@
     "db:codegen": "pnpm --filter @greencircuits/db codegen",
     "db:psql": "docker compose exec db psql -U greencircuits -d greencircuits",
     "db:test": "docker compose exec db sh tests/run.sh",
+    "data:real": "uv run --directory pipelines python -m greencircuits.jobs.real_data",
     "dev": "turbo run dev",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",

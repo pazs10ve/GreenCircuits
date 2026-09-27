@@ -111,8 +111,14 @@ export function EquityChart({
         { time: splitTime as UTCTimestamp, position: "aboveBar", shape: "arrowDown", color: palette.muted, text: "Out of sample" },
       ])
     }
+    // autoSize measures the container after creation; fit again whenever its size settles or changes.
     chart.timeScale().fitContent()
-    return () => chart.remove()
+    const resized = new ResizeObserver(() => chart.timeScale().fitContent())
+    resized.observe(container.current)
+    return () => {
+      resized.disconnect()
+      chart.remove()
+    }
   }, [equity, benchmark, drawdown, splitTime, palette, height])
 
   return <div ref={container} className={cn("w-full", className)} style={{ height }} />

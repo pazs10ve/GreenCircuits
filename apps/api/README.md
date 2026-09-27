@@ -9,10 +9,12 @@ A Fastify 5 REST API under `/v1`, with OpenAPI docs at `/docs`. It is one deploy
 | companies | a company page: statements, ratios, P/E history, ownership, peers, events and experiments |
 | market | the daily brief's context, FPI and DII flows |
 | reference | IPOs, bonds, the G-Sec yield curve |
-| me | the anonymous account, watchlists, alerts, notifications, holdings |
+| auth | sign-up (which keeps the visitor's anonymous data), sign-in (which merges it), sign-out |
+| me | the account, preferences, password, sessions, watchlists, alerts, notifications, holdings, export and deletion |
+| feed | the personalised feed, from what the visitor follows |
 | lab | backtests: validate, version the strategy, return a cached result or queue a run on BullMQ |
 
-Zod schemas validate requests and generate the OpenAPI document, and Kysely types every query from the generated schema. Hot reads are cached in Valkey. Rate limits are counted in Valkey too, so every instance shares them.
+Sessions are random tokens in an httpOnly cookie, stored only as a SHA-256 hash, and passwords are hashed with scrypt ([ADR 0006](../../docs/adr/0006-accounts-and-sessions.md)). Zod schemas validate requests and generate the OpenAPI document, and Kysely types every query from the generated schema. Hot reads are cached in Valkey. Rate limits are counted in Valkey too, so every instance shares them.
 
 ```bash
 pnpm --filter @greencircuits/api dev                # http://localhost:4000, docs at /docs

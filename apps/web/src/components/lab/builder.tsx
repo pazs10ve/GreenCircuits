@@ -8,8 +8,10 @@ import { Switch } from "@/components/ui/switch"
 import { getInstrument } from "@greencircuits/market/catalog"
 import { alternativeKindFor, alternativeOf, describe } from "@/lib/lab/describe"
 import { check, definitionOf, draftFromDefinition, named, type Draft, type Kind } from "@/lib/lab/draft"
-import { useLabAvailable, useRun, useSubmitRun } from "@/lib/lab/client"
+import { useUniverse } from "@/lib/data/client"
+import { useLabMode, useRun, useSubmitRun } from "@/lib/lab/client"
 import { earliestStart } from "@/lib/lab/templates"
+import { useMarket } from "@/lib/stream/market-context"
 import { cn } from "@/lib/utils"
 import { ConditionList, UniversePicker } from "./conditions"
 import { DateField, InstrumentField, MoneyField, NumberField, SelectField, sentence } from "./fields"
@@ -68,14 +70,21 @@ export function Builder({ initial }: { initial: Draft }) {
 
   const definition = useMemo(() => definitionOf(draft), [draft])
   const checked = useMemo(() => check(draft), [draft])
-  const ids = definition.type === "rules" ? definition.universe : [definition.instrumentId]
-  const earliest = earliestStart(ids.length ? ids : [1])
+  const ids = useMemo(() => (definition.type === "rules" ? definition.universe : [definition.instrumentId]), [definition])
+  // How far back prices go: the API knows in live mode; the demo generators keep ten years of indices and five of the rest.
+  const { dataset } = useMarket()
+  const universe = useUniverse()
+  const earliest = useMemo(() => {
+    const picked = ids.length ? ids : [1]
+    const starts = picked.map((id) => universe.data?.byId.get(id)?.since)
+    return starts.every(Boolean) ? starts.sort().at(-1)! : earliestStart(picked)
+  }, [ids, universe.data])
 
-  const available = useLabAvailable()
+  const mode = useLabMode()
   const submit = useSubmitRun()
   const router = useRouter()
   const run = async () => {
-    if (!checked.ok || !available) return
+    if (!checked.ok) return
     const res = await submit.mutateAsync(checked.request).catch(() => null)
     if (res) router.push(`/lab/runs/${res.runId}`)
   }
@@ -227,7 +236,8 @@ export function Builder({ initial }: { initial: Draft }) {
             <DateField label="End date" value={draft.to} min={draft.from} onChange={(to) => update((d) => ({ ...d, to }))} />.
           </p>
           <p className="mt-2 text-sm text-ink-2">
-            The demo market&apos;s history for {ids.length === 1 ? getInstrument(ids[0]!)?.name : "these"} goes back to{" "}
+            {dataset === "real" ? "Real prices" : "The demo market’s history"} for {ids.length === 1 ? getInstrument(ids[0]!)?.name : "these"}{" "}
+            {dataset === "real" ? "go" : "goes"} back to{" "}
             {new Intl.DateTimeFormat("en-IN", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${earliest}T00:00:00Z`))}.{" "}
             {draft.kind === "rules" && "Indicators need some history before the first signal, so give them a few months."}
           </p>
@@ -262,14 +272,14 @@ export function Builder({ initial }: { initial: Draft }) {
               ))}
             </ul>
           )}
-          <Button type="submit" form="lab-form" size="lg" className="w-full" disabled={!checked.ok || !available || submit.isPending}>
-            {submit.isPending ? "Sending…" : "Run the test"}
+          <Button type="submit" form="lab-form" size="lg" className="w-full" disabled={!checked.ok || submit.isPending}>
+            {submit.isPending ? (mode === "browser" ? "Running…" : "Sending…") : "Run the test"}
           </Button>
           {submit.isError && <p className="text-sm text-down">{submit.error.message}</p>}
           <p className="text-xs leading-relaxed text-ink-3">
-            {available
-              ? "It runs on the server with the Python engine, usually in a few seconds. Prices are the demo market's, not real history."
-              : "Tests run on the backend, which is off in this demo, so this one can't run right now."}
+            {mode === "server"
+              ? `It runs on the server with the Python engine, usually in a few seconds. ${dataset === "real" ? "Prices are real daily closes." : "Prices are the demo market's, not real history."}`
+              : "It runs here in your browser, with a TypeScript copy of the server's engine that's tested to give the same results. Prices are the demo market's, not real history."}
           </p>
         </div>
       </aside>

@@ -14,10 +14,25 @@ The Python side of GreenCircuits, managed with [uv](https://docs.astral.sh/uv/) 
   Signals use the close. Fills happen at the next open, with slippage.
 - `charges.py` applies Indian delivery charges: STT, exchange and SEBI fees, stamp duty, GST and DP charges.
 - `metrics.py` reports CAGR, volatility, Sharpe, Sortino, drawdown, Calmar and XIRR, for the whole run and split in and out of sample.
+- `parity.py` writes the golden files that keep the browser's TypeScript engine (`packages/backtest`) giving the same results. Run `uv run python -m greencircuits.lab.parity --write` after changing the engine.
+
+`greencircuits.jobs` loads real data for running locally ([ADR 0007](../docs/adr/0007-real-data-for-local-use.md)):
+
+- `real_data.py` replaces the demo data, step by step. Run it from the repository root with `pnpm data:real`, or here with `uv run python -m greencircuits.jobs.real_data [--only a,b] [--skip a,b] [--refresh]`. Its steps are:
+  - `membership`: index constituents;
+  - `prices`: ten years of daily bars;
+  - `financials`: statements, ratios and valuation history;
+  - `shareholding`;
+  - `events`: results dates and dividends;
+  - `flows`: FII and DII;
+  - `ipos`;
+  - `snapshot`: the screener table.
+- `sources.py` turns each free source into plain Python values: Yahoo Finance, NSE's website JSON and niftyindices.com.
+- `http.py` is a polite client. It paces requests per host, retries 429s and 5xx responses, and caches each response for the day in `data/cache/`.
 
 ```bash
 uv run pytest
 uv run ruff check
 ```
 
-Planned: `greencircuits.jobs` for real end-of-day data (bhavcopies and filings) and `greencircuits.quant` for pricing checked against `packages/market`.
+Planned: `greencircuits.quant` for pricing checked against `packages/market`.

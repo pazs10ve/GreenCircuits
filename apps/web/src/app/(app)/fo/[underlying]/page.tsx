@@ -38,7 +38,7 @@ export default async function OptionChainPage({ params, searchParams }: PageProp
           </>
         }
         title={`${inst.symbol} option chain`}
-        description={`Calls and puts at every strike, priced with Black-76 off the simulated ${isIndex ? "index and India VIX" : "share price and a volatility smile"}. Open interest is sample data. Click a price to build a strategy.`}
+        description={`Calls and puts at every strike, priced with Black-76 from the ${isIndex ? "index and India VIX" : "share price and a volatility smile"}: modelled prices, not traded ones. Open interest is sample data. Click a price to build a strategy.`}
         actions={
           <>
             <Button variant="outline" size="lg" asChild>

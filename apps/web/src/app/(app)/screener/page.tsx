@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { screenerSnapshot } from "@greencircuits/market/fundamentals"
+import { screenerSnapshot, type ScreenRow } from "@greencircuits/market/fundamentals"
 import { PageHeader } from "@/components/shell/page-header"
 import { SampleBadge, SourceBadge } from "@/components/market/source-badge"
 import { DEFAULT_PRESET } from "@/components/screener/presets"
@@ -8,6 +8,8 @@ import { ScreenResults } from "@/components/screener/results"
 import { ScreenList } from "@/components/screener/screen-list"
 import { ScreenerActions } from "@/components/screener/screener-actions"
 import { ScreenerProvider } from "@/components/screener/screener-context"
+import { apiGet } from "@/lib/data/api"
+import { getFeed } from "@/lib/data/market"
 
 export const metadata: Metadata = {
   title: "Screener",
@@ -18,7 +20,8 @@ export default async function ScreenerPage({ searchParams }: PageProps<"/screene
   const { q } = await searchParams
   // ?q= carries a shared or reloaded screen; otherwise start from the first preset.
   const initialQuery = typeof q === "string" ? q.slice(0, 2000) : DEFAULT_PRESET.query
-  const rows = screenerSnapshot()
+  const [api, { dataset }] = await Promise.all([apiGet<{ rows: ScreenRow[] }>("/v1/screener/rows", { revalidate: 60 }), getFeed()])
+  const rows = api?.rows.length ? api.rows : screenerSnapshot()
 
   return (
     <ScreenerProvider rows={rows} initialQuery={initialQuery}>
@@ -27,12 +30,16 @@ export default async function ScreenerPage({ searchParams }: PageProps<"/screene
           eyebrow={
             <>
               <SourceBadge />
-              <SampleBadge />
+              <SampleBadge hideWhenReal />
               <span>{rows.length} NSE stocks · Nifty 50 universe</span>
             </>
           }
           title="Screener"
-          description="Filter stocks with a query such as roe > 15 AND pe < 30. Fundamentals are sample data at yesterday's close; prices are simulated."
+          description={
+            dataset === "real"
+              ? "Filter stocks with a query such as roe > 15 AND pe < 30. Fundamentals come from company results, via Yahoo Finance, at the last close."
+              : "Filter stocks with a query such as roe > 15 AND pe < 30. Fundamentals are sample data at yesterday's close; prices are simulated."
+          }
           actions={<ScreenerActions />}
         />
 

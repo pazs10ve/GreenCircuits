@@ -281,31 +281,32 @@ function sma(closes: number[], n: number): number {
   return s.reduce((a, b) => a + b, 0) / s.length
 }
 
+/** Real data has gaps (no P/E for a loss, no three-year growth for a recent listing), so every figure can be null. */
 export interface ScreenRow {
   id: number
   symbol: string
   name: string
   sector: Sector
-  mcapCr: number
-  pe: number
-  pb: number
-  roe: number
-  roce: number
-  opm: number
+  mcapCr: number | null
+  pe: number | null
+  pb: number | null
+  roe: number | null
+  roce: number | null
+  opm: number | null
   debtEquity: number | null
-  divYield: number
-  salesCagr3y: number
-  profitCagr3y: number
-  promoter: number
-  pledged: number
-  rsi14: number
-  sma50: number
-  sma200: number
-  return1m: number
-  return1y: number
-  high52: number
-  low52: number
-  fromHigh52: number
+  divYield: number | null
+  salesCagr3y: number | null
+  profitCagr3y: number | null
+  promoter: number | null
+  pledged: number | null
+  rsi14: number | null
+  sma50: number | null
+  sma200: number | null
+  return1m: number | null
+  return1y: number | null
+  high52: number | null
+  low52: number | null
+  fromHigh52: number | null
 }
 
 let screenCache: ScreenRow[] | undefined

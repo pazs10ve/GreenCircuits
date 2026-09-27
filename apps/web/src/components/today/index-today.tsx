@@ -8,7 +8,7 @@ import { intradayCandles } from "@greencircuits/market/history"
 import { formatNumber, formatPct, formatSigned, formatTimeIST } from "@greencircuits/market/format"
 import { useIntradayBars } from "@/lib/data/client"
 import { useMarket } from "@/lib/stream/market-context"
-import { useQuote } from "@/lib/stream/hooks"
+import { useQuote, useSession } from "@/lib/stream/hooks"
 import { quoteStore } from "@/lib/stream/store"
 import { cn } from "@/lib/utils"
 
@@ -23,6 +23,7 @@ export function IndexToday({ id, height = 280, className }: { id: number; height
   const intraday = useIntradayBars(id, 5)
   const now = useNow(60_000)
   const [scrub, setScrub] = useState<ScrubPoint | null>(null)
+  const { closed } = useSession()
   const minute = now?.getTime() ?? null
 
   const base = useMemo(() => {
@@ -54,11 +55,11 @@ export function IndexToday({ id, height = 280, className }: { id: number; height
             {formatSigned(change, 2)} ({formatPct(pct)})
           </span>
         )}
-        <span className="text-sm text-ink-3">{scrub ? `at ${formatTimeIST(scrub.t * 1000)}` : "today"}</span>
+        <span className="text-sm text-ink-3">{scrub ? `at ${formatTimeIST(scrub.t * 1000)}` : closed ? `at the close ${closed}` : "today"}</span>
       </div>
       {points ? (
         <LineChart
-          ariaLabel={`${inst.name} today, ${q ? formatPct(q.changePct) : ""}. Use the arrow keys to read values.`}
+          ariaLabel={`${inst.name} ${closed ? `at the close ${closed}` : "today"}, ${q ? formatPct(q.changePct) : ""}. Use the arrow keys to read values.`}
           height={height}
           series={[{ id: "idx", points, color: up ? "var(--up)" : "var(--down)", area: true }]}
           reference={q ? { value: q.prevClose, label: "Prev close" } : undefined}

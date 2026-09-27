@@ -62,7 +62,7 @@ export const FIELDS: FieldDef[] = [
     name: "price",
     label: "Price",
     title: "Last traded price",
-    description: "Live price from the simulated feed.",
+    description: "Latest price from the price feed.",
     unit: "₹",
     type: "number",
     group: "Price",

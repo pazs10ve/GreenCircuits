@@ -211,6 +211,17 @@ export interface AppSavedScreen {
   user_id: string;
 }
 
+export interface AppSession {
+  created_at: Generated<Timestamp>;
+  expires_at: Timestamp;
+  id: Generated<string>;
+  ip: string | null;
+  last_seen_at: Generated<Timestamp>;
+  token_hash: Buffer;
+  user_agent: string | null;
+  user_id: string;
+}
+
 export interface AppSubscription {
   cancel_at_period_end: Generated<boolean>;
   created_at: Generated<Timestamp>;
@@ -235,8 +246,10 @@ export interface AppUsers {
   last_seen_at: Timestamp | null;
   locale: Generated<string>;
   name: string | null;
+  password_hash: string | null;
   phone_e164: string | null;
   phone_verified: Generated<boolean>;
+  preferences: Generated<Json>;
   status: Generated<string>;
   updated_at: Generated<Timestamp>;
 }
@@ -1091,6 +1104,7 @@ export interface DB {
   "app.push_subscription": AppPushSubscription;
   "app.saved_payoff": AppSavedPayoff;
   "app.saved_screen": AppSavedScreen;
+  "app.session": AppSession;
   "app.subscription": AppSubscription;
   "app.users": AppUsers;
   "app.watchlist": AppWatchlist;

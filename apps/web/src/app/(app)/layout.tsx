@@ -5,7 +5,7 @@ import { MobileTabs } from "@/components/shell/mobile-tabs"
 import { SiteFooter } from "@/components/shell/site-footer"
 import { StoreHydration } from "@/lib/stores/hydration"
 import { STREAM_URL } from "@/lib/data/api"
-import { getLiveSnapshot } from "@/lib/data/market"
+import { getFeed } from "@/lib/data/market"
 import { StreamProvider } from "@/lib/stream/provider"
 import { marketSeed } from "@greencircuits/market/session"
 
@@ -14,16 +14,24 @@ export default async function SiteLayout({ children }: LayoutProps<"/">) {
   await connection()
   const seed = marketSeed()
   // Live when the backend answers with a quote snapshot; otherwise the in-browser demo market.
-  const snapshot = STREAM_URL ? await getLiveSnapshot() : null
+  const feed = await getFeed()
 
   return (
-    <StreamProvider mode={snapshot ? "live" : "demo"} seed={seed} snapshot={snapshot ?? undefined} streamUrl={STREAM_URL}>
+    <StreamProvider
+      mode={feed.quotes ? "live" : "demo"}
+      seed={seed}
+      snapshot={feed.quotes ?? undefined}
+      streamUrl={STREAM_URL}
+      source={feed.source}
+      dataset={feed.dataset}
+      today={feed.today}
+    >
       <StoreHydration />
       <AlertWatcher />
       <div className="flex min-h-svh flex-col">
         <Masthead />
         <main className="flex-1 pb-20 md:pb-0">{children}</main>
-        <SiteFooter />
+        <SiteFooter dataset={feed.dataset} />
         <MobileTabs />
       </div>
     </StreamProvider>

@@ -15,13 +15,15 @@ import { AlertDialogButton } from "@/components/market/alert-dialog"
 import { WatchButton } from "@/components/market/watch-button"
 import { ComingUp } from "@/components/today/coming-up"
 import { Button } from "@/components/ui/button"
-import { getInstrumentBySlug, membersOf } from "@greencircuits/market/catalog"
+import { EQUITIES, getInstrumentBySlug, membersOf } from "@greencircuits/market/catalog"
 import { fiftyTwoWeek } from "@greencircuits/market/history"
 import type { Instrument } from "@greencircuits/market/types"
 import { formatNumber } from "@greencircuits/market/format"
-import { balancedMix, sipVsDip } from "@greencircuits/market/research/experiments"
+import { balancedMix, sipVsDip, type Experiment } from "@greencircuits/market/research/experiments"
 import { marketSeed, openingQuotes } from "@greencircuits/market/session"
+import { apiGet } from "@/lib/data/api"
 import { getCompany } from "@/lib/data/company"
+import { getFeed } from "@/lib/data/market"
 
 export async function generateMetadata({ params }: PageProps<"/stocks/[symbol]">): Promise<Metadata> {
   const { symbol } = await params
@@ -82,7 +84,8 @@ function Header({ inst, meta, children }: { inst: Instrument; meta: React.ReactN
 }
 
 async function Company({ inst }: { inst: Instrument }) {
-  const { profile, high52, experiments, peers, events } = await getCompany(inst)
+  const [{ profile, high52, experiments, peers, events }, { dataset }] = await Promise.all([getCompany(inst), getFeed()])
+  const real = dataset === "real"
 
   return (
     <div className="mx-auto max-w-[1200px] px-5 pt-8">
@@ -100,12 +103,16 @@ async function Company({ inst }: { inst: Instrument }) {
       <div className="mt-20 space-y-20">
         <Section
           title="The business in five numbers"
-          description="Valuation is judged against the company's own history; profitability against its sector. Sample figures."
+          description={`Valuation is judged against the company's own history; profitability against its sector. ${real ? "From the company's results, via Yahoo Finance." : "Sample figures."}`}
         >
           <FiveNumbers profile={profile} />
         </Section>
 
-        <Section id="ideas" title="Would it have worked?" description={`Two ways of buying ${inst.name}, tested on five years of the demo market's prices.`}>
+        <Section
+          id="ideas"
+          title="Would it have worked?"
+          description={`Two ways of buying ${inst.name}, tested on ${real ? "the last five years of its prices" : "five years of the demo market's prices"}.`}
+        >
           <div className="grid gap-14 lg:grid-cols-2 lg:gap-12">
             {experiments.map((e) => (
               <ExperimentCard key={e.id} experiment={e} />
@@ -121,7 +128,10 @@ async function Company({ inst }: { inst: Instrument }) {
           <Ownership history={profile.f.shareholding} name={inst.name} />
         </Section>
 
-        <Section title="Compared with its peers" description={`The largest ${inst.sector?.toLowerCase()} companies in the demo universe.`}>
+        <Section
+          title="Compared with its peers"
+          description={`The largest ${inst.sector?.toLowerCase()} companies ${real ? `among the ${EQUITIES.length} this site follows` : "in the demo universe"}.`}
+        >
           <Peers rows={peers} currentId={inst.id} />
         </Section>
 
@@ -135,17 +145,66 @@ async function Company({ inst }: { inst: Instrument }) {
   )
 }
 
-function Market({ inst }: { inst: Instrument }) {
-  const members = membersOf(inst.id)
-  const open = openingQuotes(marketSeed()).get(inst.id)
+/** GET /v1/market/overview/:slug */
+interface Overview {
+  close: number
+  high52: number
+  low52: number
+  sessions: number
+  since: string
+  members: number[]
+  experiments: Experiment[]
+}
+
+/** Fewer members than this among the site's stocks, and "what's moving it" would mislead. */
+const MIN_MEMBERS = 5
+
+const longDate = (date: string) => new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`))
+
+/** An index, currency or commodity: from the API when the backend runs, else the demo generators. */
+async function marketView(inst: Instrument) {
+  const [overview, feed] = await Promise.all([apiGet<Overview>(`/v1/market/overview/${inst.slug}`, { revalidate: 60 }), getFeed()])
+  if (overview) {
+    return {
+      closed: feed.closed,
+      real: feed.dataset === "real",
+      members: overview.members,
+      high: overview.high52,
+      low: overview.low52,
+      price: feed.quotes?.find((q) => q.id === inst.id)?.ltp ?? overview.close,
+      // A few indices have no history on Yahoo, only the days since real data was first loaded.
+      since: overview.sessions < 200 ? overview.since : null,
+      experiments: overview.experiments,
+    }
+  }
+  const members = membersOf(inst.id).map((m) => m.id)
   const { high, low } = fiftyTwoWeek(inst)
-  const price = open?.ltp ?? inst.prevClose
+  return {
+    closed: null,
+    real: false,
+    members,
+    high,
+    low,
+    price: openingQuotes(marketSeed()).get(inst.id)?.ltp ?? inst.prevClose,
+    since: null,
+    experiments: inst.kind === "INDEX" && members.length > 0 ? [sipVsDip(inst, { years: 10 }), balancedMix(inst)] : [],
+  }
+}
+
+async function Market({ inst }: { inst: Instrument }) {
+  const { closed, real, members, high, low, price, since, experiments } = await marketView(inst)
+  const tracked = members.length >= MIN_MEMBERS
   const fromHigh = (price / Math.max(high, price) - 1) * 100
-  const lede =
-    inst.kind === "INDEX"
-      ? `${inst.name} is ${fromHigh > -1 ? "at its 52-week high" : `${formatNumber(Math.abs(fromHigh), 1)}% below its 52-week high`}, and ${formatNumber(((price / low) - 1) * 100, 0)}% above its 52-week low.${members.length ? ` It tracks ${members.length} companies in this demo universe, weighted by size.` : ""}`
+  const memberNote = tracked
+    ? real
+      ? ` ${members.length} of its companies are among the ${EQUITIES.length} this site follows.`
+      : ` It tracks ${members.length} companies in this demo universe, weighted by size.`
+    : ""
+  const lede = since
+    ? `This site has prices for ${inst.name} only from ${longDate(since)}: Yahoo Finance keeps no daily history for it, so each close is added as it comes.${memberNote}`
+    : inst.kind === "INDEX"
+      ? `${inst.name} is ${fromHigh > -1 ? "at its 52-week high" : `${formatNumber(Math.abs(fromHigh), 1)}% below its 52-week high`}, and ${formatNumber(((price / low) - 1) * 100, 0)}% above its 52-week low.${memberNote}`
       : `${inst.name} is ${formatNumber(Math.abs(fromHigh), 1)}% ${fromHigh >= 0 ? "above" : "below"} its 52-week high.`
-  const experiments = inst.kind === "INDEX" && members.length > 0 ? [sipVsDip(inst, { years: 10 }), balancedMix(inst)] : []
 
   return (
     <div className="mx-auto max-w-[1200px] px-5 pt-8">
@@ -155,13 +214,16 @@ function Market({ inst }: { inst: Instrument }) {
         <PricePanel id={inst.id} defaultRange="1D" />
       </div>
       <div className="mt-20 space-y-20">
-        {members.length > 0 && (
-          <Section title="What's moving it today" description="Members ranked by the points they are adding to or taking off the index.">
-            <Constituents indexId={inst.id} />
+        {tracked && (
+          <Section
+            title={closed ? "What moved it" : "What's moving it today"}
+            description={`Members ranked by the points they ${closed ? `added to or took off the index ${closed}` : "are adding to or taking off the index"}${real ? `, weighted by market value among the ${members.length} this site follows` : ""}.`}
+          >
+            <Constituents indexId={inst.id} members={members} />
           </Section>
         )}
         {experiments.length > 0 && (
-          <Section id="ideas" title="Would it have worked?" description="Tested on ten years of the demo market's prices.">
+          <Section id="ideas" title="Would it have worked?" description={real ? "Tested on the last ten years of its daily closes." : "Tested on ten years of the demo market's prices."}>
             <div className="grid gap-14 lg:grid-cols-2 lg:gap-12">
               {experiments.map((e) => (
                 <ExperimentCard key={e.id} experiment={e} />

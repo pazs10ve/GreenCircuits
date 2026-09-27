@@ -8,7 +8,7 @@ import { median, percentileOf } from "./metrics"
 /**
  * A company in five numbers: valuation against its own history, growth,
  * profitability against its sector, the balance sheet, and who owns it.
- * Each comes with a plain verdict, computed from the (sample) figures.
+ * Each comes with a plain verdict, computed from the figures.
  */
 
 export type Tone = "good" | "neutral" | "caution"

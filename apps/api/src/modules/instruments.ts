@@ -104,7 +104,8 @@ export const instrumentRoutes: FastifyPluginAsyncZod = async (app) => {
     },
   )
 
-  // The latest session's intraday bars (the last 6¼ hours: the demo market trades around the clock),
+  // The latest session's intraday bars: the 6¼ hours up to the newest bar (the demo market trades around
+  // the clock; with real prices on a weekend, that's Friday's session),
   // from the 1-minute table the ingestor writes, rolled up on read.
   app.get(
     "/instruments/:id/intraday",
@@ -123,7 +124,8 @@ export const instrumentRoutes: FastifyPluginAsyncZod = async (app) => {
                first(open, ts) AS open, max(high) AS high, min(low) AS low,
                last(close, ts) AS close, sum(volume)::bigint AS volume
         FROM md.candle_1m
-        WHERE instrument_id = ${req.params.id} AND ts >= now() - interval '376 minutes'
+        WHERE instrument_id = ${req.params.id}
+          AND ts >= (SELECT max(ts) FROM md.candle_1m WHERE instrument_id = ${req.params.id}) - interval '376 minutes'
         GROUP BY 1 ORDER BY 1`.execute(app.db)
       return {
         candles: rows.rows.map((r) => ({ time: Number(r.t), open: r.open, high: r.high, low: r.low, close: r.close, volume: Number(r.volume) })),

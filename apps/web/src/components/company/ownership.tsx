@@ -2,14 +2,22 @@ import type { Shareholding } from "@greencircuits/market/fundamentals"
 import { formatNumber } from "@greencircuits/market/format"
 import { cn } from "@/lib/utils"
 
-const PARTS: { key: "promoter" | "fpi" | "dii" | "public"; label: string; cls: string }[] = [
+type Part = { key: "promoter" | "fpi" | "dii" | "public"; label: string; cls: string }
+
+const PARTS: Part[] = [
   { key: "promoter", label: "Promoters", cls: "bg-ink" },
   { key: "fpi", label: "Foreign investors", cls: "bg-accent-ink" },
   { key: "dii", label: "Mutual funds and insurers", cls: "bg-ink-3" },
   { key: "public", label: "Public and others", cls: "bg-surface-2" },
 ]
 
-function part(s: Shareholding, key: (typeof PARTS)[number]["key"]): number {
+/** NSE's summary pattern splits holdings only into promoters and the public, which includes funds and foreign investors. */
+const SUMMARY: Part[] = [
+  { key: "promoter", label: "Promoters", cls: "bg-ink" },
+  { key: "public", label: "Public, including funds and foreign investors", cls: "bg-surface-2" },
+]
+
+function part(s: Shareholding, key: Part["key"]): number {
   return key === "public" ? s.retail + s.government : s[key]
 }
 
@@ -17,6 +25,7 @@ function part(s: Shareholding, key: (typeof PARTS)[number]["key"]): number {
 export function Ownership({ history, name }: { history: Shareholding[]; name: string }) {
   const now = history.at(-1)!
   const yearAgo = history.at(-5) ?? history[0]!
+  const parts = history.some((s) => s.fpi > 0 || s.dii > 0) ? PARTS : SUMMARY
   return (
     <div className="grid gap-10 md:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] md:gap-14">
       <figure>
@@ -24,7 +33,7 @@ export function Ownership({ history, name }: { history: Shareholding[]; name: st
           {history.map((s) => (
             <div key={s.label} className="flex flex-1 flex-col">
               <div className="flex flex-1 flex-col-reverse overflow-hidden rounded-[2px]">
-                {PARTS.map((p) => (
+                {parts.map((p) => (
                   <div key={p.key} className={p.cls} style={{ height: `${part(s, p.key)}%` }} />
                 ))}
               </div>
@@ -54,7 +63,7 @@ export function Ownership({ history, name }: { history: Shareholding[]; name: st
           </tr>
         </thead>
         <tbody>
-          {PARTS.map((p) => {
+          {parts.map((p) => {
             const v = part(now, p.key)
             const d = v - part(yearAgo, p.key)
             return (

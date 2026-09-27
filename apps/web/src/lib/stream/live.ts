@@ -28,6 +28,8 @@ export function connectLive(url: string, initial: Map<number, Quote>): void {
     }
     ws.onmessage = (event: MessageEvent<string>) => {
       const frame = JSON.parse(event.data) as ServerFrame
+      // The gateway says what its prices are on connect, and again when the market opens or closes.
+      if (frame.t === "hello") quoteStore.setSource(frame.source)
       if (frame.t !== "q") return
       quoteStore.apply(frame.q.map((w) => fromWire(w, quoteStore.get(w[0]))))
       if (quoteStore.status !== "live") quoteStore.setStatus("live")

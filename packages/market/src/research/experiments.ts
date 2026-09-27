@@ -6,7 +6,7 @@ import { cagr, maxDrawdown, rollingMax, rsiSeries, xirr } from "./metrics"
 
 /**
  * "Would it have worked?" Small, honest backtests of common investing ideas,
- * run on the demo market's daily history. Each returns two lines to draw, a
+ * run on daily history: the demo generators', or real bars passed in as `candles`. Each returns two lines to draw, a
  * few numbers side by side, and a one-sentence answer written from the result.
  */
 

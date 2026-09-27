@@ -1,12 +1,16 @@
 import { sql } from "kysely"
 import { z } from "zod"
-import { KEYS, type Source } from "@greencircuits/contracts"
+import { KEYS, readSession, type Source } from "@greencircuits/contracts"
 import type { Quote } from "@greencircuits/market/types"
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod"
+import { datasetOf } from "../lib/dataset"
 
 /**
- * Latest quotes. The ingestor keeps them in a Valkey hash; if it isn't
- * running, the last daily close stands in, marked as end-of-day data.
+ * Latest quotes. The ingestor keeps them in a Valkey hash, and says in the
+ * session key what they are (simulated, or real and delayed, or closing
+ * prices); if it has never run, the last daily close stands in, marked as
+ * end-of-day data. `dataset` says whether history and company figures are
+ * real or samples.
  */
 export const quoteRoutes: FastifyPluginAsyncZod = async (app) => {
   const endOfDay = async (ids: number[] | null): Promise<Quote[]> => {
@@ -49,9 +53,9 @@ export const quoteRoutes: FastifyPluginAsyncZod = async (app) => {
   }
 
   const respond = async (ids: number[] | null) => {
-    const quotes = await live(ids)
-    const source: Source = quotes.length ? "SIMULATED" : "EOD"
-    return { source, quotes: quotes.length ? quotes : await endOfDay(ids) }
+    const [quotes, session, dataset] = await Promise.all([live(ids), app.valkey.get(KEYS.session).catch(() => null), datasetOf(app.db)])
+    const source: Source = quotes.length ? (readSession(session)?.source ?? "SIMULATED") : "EOD"
+    return { source, dataset, quotes: quotes.length ? quotes : await endOfDay(ids) }
   }
 
   app.get(

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import type { Quote } from "@greencircuits/market/types"
-import { fromWire, toWire } from "./index"
+import { fromWire, readSession, toWire } from "./index"
+import { dataVersionOf, readDataVersion } from "./lab"
 import { BacktestRequest, StrategyDefinition, TEMPLATES, templateDefinition } from "./strategy"
 
 const quote: Quote = {
@@ -57,5 +58,21 @@ describe("backtest requests", () => {
       expect(StrategyDefinition.safeParse(templateDefinition(t, 7, [7, 8, 9])).success).toBe(true)
     }
     expect(templateDefinition("no-such-template", 7)).toBeNull()
+  })
+})
+
+describe("what a feed and a run say about their data", () => {
+  it("reads a feed's session, treating one from before providers as the simulator's", () => {
+    expect(readSession(JSON.stringify({ provider: "yahoo", source: "DELAYED", startedAt: 1, instruments: 66 }))).toMatchObject({ provider: "yahoo", source: "DELAYED" })
+    expect(readSession(JSON.stringify({ seed: 7, day: "2026-09-25", startedAt: 1, instruments: 66 }))).toMatchObject({ provider: "simulator", source: "SIMULATED" })
+    expect(readSession(null)).toBeNull()
+    expect(readSession("not json")).toBeNull()
+  })
+
+  it("keeps runs on real and sample prices apart", () => {
+    expect(dataVersionOf("2026-09-25", "real")).not.toBe(dataVersionOf("2026-09-25", "sample"))
+    expect(readDataVersion(dataVersionOf("2026-09-25", "real"))).toEqual({ lastDate: "2026-09-25", dataset: "real" })
+    // Runs from before this existed were all on sample prices.
+    expect(readDataVersion("2026-09-25")).toEqual({ lastDate: "2026-09-25", dataset: "sample" })
   })
 })

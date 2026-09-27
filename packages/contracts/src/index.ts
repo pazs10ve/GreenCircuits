@@ -12,7 +12,7 @@ export const KEYS = {
   ticks: "gc:ticks",
   /** Unix ms of the ingestor's last flush; the API's health check reads it. */
   heartbeat: "gc:ingestor:heartbeat",
-  /** JSON { seed, day, startedAt } for the running simulated session. */
+  /** JSON FeedSession: which feed is running and what its prices are. */
   session: "gc:market:session",
 } as const
 
@@ -23,6 +23,36 @@ export const KEYS = {
 export type WireQuote = [id: number, ltp: number, open: number, high: number, low: number, prevClose: number, volume: number, ts: number]
 
 export type Source = "LIVE" | "DELAYED" | "EOD" | "SIMULATED"
+
+/**
+ * Where history and company figures come from: "real" once the real-data
+ * loader has filled the database (pipelines: greencircuits.jobs.real_data),
+ * "sample" for the demo generators and the seeded database.
+ */
+export type Dataset = "real" | "sample"
+
+/** What the running feed writes under KEYS.session. */
+export interface FeedSession {
+  provider: "simulator" | "yahoo"
+  /** SIMULATED from the simulator; DELAYED while NSE trades and EOD otherwise, from Yahoo. */
+  source: Source
+  startedAt: number
+  instruments: number
+  /** The simulator's seed and trading day. */
+  seed?: number
+  day?: string
+}
+
+/** The session a feed stored, or null. Sessions written before providers existed were all simulated. */
+export function readSession(raw: string | null | undefined): FeedSession | null {
+  if (!raw) return null
+  try {
+    const s = JSON.parse(raw) as Partial<FeedSession>
+    return { provider: s.provider ?? "simulator", source: s.source ?? "SIMULATED", startedAt: s.startedAt ?? 0, instruments: s.instruments ?? 0, seed: s.seed, day: s.day }
+  } catch {
+    return null
+  }
+}
 
 /** Frames the gateway sends. */
 export type ServerFrame =

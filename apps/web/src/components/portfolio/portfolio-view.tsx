@@ -14,10 +14,12 @@ import { Panel } from "@/components/shell/page-header"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useHydrated } from "@/hooks/use-hydrated"
-import { getInstrument } from "@greencircuits/market/catalog"
+import { INDEX, getInstrument } from "@greencircuits/market/catalog"
 import type { Instrument } from "@greencircuits/market/types"
 import { formatINR, formatNumber, formatPct, formatSigned } from "@greencircuits/market/format"
-import { useQuoteReader } from "@/lib/stream/hooks"
+import { useDailyBarsOf, useUniverse } from "@/lib/data/client"
+import { useQuoteReader, useSession } from "@/lib/stream/hooks"
+import { useMarket } from "@/lib/stream/market-context"
 import { usePortfolio } from "@/lib/stores/portfolio"
 import { cn } from "@/lib/utils"
 import { holdingsHistory, portfolioBeta } from "./analytics"
@@ -53,6 +55,11 @@ export function PortfolioView() {
   const reset = usePortfolio((s) => s.reset)
   const read = useQuoteReader(1000)
   const hydrated = useHydrated()
+  // In live mode the year of history and the betas come from the API.
+  const { mode } = useMarket()
+  const { closed } = useSession()
+  const { data: universe } = useUniverse()
+  const liveBars = useDailyBarsOf(mode === "live" ? [INDEX.NIFTY, ...holdings.map((h) => h.instrumentId)] : [], 250)
 
   const { rows, totals, sectors, beta } = useMemo(() => {
     const base = holdings
@@ -87,11 +94,19 @@ export function PortfolioView() {
       rows: base,
       totals: { value, invested, pnl: value - invested, pnlPct: invested > 0 ? (value / invested - 1) * 100 : 0, dayPnl, dayPct: value - dayPnl > 0 ? (dayPnl / (value - dayPnl)) * 100 : 0 },
       sectors: [...bySector.entries()].map(([sector, v]) => ({ sector, value: v, pct: value > 0 ? (v / value) * 100 : 0 })).sort((a, b) => b.value - a.value),
-      beta: portfolioBeta(holdings, (id) => read(id)?.ltp ?? getInstrument(id)?.prevClose ?? 0),
+      beta: portfolioBeta(
+        holdings,
+        (id) => read(id)?.ltp ?? getInstrument(id)?.prevClose ?? 0,
+        (id) => universe?.byId.get(id)?.beta,
+      ),
     }
-  }, [holdings, read])
+  }, [holdings, read, universe])
 
-  const history = useMemo(() => (hydrated ? holdingsHistory(holdings) : null), [holdings, hydrated])
+  const history = useMemo(() => {
+    if (!hydrated) return null
+    if (mode === "live") return liveBars ? holdingsHistory(holdings, (id) => liveBars.get(id)) : null
+    return holdingsHistory(holdings)
+  }, [holdings, hydrated, mode, liveBars])
   const top = [...rows].sort((a, b) => b.weight - a.weight)[0]
 
   const columns = useMemo<ColumnDef<Row>[]>(
@@ -126,7 +141,7 @@ export function PortfolioView() {
       },
       {
         id: "day",
-        header: "Today",
+        header: "Day",
         accessorFn: (r) => r.dayPnl,
         meta: { align: "right" },
         cell: ({ row: { original: r } }) => <Signed value={r.dayPnl} pct={r.dayPct} />,
@@ -177,7 +192,7 @@ export function PortfolioView() {
           { label: "Current value", value: formatINR(totals.value, 0) },
           { label: "Invested", value: formatINR(totals.invested, 0) },
           { label: "Unrealised P&L", value: formatSigned(totals.pnl, 0), hint: formatPct(totals.pnlPct), tone: toneOf(totals.pnl) },
-          { label: "Today", value: formatSigned(totals.dayPnl, 0), hint: formatPct(totals.dayPct), tone: toneOf(totals.dayPnl) },
+          { label: closed ? "Last session" : "Today", value: formatSigned(totals.dayPnl, 0), hint: formatPct(totals.dayPct), tone: toneOf(totals.dayPnl) },
           { label: "Beta vs Nifty", value: formatNumber(beta, 2), hint: beta > 1.05 ? "More volatile than the index" : beta < 0.95 ? "Less volatile than the index" : "Moves with the index" },
           { label: "Holdings", value: String(rows.length), hint: `${sectors.length} sectors` },
         ].map((s) => (
@@ -191,8 +206,8 @@ export function PortfolioView() {
         <Panel
           className="xl:col-span-2"
           title="If you had held these for a year"
-          description="Today's holdings valued over the last 250 sessions, against the Nifty 50"
-          actions={<SampleBadge />}
+          description="Your current holdings valued over the last 250 sessions, against the Nifty 50"
+          actions={<SampleBadge hideWhenReal />}
           bodyClassName="px-1 py-2"
         >
           {history ? (
