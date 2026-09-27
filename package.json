@@ -10,15 +10,19 @@
     "infra:up": "docker compose up -d",
     "infra:down": "docker compose down",
     "infra:reset": "docker compose down -v",
+    "db:migrate": "docker compose exec db sh migrate.sh",
+    "db:seed": "pnpm --filter @greencircuits/db seed",
+    "db:codegen": "pnpm --filter @greencircuits/db codegen",
     "db:psql": "docker compose exec db psql -U greencircuits -d greencircuits",
     "db:test": "docker compose exec db sh tests/run.sh",
-    "build": "turbo run build",
     "dev": "turbo run dev",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
     "test": "turbo run test"
   },
   "devDependencies": {
     "turbo": "^2.11.4",
-    "typescript": "^7.0.2"
+    "typescript": "^5"
   }
 }

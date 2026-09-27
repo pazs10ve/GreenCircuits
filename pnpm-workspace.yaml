@@ -1,3 +1,10 @@
 packages:
   - "apps/*"
   - "packages/*"
+
+# Packages allowed to run install scripts (pnpm refuses the rest).
+allowBuilds:
+  esbuild: true   # fetches its platform binary; tsx, tsup and vitest need it
+  msgpackr-extract: false  # optional native speed-up for msgpackr (BullMQ); the JS fallback is fine
+  sharp: false
+  unrs-resolver: false

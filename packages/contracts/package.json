@@ -1,0 +1,24 @@
+{
+  "name": "@greencircuits/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Wire formats and shared keys between the ingestor, the stream gateway, the API and the web app.",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./strategy": "./src/strategy.ts"
+  },
+  "dependencies": {
+    "@greencircuits/market": "workspace:*",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "typescript": "^5",
+    "vitest": "^5.0.2"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p .",
+    "test": "vitest run"
+  }
+}
