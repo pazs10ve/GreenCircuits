@@ -1,11 +1,16 @@
 # ingestor
 
-Owns the market feed. Every source sits behind one `MarketDataProvider` interface:
+Owns the market feed. Today that feed is the simulator from `@greencircuits/market`, run over the instruments in the security master. It is seeded by the IST date, so the server's market and the browser's demo mode open in the same state.
 
-- `BrokerProvider`: Angel One SmartAPI or Fyers, on your own account
-- `ReplayProvider`: sessions you recorded, for development after hours
-- `SimulatorProvider`: a synthetic market for the public demo and load tests
+What it does, and when:
 
-It normalises ticks, keeps quote state, closes 1-minute bars on exchange time, publishes changes to Valkey every 250 ms and writes bars to TimescaleDB. It also records the raw feed from day one, because intraday history cannot be downloaded free later.
+- **Every 250 ms:** writes changed quotes to the `gc:quotes` hash and publishes them on `gc:ticks`.
+- **Every 5 seconds:** upserts the 1-minute bars it has built from the ticks into `md.candle_1m`. TimescaleDB rolls them up into 5- and 15-minute continuous aggregates.
+- **Every minute:** refreshes screener prices.
+- **On start:** backfills the session's bars, so charts are never empty.
 
-Phases 0–2. See §6.2 and §7.1 of `docs/blueprint.html`.
+A broker adapter (Angel One SmartAPI or Fyers, on your own account) and a replay adapter are planned behind the same interface.
+
+```bash
+pnpm --filter @greencircuits/ingestor dev   # health on port 4010
+```

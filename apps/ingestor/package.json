@@ -1,0 +1,26 @@
+{
+  "name": "@greencircuits/ingestor",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Owns the market feed: runs the simulator (or, later, a broker adapter), keeps latest quotes in Valkey, publishes ticks and writes 1-minute bars.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --clear-screen=false src/main.ts",
+    "build": "tsup",
+    "start": "node dist/main.js",
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "@greencircuits/contracts": "workspace:*",
+    "@greencircuits/db": "workspace:*",
+    "@greencircuits/market": "workspace:*",
+    "ioredis": "^6.0.0",
+    "kysely": "^0.28"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "tsup": "^8.5.1",
+    "tsx": "^4",
+    "typescript": "^5"
+  }
+}

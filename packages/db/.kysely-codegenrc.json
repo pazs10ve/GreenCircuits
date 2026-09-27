@@ -1,0 +1,11 @@
+{
+  "dialect": "postgres",
+  "outFile": "src/schema.ts",
+  "includePattern": "{ref,md,corp,fi,ipo,scr,app,lab,ops}.*",
+  "dateParser": "string",
+  "numericParser": "number",
+  "typeMapping": {
+    "int8": "number",
+    "interval": "string"
+  }
+}

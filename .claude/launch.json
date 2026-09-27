@@ -1,0 +1,70 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "web",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "apps/web/node_modules/next/dist/bin/next",
+        "dev",
+        "apps/web",
+        "--port",
+        "3100"
+      ],
+      "port": 3100
+    },
+    {
+      "name": "api",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "apps/api/node_modules/tsx/dist/cli.mjs",
+        "watch",
+        "--clear-screen=false",
+        "apps/api/src/main.ts"
+      ],
+      "port": 4000
+    },
+    {
+      "name": "ingestor",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "apps/ingestor/node_modules/tsx/dist/cli.mjs",
+        "watch",
+        "--clear-screen=false",
+        "apps/ingestor/src/main.ts"
+      ],
+      "port": 4010
+    },
+    {
+      "name": "stream",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "apps/stream/node_modules/tsx/dist/cli.mjs",
+        "watch",
+        "--clear-screen=false",
+        "apps/stream/src/main.ts"
+      ],
+      "port": 4001
+    },
+    {
+      "name": "alerts",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "apps/alerts/node_modules/tsx/dist/cli.mjs",
+        "watch",
+        "--clear-screen=false",
+        "apps/alerts/src/main.ts"
+      ],
+      "port": 4011
+    },
+    {
+      "name": "lab-worker",
+      "runtimeExecutable": "pipelines/.venv/Scripts/python.exe",
+      "runtimeArgs": [
+        "-m",
+        "greencircuits.lab.worker"
+      ],
+      "port": 4020
+    }
+  ]
+}

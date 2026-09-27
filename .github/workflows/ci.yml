@@ -1,0 +1,120 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  TURBO_TELEMETRY_DISABLED: "1"
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  node:
+    name: Typecheck, lint, unit tests and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4 # version from package.json "packageManager"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+      # The web app builds in demo mode here: no API_URL, so it needs no backend.
+      - run: pnpm build
+
+  pipelines:
+    name: Strategy engine (Python)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: pipelines
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+          cache-dependency-glob: pipelines/uv.lock
+      - run: uv sync --locked
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run pytest -q
+
+  integration:
+    name: Schema, API and a backtest end to end
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: timescale/timescaledb:2.30.1-pg17
+        env:
+          POSTGRES_USER: greencircuits
+          POSTGRES_PASSWORD: greencircuits
+          POSTGRES_DB: greencircuits
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U greencircuits -d greencircuits"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 30
+      valkey:
+        image: valkey/valkey:8-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "valkey-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 30
+    env:
+      PGHOST: localhost
+      PGUSER: greencircuits
+      PGPASSWORD: greencircuits
+      PGDATABASE: greencircuits
+      DATABASE_URL: postgres://greencircuits:greencircuits@localhost:5432/greencircuits
+      VALKEY_URL: redis://localhost:6379
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply the schema and migrations
+        run: sh db/migrate.sh
+      - name: Run the schema smoke checks
+        run: sh db/tests/run.sh
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Load the demo dataset
+        run: pnpm db:seed
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+          cache-dependency-glob: pipelines/uv.lock
+      - name: Start the backtest worker
+        working-directory: pipelines
+        run: |
+          uv sync --locked
+          nohup uv run python -m greencircuits.lab.worker > "$RUNNER_TEMP/worker.log" 2>&1 &
+
+      - name: API integration tests, following a backtest through the queue
+        run: pnpm --filter @greencircuits/api test:integration
+        env:
+          LAB_E2E: "1"
+      - name: Show the worker log
+        if: failure()
+        run: cat "$RUNNER_TEMP/worker.log"

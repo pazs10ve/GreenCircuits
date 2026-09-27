@@ -33,3 +33,7 @@ Thumbs.db
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# claude code: keep the shared launch config, ignore personal settings
+.claude/*
+!.claude/launch.json

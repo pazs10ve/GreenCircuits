@@ -1,3 +1,3 @@
 # ui
 
-Design tokens (light and dark) and components built on Tailwind CSS and shadcn/ui: dense tables with tabular figures, quote cells that flash on change, and LIVE, DELAYED, EOD and SIMULATED badges.
+Planned. The design tokens and components live in `apps/web` for now (`src/app/globals.css` and `src/components`). They move here if a second app needs them.

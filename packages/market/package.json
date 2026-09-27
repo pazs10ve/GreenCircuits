@@ -1,0 +1,19 @@
+{
+  "name": "@greencircuits/market",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared market logic: instrument catalog, the market simulator, formatting, Black-76, sample fundamentals and research helpers.",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p .",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "typescript": "^5",
+    "vitest": "^5.0.2"
+  }
+}

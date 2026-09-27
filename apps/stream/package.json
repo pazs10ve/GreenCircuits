@@ -1,0 +1,25 @@
+{
+  "name": "@greencircuits/stream",
+  "version": "0.1.0",
+  "private": true,
+  "description": "WebSocket gateway on uWebSockets.js: per-client subscriptions, one conflated frame per flush.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --clear-screen=false src/main.ts",
+    "build": "tsup",
+    "start": "node dist/main.js",
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "@greencircuits/contracts": "workspace:*",
+    "@greencircuits/market": "workspace:*",
+    "ioredis": "^6.0.0",
+    "uWebSockets.js": "github:uNetworking/uWebSockets.js#v20.71.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "tsup": "^8.5.1",
+    "tsx": "^4",
+    "typescript": "^5"
+  }
+}

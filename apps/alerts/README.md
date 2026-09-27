@@ -1,5 +1,15 @@
 # alerts
 
-Real-time alert engine. Keeps per-instrument threshold heaps in memory, fires each alert exactly once by claiming it with a conditional update in Postgres, and hands delivery to the notifier through BullMQ.
+The real-time alert engine. It keeps active price and day-change alerts in memory and checks them against every tick published on `gc:ticks`. When the API announces a change on `gc:alerts:changed`, it reloads.
 
-Phase 4. See §7.3 of `docs/blueprint.html`.
+Each alert fires exactly once. A conditional update claims it:
+
+```sql
+UPDATE ... WHERE version = $v AND status = 'ACTIVE' AND <cooldown elapsed> RETURNING
+```
+
+The trigger, the notification and the delivery rows are written in the same transaction. In-app notifications are delivered. Email and Telegram deliveries are recorded as skipped until accounts can be verified.
+
+```bash
+pnpm --filter @greencircuits/alerts dev   # health on port 4011
+```
