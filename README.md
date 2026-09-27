@@ -25,10 +25,13 @@ It is a portfolio project, not a product. Prices come from a market simulator, c
 - **Company pages:** price, the five numbers that matter, and P/E against the company's own history and its sector. Then financials, ownership, peers and events, all read from the database.
 - **Your data:** watchlists, alerts and holdings, kept on the server under an anonymous account. There is no sign-up ([ADR 0002](docs/adr/0002-anonymous-accounts.md)).
 - **Alerts:** checked on every tick, fired exactly once, and delivered as in-app notifications.
-- **Backtests:** queued on BullMQ and run by a Python engine ([ADR 0001](docs/adr/0001-backtest-jobs-on-a-queue.md)). It fills at the next day's open and charges STT, stamp duty, exchange fees, GST and DP charges. Results are compared with Nifty 50 and split into in-sample and out-of-sample periods.
+- **The lab:** describe an idea in sentences, as a monthly SIP (optionally waiting for dips), an equity and bond mix, or entry and exit rules, and get a report.
+  - **The engine:** tests are queued on BullMQ and run by a Python engine ([ADR 0001](docs/adr/0001-backtest-jobs-on-a-queue.md)). It fills at the next day's open and charges STT, stamp duty, exchange fees, GST and DP charges.
+  - **The alternative:** every result sits next to the obvious alternative: a plain SIP, the same SIP in the index, a fixed deposit, all equity, or buying and holding.
+  - **The report:** it has the growth chart, the numbers, drawdowns, month-by-month returns and trades, plus a held-out final 30% of the period that shows whether an edge survives.
 - **Demo mode:** with the backend off, the site still works, running the simulator in the browser ([ADR 0003](docs/adr/0003-live-and-demo-modes.md)).
 
-Not done yet: a lab interface on top of the backtest API (the lab page still shows sample runs), and the screener, F&O, IPO, bond and commodity pages in the new design. See the [roadmap](#roadmap).
+Not done yet: running lab tests in demo mode (they need the backend today), and the screener, F&O, IPO, bond and commodity pages in the new design. See the [roadmap](#roadmap).
 
 ## Architecture
 
@@ -155,7 +158,8 @@ GreenCircuits/
 - [x] **Realtime:** the ingestor, 1-minute bars in TimescaleDB, the WebSocket gateway, live and demo modes
 - [x] **Your data and alerts:** anonymous accounts, synced watchlists, alerts and holdings, and exactly-once alerts with in-app notifications
 - [x] **Backtest engine:** the queue, the Python engine with Indian charges and in-sample and out-of-sample results
-- [ ] **Lab interface:** build, run and read backtests in the new design
+- [x] **Lab interface:** build, run and read backtests in the new design
+- [ ] **Lab in demo mode:** run tests in the browser when the backend is off
 - [ ] **The rest of the site:** Explore (screener, IPOs, bonds, commodities), F&O, portfolio and watchlists in the new design, and a case-study page
 - [ ] **Prove it:** k6 load tests at 100,000 requests an hour and 1,000 sockets, dashboards, published results
 - [ ] **Later:** real end-of-day data, a broker feed, email and Telegram alerts, paper trading, walk-forward testing

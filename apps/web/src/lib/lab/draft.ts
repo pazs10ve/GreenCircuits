@@ -1,220 +1,195 @@
-import { INDEX, getInstrument } from "@greencircuits/market/catalog"
-import { COST_PRESETS, type CostModel } from "./costs"
+import { BacktestRequest, type Condition, type StrategyDefinition } from "@greencircuits/contracts/strategy"
+import { INDEX } from "@greencircuits/market/catalog"
+import { defaultName } from "./describe"
+import { LARGEST_TEN, defaultPeriod } from "./templates"
 
 /**
- * The strategy builder's working copy. It is plain data (strings, numbers,
- * booleans) so the server page can prefill it and hand it to the client.
- * dsl.ts turns it into the rules text the engine parses.
+ * The builder's state. It keeps every kind's settings at once, so switching
+ * from rules to a SIP and back loses nothing, and exits are toggles with
+ * their values kept while switched off.
  */
 
-export type Interval = "1d" | "15m" | "5m"
-export type Style = "RULES" | "OPTIONS"
-export type Comparator = ">" | "<" | "crosses_above" | "crosses_below"
-export type IndicatorId = "price" | "sma" | "ema" | "rsi" | "macd" | "bb" | "atr" | "volume" | "vwap" | "supertrend"
-export type OperandKind = IndicatorId | "number"
-export type PriceField = "close" | "open" | "high" | "low"
-export type MacdLine = "line" | "signal" | "histogram"
-export type Band = "upper" | "middle" | "lower"
+export type Kind = StrategyDefinition["type"]
 
-/** One side of a comparison. Every parameter is kept so switching kind and back loses nothing. */
-export interface Operand {
-  kind: OperandKind
-  period: number
-  field: PriceField
-  line: MacdLine
-  band: Band
-  mult: number
+interface Toggle {
+  on: boolean
   value: number
 }
 
-export type Rule =
-  | { id: string; kind: "compare"; left: Operand; op: Comparator; right: Operand }
-  | { id: string; kind: "raw"; text: string }
-
-export type UniverseKind = "symbol" | "index" | "watchlist" | "screen"
-export type SizingMode = "fixed" | "percent" | "equal" | "risk"
-export type CostPresetId = "delivery" | "intraday" | "fno"
-export type LegInstrument = "CE" | "PE" | "FUT"
-
-export interface Leg {
-  id: string
-  action: "BUY" | "SELL"
-  instrument: LegInstrument
-  strike: string
-  lots: number
-}
-
 export interface Draft {
-  templateId?: string
+  kind: Kind
   name: string
-  description: string
-  style: Style
-  universe: {
-    kind: UniverseKind
-    symbolId: number
-    index: string
-    pointInTime: boolean
-    watchlistId: string
-    screen: string
-  }
-  interval: Interval
+  /** Once the name is typed, it stops following the settings. */
+  nameEdited: boolean
   from: string
   to: string
-  split: string
-  entry: { join: "and" | "or"; rules: Rule[] }
-  exit: {
-    stopOn: boolean
-    stopPct: number
-    targetOn: boolean
-    targetPct: number
-    trailOn: boolean
-    trailPct: number
-    timeOn: boolean
-    maxBars: number
-    opposite: boolean
-    signalOn: boolean
-    signal: Rule
-  }
-  sizing: {
-    mode: SizingMode
-    fixedInr: number
-    percent: number
-    riskPct: number
-    atrMult: number
-    maxPositions: number
-    hedgeOn: boolean
-    hedgeSymbolId: number
-    hedgeRatio: number
-  }
-  options: {
-    underlyingId: number
-    expiry: "weekly" | "monthly"
-    entryTime: string
-    daysToExpiry: number
-    exitTime: string
-    legs: Leg[]
-    stopPerLegPct: number
-    targetOn: boolean
-    targetPct: number
-    adjust: boolean
-  }
-  costs: { preset: CostPresetId; model: CostModel }
+  /** Starting money for a mix or rules. */
   capital: number
-  benchmark: string
-}
-
-export const INDICATORS: Record<IndicatorId, { label: string; hint: string; params: ("period" | "field" | "line" | "band" | "mult")[] }> = {
-  price: { label: "Price", hint: "Bar open, high, low or close", params: ["field"] },
-  sma: { label: "SMA", hint: "Simple moving average of close", params: ["period"] },
-  ema: { label: "EMA", hint: "Exponential moving average of close", params: ["period"] },
-  rsi: { label: "RSI", hint: "Relative strength index, 0–100", params: ["period"] },
-  macd: { label: "MACD", hint: "12, 26, 9 on close", params: ["line"] },
-  bb: { label: "Bollinger band", hint: "Band around an SMA, in standard deviations", params: ["band", "period", "mult"] },
-  atr: { label: "ATR", hint: "Average true range in ₹", params: ["period"] },
-  volume: { label: "Volume", hint: "Period 1 is the bar's volume; more is an average", params: ["period"] },
-  vwap: { label: "VWAP", hint: "Volume-weighted average price, resets each session", params: [] },
-  supertrend: { label: "Supertrend", hint: "ATR period and multiplier", params: ["period", "mult"] },
-}
-
-export const COMPARATORS: { value: Comparator; label: string }[] = [
-  { value: ">", label: "is above" },
-  { value: "<", label: "is below" },
-  { value: "crosses_above", label: "crosses above" },
-  { value: "crosses_below", label: "crosses below" },
-]
-
-/** Index universes with their constituent counts. Membership is taken as of each date. */
-export const UNIVERSES: { id: string; label: string; members: number; note?: string }[] = [
-  { id: "nifty50", label: "NIFTY 50", members: 50 },
-  { id: "nifty100", label: "NIFTY 100", members: 100 },
-  { id: "nifty200", label: "NIFTY 200", members: 200 },
-  { id: "nifty500", label: "NIFTY 500", members: 500 },
-  { id: "midcap150", label: "NIFTY MIDCAP 150", members: 150 },
-  { id: "banknifty", label: "NIFTY BANK", members: 12 },
-  { id: "niftyit", label: "NIFTY IT", members: 10 },
-  { id: "sensex", label: "SENSEX", members: 30 },
-  { id: "sectors", label: "Nifty sector indices", members: 12, note: "Trades the indices themselves" },
-]
-
-export const BENCHMARKS = ["NIFTY 50 TRI", "NIFTY 500 TRI", "NIFTY MIDCAP 150 TRI", "SENSEX TRI"]
-
-export const STRIKES = ["ATM", "OTM 1", "OTM 2", "OTM 3", "OTM 5", "ITM 1", "ITM 2", "16 delta", "25 delta", "30 delta"]
-
-/** F&O underlyings. Only NIFTY (NSE) and SENSEX (BSE) kept weekly expiries after SEBI's November 2024 changes. */
-export const UNDERLYINGS = [INDEX.NIFTY, INDEX.BANKNIFTY, INDEX.FINNIFTY, INDEX.SENSEX]
-export const WEEKLY_UNDERLYINGS: number[] = [INDEX.NIFTY, INDEX.SENSEX]
-/** NSE weekly expiries fall on Tuesday and BSE's on Thursday (since September 2025). */
-export function expiryWeekday(underlyingId: number): string {
-  return underlyingId === INDEX.SENSEX ? "Thursday" : "Tuesday"
-}
-
-export function operand(kind: OperandKind, patch: Partial<Operand> = {}): Operand {
-  const period = kind === "rsi" || kind === "atr" ? 14 : kind === "sma" ? 50 : kind === "supertrend" ? 10 : kind === "volume" ? 1 : 20
-  return { kind, period, field: "close", line: "line", band: "lower", mult: kind === "supertrend" ? 3 : 2, value: 0, ...patch }
-}
-
-export const num = (value: number) => operand("number", { value })
-
-export function compare(id: string, left: Operand, op: Comparator, right: Operand): Rule {
-  return { id, kind: "compare", left, op, right }
-}
-
-export function raw(id: string, text: string): Rule {
-  return { id, kind: "raw", text }
-}
-
-export function costsFor(preset: CostPresetId, style: Style): { preset: CostPresetId; model: CostModel } {
-  const id = preset === "fno" ? (style === "OPTIONS" ? "options" : "futures") : preset
-  return { preset, model: { ...COST_PRESETS[id].model } }
-}
-
-/** A blank rules strategy over the given dates. */
-export function blankDraft(from: string, to: string, split: string): Draft {
-  return {
-    name: "Untitled strategy",
-    description: "",
-    style: "RULES",
-    universe: { kind: "index", symbolId: 100, index: "nifty100", pointInTime: true, watchlistId: "core", screen: "" },
-    interval: "1d",
-    from,
-    to,
-    split,
-    entry: { join: "and", rules: [compare("r1", operand("rsi"), "crosses_below", num(30))] },
-    exit: {
-      stopOn: true,
-      stopPct: 5,
-      targetOn: true,
-      targetPct: 10,
-      trailOn: false,
-      trailPct: 4,
-      timeOn: false,
-      maxBars: 20,
-      opposite: false,
-      signalOn: false,
-      signal: compare("x1", operand("rsi"), ">", num(60)),
-    },
-    sizing: { mode: "percent", fixedInr: 100_000, percent: 10, riskPct: 1, atrMult: 2, maxPositions: 10, hedgeOn: false, hedgeSymbolId: 104, hedgeRatio: 1 },
-    options: {
-      underlyingId: INDEX.NIFTY,
-      expiry: "weekly",
-      entryTime: "09:20",
-      daysToExpiry: 0,
-      exitTime: "15:15",
-      legs: [
-        { id: "l1", action: "SELL", instrument: "CE", strike: "ATM", lots: 1 },
-        { id: "l2", action: "SELL", instrument: "PE", strike: "ATM", lots: 1 },
-      ],
-      stopPerLegPct: 25,
-      targetOn: false,
-      targetPct: 50,
-      adjust: false,
-    },
-    costs: costsFor("delivery", "RULES"),
-    capital: 1_000_000,
-    benchmark: "NIFTY 50 TRI",
+  slippageBps: number
+  sip: { instrumentId: number; monthly: number; waitForDip: boolean; fallPct: number; cashRatePct: number }
+  rebalance: { instrumentId: number; equityPct: number; bondRatePct: number }
+  rules: {
+    universe: number[]
+    entry: Condition[]
+    entryLogic: "ALL" | "ANY"
+    exit: { target: Toggle; stop: Toggle; trail: Toggle; time: Toggle; when: { on: boolean; conditions: Condition[] } }
+    maxPositions: number
+    costs: boolean
+    cashRatePct: number
   }
 }
 
-export function lotSize(underlyingId: number): number {
-  return getInstrument(underlyingId)?.lot ?? 1
+export const RSI_DIP: Condition = { left: { kind: "rsi", period: 14 }, op: "crosses_below", right: { kind: "value", value: 30 } }
+const BELOW_AVERAGE: Condition = { left: { kind: "price" }, op: "crosses_below", right: { kind: "sma", period: 200 } }
+
+export function emptyDraft(today = new Date()): Draft {
+  const draft: Draft = {
+    kind: "sip",
+    name: "",
+    nameEdited: false,
+    ...defaultPeriod([INDEX.NIFTY], today),
+    capital: 10_00_000,
+    slippageBps: 5,
+    sip: { instrumentId: INDEX.NIFTY, monthly: 10_000, waitForDip: false, fallPct: 10, cashRatePct: 6 },
+    rebalance: { instrumentId: INDEX.NIFTY, equityPct: 60, bondRatePct: 7 },
+    rules: {
+      universe: LARGEST_TEN.slice(0, 1),
+      entry: [RSI_DIP],
+      entryLogic: "ALL",
+      exit: {
+        target: { on: true, value: 10 },
+        stop: { on: false, value: 8 },
+        trail: { on: false, value: 10 },
+        time: { on: true, value: 60 },
+        when: { on: false, conditions: [BELOW_AVERAGE] },
+      },
+      maxPositions: 1,
+      costs: true,
+      cashRatePct: 6,
+    },
+  }
+  return named(draft)
+}
+
+/** A draft that reproduces a definition, e.g. from a template or an earlier run. */
+export function draftFromDefinition(
+  d: StrategyDefinition,
+  extra: { from?: string; to?: string; capital?: number; slippageBps?: number; name?: string } = {},
+  today = new Date(),
+): Draft {
+  const base = emptyDraft(today)
+  const ids = d.type === "rules" ? d.universe : [d.instrumentId]
+  const draft: Draft = { ...base, kind: d.type, ...defaultPeriod(ids, today) }
+  if (d.type === "sip") {
+    draft.sip = {
+      instrumentId: d.instrumentId,
+      monthly: d.monthly,
+      waitForDip: !!d.dip,
+      fallPct: d.dip?.fallPct ?? base.sip.fallPct,
+      cashRatePct: d.dip?.cashRatePct ?? base.sip.cashRatePct,
+    }
+  } else if (d.type === "rebalance") {
+    draft.rebalance = { instrumentId: d.instrumentId, equityPct: d.equityPct, bondRatePct: d.bondRatePct }
+  } else {
+    const e = base.rules.exit
+    draft.rules = {
+      universe: d.universe,
+      entry: d.entry,
+      entryLogic: d.entryLogic,
+      exit: {
+        target: { on: d.exit.targetPct != null, value: d.exit.targetPct ?? e.target.value },
+        stop: { on: d.exit.stopPct != null, value: d.exit.stopPct ?? e.stop.value },
+        trail: { on: d.exit.trailPct != null, value: d.exit.trailPct ?? e.trail.value },
+        time: { on: d.exit.maxBars != null, value: d.exit.maxBars ?? e.time.value },
+        when: { on: !!d.exit.when?.length, conditions: d.exit.when?.length ? d.exit.when : e.when.conditions },
+      },
+      maxPositions: d.maxPositions,
+      costs: d.costs === "DELIVERY",
+      cashRatePct: d.cashRatePct,
+    }
+  }
+  if (extra.from) draft.from = extra.from
+  if (extra.to) draft.to = extra.to
+  if (extra.capital) draft.capital = extra.capital
+  if (extra.slippageBps != null) draft.slippageBps = extra.slippageBps
+  if (extra.name) return { ...draft, name: extra.name, nameEdited: true }
+  return named(draft)
+}
+
+export function definitionOf(draft: Draft): StrategyDefinition {
+  switch (draft.kind) {
+    case "sip": {
+      const s = draft.sip
+      return {
+        type: "sip",
+        instrumentId: s.instrumentId,
+        monthly: s.monthly,
+        ...(s.waitForDip ? { dip: { fallPct: s.fallPct, cashRatePct: s.cashRatePct } } : {}),
+      }
+    }
+    case "rebalance":
+      return { type: "rebalance", ...draft.rebalance }
+    case "rules": {
+      const r = draft.rules
+      const x = r.exit
+      return {
+        type: "rules",
+        universe: r.universe,
+        entry: r.entry,
+        entryLogic: r.entryLogic,
+        exit: {
+          ...(x.target.on ? { targetPct: x.target.value } : {}),
+          ...(x.stop.on ? { stopPct: x.stop.value } : {}),
+          ...(x.trail.on ? { trailPct: x.trail.value } : {}),
+          ...(x.time.on ? { maxBars: Math.round(x.time.value) } : {}),
+          ...(x.when.on && x.when.conditions.length ? { when: x.when.conditions } : {}),
+        },
+        maxPositions: Math.min(r.maxPositions, r.universe.length || 1),
+        costs: r.costs ? "DELIVERY" : "NONE",
+        cashRatePct: r.cashRatePct,
+      }
+    }
+  }
+}
+
+/** Keeps the default name in step with the settings until someone types their own. */
+export function named(draft: Draft): Draft {
+  return draft.nameEdited ? draft : { ...draft, name: defaultName(definitionOf(draft)) }
+}
+
+const MESSAGES: [RegExp, string][] = [
+  [/^name$/, "Give the test a name."],
+  [/^to$/, "The test has to end after it starts."],
+  [/^(from|to)/, "Pick the dates to test between."],
+  [/^capital$/, "Starting money has to be between ₹10,000 and ₹100 crore."],
+  [/^definition\.monthly$/, "The monthly amount has to be between ₹1 and ₹1 crore."],
+  [/^definition\.universe$/, "Pick at least one stock or index to trade (at most 50)."],
+  [/^definition\.entry$/, "Add at least one condition for buying (at most 8)."],
+  [/^definition\.exit$/, "Choose at least one way to sell."],
+  [/period$/, "Periods run from 2 to 400 days."],
+  [/^definition\.dip\.fallPct$/, "The dip to wait for has to be between 1% and 60%."],
+  [/^definition\.equityPct$/, "The equity share has to be between 0% and 100%."],
+  [/Pct$/, "One of the percentages is out of range."],
+]
+
+export type Checked = { ok: true; request: BacktestRequest } | { ok: false; issues: string[] }
+
+/** Validates with the same schema the API uses, in words a person can act on. */
+export function check(draft: Draft): Checked {
+  const parsed = BacktestRequest.safeParse({
+    name: draft.name,
+    definition: definitionOf(draft),
+    from: draft.from,
+    to: draft.to,
+    capital: draft.kind === "sip" ? 10_00_000 : draft.capital,
+    slippageBps: draft.slippageBps,
+  })
+  if (parsed.success) return { ok: true, request: parsed.data }
+  const issues = new Set<string>()
+  for (const issue of parsed.error.issues) {
+    const path = issue.path.join(".")
+    const match = MESSAGES.find(([re]) => re.test(path))
+    issues.add(match ? match[1] : issue.message)
+  }
+  return { ok: false, issues: [...issues] }
 }

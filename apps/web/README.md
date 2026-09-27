@@ -30,23 +30,25 @@ The look is a morning paper crossed with a quiet everyday tool, light by default
 
 ```
 src/
-├── app/(app)/        Today, company and index pages, and the pages below still in the first design
+├── app/(app)/        Today, company and index pages, the lab, and the pages below still in the first design
 ├── components/
 │   ├── shell/        masthead, navigation, search, footer, alert watcher
 │   ├── today/        the daily brief's sections
 │   ├── company/      company and index page sections
+│   ├── lab/          the lab's builder, list of tests and report
 │   ├── editorial/    sections and experiment cards
 │   ├── viz/          SVG line charts and small multiples
 │   ├── market/       prices and changes
 │   └── ui/           shadcn/ui primitives (Radix)
 ├── lib/
 │   ├── data/         data access: the API first, the generators as the fallback
+│   ├── lab/          strategies in plain words, the builder's draft, the report's narrative
 │   ├── stream/       live and demo quote sources, the Web Worker, hooks
 │   └── stores/       persisted client state and its sync to the API
 └── hooks/
 ```
 
-The lab, screener, F&O, portfolio, watchlists, alerts and settings pages, and their component folders, are still in the first design and are next to be redone.
+The screener, F&O, portfolio, watchlists, alerts and settings pages, and their component folders, are still in the first design and are next to be redone.
 
 ## Conventions
 

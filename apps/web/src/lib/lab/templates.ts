@@ -1,260 +1,97 @@
-import { EQUITIES, getInstrumentBySlug, INDEX, INDICES } from "@greencircuits/market/catalog"
-import { getStrategy } from "@greencircuits/market/lab"
-import { addDays, isDateKey, istDateKey, lastWeekday } from "./dates"
-import { blankDraft, compare, costsFor, num, operand, raw, type Draft } from "./draft"
+import { templateDefinition, type Template } from "@greencircuits/contracts/strategy"
+import type { StrategyDefinition } from "@greencircuits/contracts/strategy"
+import { EQUITIES, INDEX, INSTRUMENTS, getInstrument } from "@greencircuits/market/catalog"
+import type { Instrument } from "@greencircuits/market/types"
 
-/** Starting points shown in the gallery on /lab and prefilled by /lab/new?template=<id>. */
-export interface Template {
-  id: string
-  name: string
-  style: "RULES" | "OPTIONS"
-  summary: string
-  snippet: string
-  meta: string
-  build: (d: Draft) => Draft
+/**
+ * The questions the lab starts from. Each is a template from the contracts
+ * package applied to a sensible instrument, with a test period that fits the
+ * history the demo market has for it.
+ */
+
+export interface Question {
+  template: Template
+  question: string
+  blurb: string
+  instrumentId: number
+  universe?: number[]
 }
 
-export const TEMPLATES: Template[] = [
+/** The ten largest Nifty 50 companies by market value: a universe for rules that pick among stocks. */
+export const LARGEST_TEN: number[] = [...EQUITIES]
+  .sort((a, b) => (b.sharesCr ?? 0) * b.prevClose - (a.sharesCr ?? 0) * a.prevClose)
+  .slice(0, 10)
+  .map((i) => i.id)
+
+const RELIANCE = EQUITIES.find((i) => i.symbol === "RELIANCE")!.id
+
+export const QUESTIONS: Question[] = [
   {
-    id: "golden-cross",
-    name: "Golden cross",
-    style: "RULES",
-    summary: "Buy when the 50-day average crosses above the 200-day; sell on the reverse cross.",
-    snippet: "sma(close, 50) crosses_above sma(close, 200)",
-    meta: "Daily · NIFTY 100",
-    build: (d) => ({
-      ...d,
-      name: "Golden cross",
-      description: "Trend following on large caps: the 50-day SMA crossing the 200-day SMA.",
-      universe: { ...d.universe, kind: "index", index: "nifty100" },
-      entry: { join: "and", rules: [compare("r1", operand("sma", { period: 50 }), "crosses_above", operand("sma", { period: 200 }))] },
-      exit: { ...d.exit, stopOn: true, stopPct: 10, targetOn: false, opposite: true },
-      sizing: { ...d.sizing, mode: "equal", maxPositions: 10 },
-    }),
+    template: "sip",
+    question: "What would ₹10,000 a month have become?",
+    blurb: "A monthly SIP in the Nifty 50, against putting the same money in a fixed deposit.",
+    instrumentId: INDEX.NIFTY,
   },
   {
-    id: "supertrend",
-    name: "Supertrend",
-    style: "RULES",
-    summary: "Ride trends while price holds above a volatility-adjusted trailing line.",
-    snippet: "close crosses_above supertrend(10, 3)",
-    meta: "Daily · NIFTY 50",
-    build: (d) => ({
-      ...d,
-      name: "Supertrend trend follow",
-      description: "Enter when the close flips above Supertrend(10, 3); exit when it flips back below.",
-      universe: { ...d.universe, kind: "index", index: "nifty50" },
-      entry: { join: "and", rules: [compare("r1", operand("price"), "crosses_above", operand("supertrend"))] },
-      exit: { ...d.exit, stopOn: true, stopPct: 8, targetOn: false, opposite: true },
-      sizing: { ...d.sizing, mode: "risk", riskPct: 1, atrMult: 2, maxPositions: 8 },
-    }),
+    template: "sip-vs-dip",
+    question: "Should you wait for a dip before investing?",
+    blurb: "Save each instalment until the market is 10% off its high, against investing every month regardless.",
+    instrumentId: INDEX.NIFTY,
   },
   {
-    id: "opening-range-breakout",
-    name: "Opening-range breakout",
-    style: "RULES",
-    summary: "Buy a break of the first 15-minute high on above-average volume; flat by the close.",
-    snippet: "close crosses_above or_high(15) and volume > avg(volume, 20)",
-    meta: "15 min · NIFTY 50 members",
-    build: (d) => ({
-      ...d,
-      name: "Opening-range breakout",
-      description: "Intraday momentum: a break of the 09:15–09:30 range with volume confirmation.",
-      interval: "15m",
-      universe: { ...d.universe, kind: "index", index: "nifty50" },
-      entry: {
-        join: "and",
-        rules: [raw("r1", "close crosses_above or_high(15)"), compare("r2", operand("volume", { period: 1 }), ">", operand("volume", { period: 20 }))],
-      },
-      exit: { ...d.exit, stopOn: true, stopPct: 1, targetOn: true, targetPct: 2, trailOn: false, timeOn: true, maxBars: 20 },
-      sizing: { ...d.sizing, mode: "risk", riskPct: 0.5, atrMult: 1.5, maxPositions: 5 },
-      costs: costsFor("intraday", "RULES"),
-    }),
+    template: "rebalance",
+    question: "Is a 60/40 mix worth the return it gives up?",
+    blurb: "Equity and bonds, reset every April, against staying fully in equity.",
+    instrumentId: INDEX.NIFTY,
   },
   {
-    id: "pairs-trade",
-    name: "Pairs trade",
-    style: "RULES",
-    summary: "Buy HDFCBANK and short ICICIBANK futures when their price ratio stretches 2σ below its mean.",
-    snippet: 'zscore(close / close("ICICIBANK"), 60) < -2',
-    meta: "Daily · two private banks",
-    build: (d) => ({
-      ...d,
-      name: "Pairs trade: HDFCBANK / ICICIBANK",
-      description: "Mean reversion in the price ratio of two private banks, hedged with a short futures leg.",
-      universe: { ...d.universe, kind: "symbol", symbolId: 101 },
-      entry: { join: "and", rules: [raw("r1", 'zscore(close / close("ICICIBANK"), 60) < -2')] },
-      exit: {
-        ...d.exit,
-        stopOn: true,
-        stopPct: 6,
-        targetOn: false,
-        timeOn: true,
-        maxBars: 30,
-        signalOn: true,
-        signal: raw("x1", 'zscore(close / close("ICICIBANK"), 60) > 0'),
-      },
-      sizing: { ...d.sizing, mode: "fixed", fixedInr: 300_000, maxPositions: 1, hedgeOn: true, hedgeSymbolId: 104, hedgeRatio: 1 },
-      costs: costsFor("fno", "RULES"),
-    }),
+    template: "rsi-dip",
+    question: "Does buying a stock when it's oversold pay?",
+    blurb: "Buy Reliance when its RSI crosses below 30; sell 10% higher or after 60 trading days.",
+    instrumentId: RELIANCE,
   },
   {
-    id: "covered-call",
-    name: "Covered call",
-    style: "OPTIONS",
-    summary: "Hold NIFTY futures and sell a monthly out-of-the-money call against them.",
-    snippet: "buy 1 × FUT · sell 1 × OTM 2 CE",
-    meta: "Monthly expiry · NIFTY",
-    build: (d) => ({
-      ...d,
-      name: "NIFTY covered call",
-      description: "Long one lot of NIFTY futures with a monthly OTM call sold against it, rolled at expiry.",
-      style: "OPTIONS",
-      interval: "15m",
-      options: {
-        ...d.options,
-        underlyingId: INDEX.NIFTY,
-        expiry: "monthly",
-        entryTime: "09:30",
-        daysToExpiry: 20,
-        exitTime: "15:15",
-        legs: [
-          { id: "l1", action: "BUY", instrument: "FUT", strike: "ATM", lots: 1 },
-          { id: "l2", action: "SELL", instrument: "CE", strike: "OTM 2", lots: 1 },
-        ],
-        stopPerLegPct: 100,
-        targetOn: true,
-        targetPct: 80,
-        adjust: true,
-      },
-      costs: costsFor("fno", "OPTIONS"),
-    }),
+    template: "trend",
+    question: "Does following the trend beat holding on?",
+    blurb: "Own the Nifty 50 only while it's above its 200-day average.",
+    instrumentId: INDEX.NIFTY,
   },
   {
-    id: "short-strangle",
-    name: "Short strangle with adjustments",
-    style: "OPTIONS",
-    summary: "Sell 16-delta calls and puts; roll the untested side when one leg's premium doubles.",
-    snippet: "sell 1 × 16Δ CE · sell 1 × 16Δ PE · adjust at 2×",
-    meta: "Weekly expiry · NIFTY",
-    build: (d) => ({
-      ...d,
-      name: "Weekly short strangle",
-      description: "Premium selling two sessions before the NIFTY weekly expiry, with a defined adjustment rule.",
-      style: "OPTIONS",
-      interval: "5m",
-      options: {
-        ...d.options,
-        underlyingId: INDEX.NIFTY,
-        expiry: "weekly",
-        entryTime: "09:30",
-        daysToExpiry: 2,
-        exitTime: "15:15",
-        legs: [
-          { id: "l1", action: "SELL", instrument: "CE", strike: "16 delta", lots: 1 },
-          { id: "l2", action: "SELL", instrument: "PE", strike: "16 delta", lots: 1 },
-        ],
-        stopPerLegPct: 100,
-        targetOn: true,
-        targetPct: 50,
-        adjust: true,
-      },
-      costs: costsFor("fno", "OPTIONS"),
-    }),
+    template: "breakout",
+    question: "Do stocks at a one-year high keep rising?",
+    blurb: "Buy large companies that close above last year's high, and ride them with a 10% trailing stop.",
+    instrumentId: LARGEST_TEN[0]!,
+    universe: LARGEST_TEN,
   },
 ]
 
-/** Drafts for the sample strategies, so "Edit" on a report opens the rules that produced it. */
-const SAMPLE_DRAFTS: Record<string, (d: Draft) => Draft> = {
-  "rsi-dip": (d) => ({
-    ...d,
-    universe: { ...d.universe, kind: "index", index: "nifty200" },
-    entry: {
-      join: "and",
-      rules: [compare("r1", operand("rsi"), "crosses_below", num(30)), compare("r2", operand("price"), ">", operand("sma", { period: 200 }))],
-    },
-    exit: { ...d.exit, stopOn: true, stopPct: 6, targetOn: true, targetPct: 12, trailOn: true, trailPct: 4, timeOn: true, maxBars: 20, signalOn: true, signal: compare("x1", operand("rsi"), ">", num(60)) },
-    sizing: { ...d.sizing, mode: "risk", riskPct: 1, atrMult: 2, maxPositions: 10 },
-  }),
-  "breakout-52w": (d) => ({
-    ...d,
-    universe: { ...d.universe, kind: "index", index: "nifty500" },
-    entry: { join: "and", rules: [raw("r1", "close > max(high, 250)[1]"), raw("r2", "delivery_pct > avg(delivery_pct, 20) * 1.3")] },
-    exit: { ...d.exit, stopOn: false, targetOn: false, trailOn: true, trailPct: 8, signalOn: true, signal: compare("x1", operand("price"), "<", operand("sma", { period: 50 })) },
-    sizing: { ...d.sizing, mode: "equal", maxPositions: 15 },
-  }),
-  "straddle-0920": (d) => ({
-    ...d,
-    style: "OPTIONS",
-    interval: "5m",
-    options: { ...d.options, underlyingId: INDEX.NIFTY, expiry: "weekly", entryTime: "09:20", daysToExpiry: 0, exitTime: "15:15", stopPerLegPct: 25, targetOn: false, adjust: false },
-    costs: costsFor("fno", "OPTIONS"),
-  }),
-  "sector-rotation": (d) => ({
-    ...d,
-    universe: { ...d.universe, kind: "index", index: "sectors" },
-    entry: { join: "and", rules: [raw("r1", "rank(return(close, 63)) <= 3"), raw("r2", "is_first_session_of_month")] },
-    exit: { ...d.exit, stopOn: false, targetOn: false, signalOn: true, signal: raw("x1", "rank(return(close, 63)) > 3") },
-    sizing: { ...d.sizing, mode: "equal", maxPositions: 3 },
-  }),
+/** How far back the demo market's history goes: ten years for indices, five for everything else. */
+export function historyYears(inst: Instrument | undefined): number {
+  return inst?.kind === "INDEX" ? 10 : 5
 }
 
-export function getTemplate(id: string | undefined): Template | undefined {
-  return TEMPLATES.find((t) => t.id === id)
+/** A period that leaves a year of history before the start for indicators to warm up. */
+export function defaultPeriod(ids: number[], today = new Date()): { from: string; to: string } {
+  const years = Math.min(...ids.map((id) => historyYears(getInstrument(id)))) - 1
+  const ist = new Date(today.getTime() + 5.5 * 3600 * 1000)
+  const from = new Date(Date.UTC(ist.getUTCFullYear() - years, ist.getUTCMonth(), 1))
+  return { from: from.toISOString().slice(0, 10), to: ist.toISOString().slice(0, 10) }
 }
 
-export interface DraftSource {
-  kind: "blank" | "template" | "strategy" | "symbol" | "screen"
-  label?: string
+/** The earliest date a test can start on for these instruments. */
+export function earliestStart(ids: number[], today = new Date()): string {
+  const years = Math.min(...ids.map((id) => historyYears(getInstrument(id))))
+  const d = new Date(today.getTime() + 5.5 * 3600 * 1000)
+  d.setUTCFullYear(d.getUTCFullYear() - years)
+  return d.toISOString().slice(0, 10)
 }
 
-/** Resolve the builder's starting draft from the query string. Runs on the server. */
-export function initialDraft(
-  params: { template?: string; symbol?: string; screen?: string },
-  now: Date,
-): { draft: Draft; source: DraftSource } {
-  const yesterday = lastWeekday(addDays(istDateKey(now), -1))
-  const base = blankDraft("2016-01-01", yesterday, "2023-01-01")
-  let draft = base
-  let source: DraftSource = { kind: "blank" }
-
-  const strategy = params.template ? getStrategy(params.template) : undefined
-  const template = getTemplate(params.template)
-  if (strategy) {
-    draft = SAMPLE_DRAFTS[strategy.id]!({
-      ...base,
-      templateId: strategy.id,
-      name: strategy.name,
-      description: strategy.description,
-      interval: strategy.interval,
-    })
-    source = { kind: "strategy", label: `${strategy.name} v${strategy.version}` }
-  } else if (template) {
-    draft = { ...template.build(base), templateId: template.id }
-    source = { kind: "template", label: template.name }
-  }
-
-  if (params.symbol) {
-    const q = params.symbol.trim()
-    const inst =
-      getInstrumentBySlug(q) ??
-      [...EQUITIES, ...INDICES].find((i) => i.symbol.toLowerCase() === q.toLowerCase())
-    if (inst && inst.kind === "EQUITY") {
-      draft = { ...draft, style: "RULES", universe: { ...draft.universe, kind: "symbol", symbolId: inst.id } }
-      if (!strategy && !template) draft.name = `${inst.symbol} strategy`
-      source = source.kind === "blank" ? { kind: "symbol", label: inst.symbol } : source
-    } else if (inst && inst.kind === "INDEX" && inst.isFo) {
-      draft = { ...draft, options: { ...draft.options, underlyingId: inst.id } }
-      source = source.kind === "blank" ? { kind: "symbol", label: inst.symbol } : source
-    }
-  }
-
-  if (params.screen && params.screen.trim()) {
-    draft = { ...draft, style: "RULES", universe: { ...draft.universe, kind: "screen", screen: params.screen.trim().slice(0, 300) } }
-    if (!strategy && !template) draft.name = "Screen-based strategy"
-    source = source.kind === "blank" ? { kind: "screen", label: "Screener query" } : source
-  }
-
-  if (!isDateKey(draft.to)) draft.to = yesterday
-  return { draft, source }
+/** A template's definition from the URL: ?template=rsi-dip&symbol=RELIANCE. */
+export function fromTemplate(template: string | undefined, symbol: string | undefined): StrategyDefinition | null {
+  if (!template) return null
+  const question = QUESTIONS.find((q) => q.template === template)
+  const bySymbol = symbol ? INSTRUMENTS.find((i) => i.symbol === symbol || i.slug === symbol.toLowerCase()) : undefined
+  const instrumentId = bySymbol?.id ?? question?.instrumentId ?? INDEX.NIFTY
+  const universe = bySymbol ? [bySymbol.id] : (question?.universe ?? [instrumentId])
+  return templateDefinition(template, instrumentId, universe)
 }

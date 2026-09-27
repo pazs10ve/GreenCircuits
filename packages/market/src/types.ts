@@ -70,3 +70,10 @@ export interface Candle {
   close: number
   volume: number
 }
+
+/** A point on a time series chart. */
+export interface Point {
+  /** Unix seconds. */
+  time: number
+  value: number
+}

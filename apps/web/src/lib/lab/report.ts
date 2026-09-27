@@ -1,224 +1,174 @@
-import { EQUITIES } from "@greencircuits/market/catalog"
-import { runSampleBacktest, type BacktestResult, type Metrics, type Point, type Strategy } from "@greencircuits/market/lab"
-import { hashString, mulberry32 } from "@greencircuits/market/random"
-import { DAY_MS, istDateKey } from "./dates"
+import type { AlternativeMetrics, RunInfo, RunMetrics, RunResult, Summary } from "@greencircuits/contracts/lab"
+import { INDEX } from "@greencircuits/market/catalog"
+import { formatNumber } from "@greencircuits/market/format"
+import { alternativeOf, money, pct, points } from "./describe"
 
 /**
- * Turns a sample BacktestResult into plain data for the report page: numbers
- * and arrays only (no Map, no Date), downsampled curves for the chart, and the
- * derived figures the tiles and robustness panel show. Everything is computed
- * from the same series, so the page agrees with itself.
+ * The report's words, written from the numbers: a lede that says what
+ * happened, a verdict against the alternative, and whether the result held up
+ * on the part of the period that was held out.
  */
 
-const cache = new Map<string, BacktestResult>()
+const capitalise = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
-/** runSampleBacktest is deterministic for a date; memoise per strategy per IST day. */
-export function sampleResult(strategy: Strategy, now: Date): BacktestResult {
-  const key = `${strategy.id}:${istDateKey(now)}`
-  let r = cache.get(key)
-  if (!r) {
-    r = runSampleBacktest(strategy, 1_000_000, now)
-    if (cache.size > 32) cache.clear()
-    cache.set(key, r)
+/** Money-weighted for SIPs (what a fund statement shows), time-weighted otherwise. */
+export function yearly(m: RunMetrics | AlternativeMetrics, sip: boolean): number {
+  return sip ? (m.xirr ?? m.cagr) : m.cagr
+}
+
+export function lede(run: RunInfo, result: RunResult): string {
+  const d = run.definition
+  const m = result.metrics
+  const alt = m.alternative
+  const other = alternativeOf(alt.kind, d)
+  const sentences: string[] = []
+  if (d.type === "sip") {
+    const r = yearly(m, true)
+    sentences.push(
+      `${money(m.invested ?? 0)} put in over ${m.months} months is worth ${money(m.final_value)}, ${r >= 0 ? "a return of" : "a loss of"} ${pct(Math.abs(r))} a year.`,
+    )
+    sentences.push(`${capitalise(other.phrase)} would be worth ${money(alt.final_value)} (${pct(yearly(alt, true))} a year).`)
+  } else {
+    const grew = m.final_value >= run.initial_capital
+    sentences.push(
+      `${money(run.initial_capital)} ${grew ? "grew to" : "shrank to"} ${money(m.final_value)}, ${pct(m.cagr)} a year${d.type === "rules" ? ` over ${m.trades} ${m.trades === 1 ? "trade" : "trades"}` : ""}.`,
+    )
+    sentences.push(`${capitalise(other.phrase)} would have ended at ${money(alt.final_value)} (${pct(alt.cagr)} a year).`)
   }
-  return r
-}
-
-export interface TradeRow {
-  no: number
-  symbol: string
-  slug?: string
-  side: "LONG" | "SHORT"
-  entryDate: number
-  exitDate: number
-  entry: number
-  exit: number
-  qty: number
-  pnl: number
-  returnPct: number
-  holdDays: number
-  reason: string
-}
-
-export interface MonthRow {
-  year: number
-  months: (number | null)[]
-  total: number
-}
-
-export interface Sensitivity {
-  rowLabel: string
-  colLabel: string
-  rows: string[]
-  cols: string[]
-  values: number[][]
-  chosen: [number, number]
-}
-
-export interface ReportData {
-  from: number
-  to: number
-  splitTime: number
-  capital: number
-  finalValue: number
-  totalReturnPct: number
-  equity: Point[]
-  benchmark: Point[]
-  drawdown: Point[]
-  metrics: Metrics
-  benchmarkMetrics: Metrics
-  inSampleCagr: number
-  outOfSampleCagr: number
-  benchmarkIsCagr: number
-  benchmarkOosCagr: number
-  monthly: MonthRow[]
-  trades: TradeRow[]
-  winRate: number
-  profitFactor: number
-  avgHoldDays: number
-  tradesPerYear: number
-  longestDrawdownDays: number
-  bestMonth: { pct: number; label: string }
-  worstMonth: { pct: number; label: string }
-  sensitivity: Sensitivity
-}
-
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-
-/** Keep about `target` points: the last value in each bucket, plus any forced indices (the split). */
-function downsample(points: Point[], target: number, force: number[] = [], pick: "last" | "min" = "last"): Point[] {
-  const step = Math.max(1, Math.ceil(points.length / target))
-  const out: Point[] = [points[0]!]
-  for (let i = 1; i < points.length; i += step) {
-    const bucket = points.slice(i, Math.min(points.length, i + step))
-    out.push(pick === "min" ? bucket.reduce((m, p) => (p.value < m.value ? p : m)) : bucket.at(-1)!)
+  // Risk, when it differs enough to matter.
+  const gap = Math.abs(m.max_drawdown) - Math.abs(alt.max_drawdown)
+  if (Math.abs(gap) >= 0.03 && alt.max_drawdown !== 0) {
+    sentences.push(
+      gap < 0
+        ? `It was calmer, though: its worst fall from a peak was ${pct(-m.max_drawdown, { digits: 0 })}, against ${pct(-alt.max_drawdown, { digits: 0 })}.`
+        : `It was also bumpier: its worst fall from a peak was ${pct(-m.max_drawdown, { digits: 0 })}, against ${pct(-alt.max_drawdown, { digits: 0 })}.`,
+    )
   }
-  for (const f of force) if (points[f]) out.push(points[f])
-  out.push(points.at(-1)!)
-  const seen = new Set<number>()
-  return out.filter((p) => !seen.has(p.time) && seen.add(p.time)).sort((a, b) => a.time - b.time)
+  return sentences.join(" ")
 }
 
-const SENSITIVITY: Record<string, { rowLabel: string; colLabel: string; rows: string[]; cols: string[]; chosen: [number, number]; falloff: number }> = {
-  "rsi-dip": { rowLabel: "RSI entry level", colLabel: "Stop-loss", rows: ["25", "30", "35", "40"], cols: ["4%", "5%", "6%", "7%", "8%"], chosen: [1, 2], falloff: 0.55 },
-  "breakout-52w": { rowLabel: "Breakout lookback", colLabel: "Trailing stop", rows: ["150", "200", "250", "300"], cols: ["6%", "7%", "8%", "9%", "10%"], chosen: [2, 2], falloff: 0.8 },
-  "straddle-0920": { rowLabel: "Entry time", colLabel: "Stop per leg", rows: ["09:20", "09:30", "09:45", "10:00"], cols: ["15%", "20%", "25%", "30%", "35%"], chosen: [0, 2], falloff: 2.4 },
-  "sector-rotation": { rowLabel: "Momentum lookback", colLabel: "Sectors held", rows: ["21", "42", "63", "126"], cols: ["2", "3", "4", "5"], chosen: [2, 1], falloff: 0.7 },
+export type Tone = "up" | "down" | "flat"
+
+/** "Beat a fixed deposit by 2.1 points a year", coloured by the outcome. */
+export function verdict(run: RunInfo, result: RunResult): { tone: Tone; text: string } {
+  const sip = run.definition.type === "sip"
+  const m = result.metrics
+  const other = alternativeOf(m.alternative.kind, run.definition)
+  const diff = yearly(m, sip) - yearly(m.alternative, sip)
+  if (Math.abs(diff) < 0.0025) return { tone: "flat", text: `Level with ${other.versus}` }
+  return diff > 0
+    ? { tone: "up", text: `Beat ${other.versus} by ${points(diff)} a year` }
+    : { tone: "down", text: `Trailed ${other.versus} by ${points(-diff)} a year` }
 }
 
-/** A sample parameter sweep centred on the chosen settings, whose cell equals the reported CAGR. */
-function sensitivityFor(strategy: Strategy, cagr: number): Sensitivity {
-  const s = SENSITIVITY[strategy.id] ?? SENSITIVITY["rsi-dip"]!
-  const rng = mulberry32(strategy.seed ^ 0x51f7)
-  const [cr, cc] = s.chosen
-  const values = s.rows.map((_, r) =>
-    s.cols.map((__, c) => {
-      if (r === cr && c === cc) return cagr
-      const dist = (r - cr) ** 2 + (c - cc) ** 2
-      return cagr - s.falloff * dist - (rng() - 0.35) * 1.4
-    }),
-  )
-  return { rowLabel: s.rowLabel, colLabel: s.colLabel, rows: s.rows, cols: s.cols, values, chosen: s.chosen }
+/** Whether an edge in the first part of the period survived in the held-out part. */
+export function holdUp(result: RunResult): string {
+  const m = result.metrics
+  const a = m.alternative
+  const early = m.in_sample.cagr - a.in_sample.cagr
+  const late = m.out_of_sample.cagr - a.out_of_sample.cagr
+  if (early > 0.0025 && late > 0.0025)
+    return `It did better than the alternative in both parts: by ${points(early)} a year before, and ${points(late)} a year in the held-out part. An edge that survives on data the rules weren't shaped on is a better sign, though still no promise.`
+  if (early > 0.0025)
+    return `It did better than the alternative in the first part but not in the held-out part. If you adjusted the rules to look good on this history, that's the warning sign: they may describe the past rather than anticipate the future.`
+  if (late > 0.0025)
+    return `It trailed the alternative in the first part and did better in the held-out part, so there's no consistent edge either way.`
+  return `It trailed the alternative in both parts of the period.`
 }
 
-function cagrBetween(start: number, end: number, fromMs: number, toMs: number): number {
-  const years = (toMs - fromMs) / (365.25 * DAY_MS)
-  return years > 0 ? (Math.pow(end / start, 1 / years) - 1) * 100 : 0
+export interface NumberRow {
+  label: string
+  values: string[]
+  /** Index of the better value, when "better" means something. */
+  better?: number
+  hint?: string
 }
 
-export function buildReport(strategy: Strategy, now: Date): ReportData {
-  const r = sampleResult(strategy, now)
-  const splitTime = Math.floor(r.splitDate.getTime() / 1000)
-  const splitIdx = r.equity.findIndex((p) => p.time >= splitTime)
+/** The numbers table: the strategy, the alternative and, for lump sums, the Nifty 50. */
+export function numberRows(run: RunInfo, result: RunResult): { columns: string[]; rows: NumberRow[] } {
+  const d = run.definition
+  const m = result.metrics
+  const a = m.alternative
+  const sip = d.type === "sip"
+  const other = alternativeOf(a.kind, d)
+  const b = result.benchmark
+  // A third column for the market, unless the alternative already is the Nifty 50.
+  const withMarket = !sip && !(d.type === "rules" && d.universe.length === 1 && d.universe[0] === INDEX.NIFTY) && !(d.type === "rebalance" && d.instrumentId === INDEX.NIFTY)
+  const bFinal = result.equity_sample.at(-1)?.b
+  const columns = ["This test", other.label, ...(withMarket ? ["Nifty 50"] : [])]
+  const best = (xs: number[], higher = true) => {
+    const target = higher ? Math.max(...xs) : Math.min(...xs)
+    return xs.filter((x) => x === target).length === 1 ? xs.indexOf(target) : undefined
+  }
+  const three = <T,>(s: T, alt: T, market: T) => (withMarket ? [s, alt, market] : [s, alt])
+  const summary = (f: (x: Summary) => number) => three(f(m), f(a), f(b))
 
-  // Benchmark CAGR on each side of the split, from the full-resolution series.
-  const b = r.benchmark
-  const bIs = cagrBetween(r.capital, b[splitIdx - 1]!.value, b[0]!.time * 1000, b[splitIdx - 1]!.time * 1000)
-  const bOos = cagrBetween(b[splitIdx - 1]!.value, b.at(-1)!.value, b[splitIdx]!.time * 1000, b.at(-1)!.time * 1000)
+  const rows: NumberRow[] = []
+  if (sip) {
+    rows.push({ label: "Money put in", values: [money(m.invested ?? 0), money(m.invested ?? 0)] })
+    rows.push({ label: "Worth at the end", values: [money(m.final_value), money(a.final_value)], better: best([m.final_value, a.final_value]) })
+    const r = [yearly(m, true), yearly(a, true)]
+    rows.push({ label: "Return a year", values: r.map((v) => pct(v)), better: best(r), hint: "XIRR: the yearly rate that turns each instalment into what it's worth now." })
+  } else {
+    const finals = three(m.final_value, a.final_value, bFinal ?? 0)
+    rows.push({ label: "Worth at the end", values: finals.map(money), better: best(finals) })
+    const cagr = summary((x) => x.cagr)
+    rows.push({ label: "Return a year", values: cagr.map((v) => pct(v)), better: best(cagr), hint: "CAGR: the steady yearly rate that gets from the start to the end." })
+  }
+  const dd = sip ? [m.max_drawdown, a.max_drawdown] : summary((x) => x.max_drawdown)
+  rows.push({ label: "Worst fall from a peak", values: dd.map((v) => pct(v)), better: best(dd), hint: "Maximum drawdown, on time-weighted returns so new money can't hide a fall." })
+  const vol = sip ? [m.volatility, a.volatility] : summary((x) => x.volatility)
+  // A deposit's only "swing" is weekend interest landing on Mondays; call it what it is.
+  const volText = vol.map((v, i) => (i === 1 && a.kind === "deposit" ? "None" : pct(v)))
+  rows.push({ label: "Ups and downs", values: volText, better: best(vol, false), hint: "Volatility: how much returns swing, as a yearly figure." })
+  if (!sip) {
+    const sharpe = summary((x) => x.sharpe)
+    rows.push({ label: "Return for the risk", values: sharpe.map((v) => formatNumber(v, 2)), better: best(sharpe), hint: "Sharpe ratio: return above a 6.5% risk-free rate, per unit of volatility." })
+  }
+  if (sip && d.type === "sip" && d.dip) {
+    rows.push({ label: "Times it bought", values: [String(m.buys ?? 0), String(m.months ?? 0)] })
+    rows.push({ label: "Months with cash waiting", values: [String(m.months_in_cash ?? 0), "0"] })
+  }
+  return { columns, rows }
+}
 
-  // Longest stretch below a previous peak, in calendar days.
-  let longest = 0
-  let start: number | null = null
-  for (const p of r.drawdown) {
-    if (p.value < 0 && start == null) start = p.time
-    if (p.value >= 0 && start != null) {
-      longest = Math.max(longest, p.time - start)
-      start = null
+/** Monthly returns as a year-by-month grid, newest year first, with each year's total. */
+export function monthGrid(monthly: Record<string, number>): { year: number; months: (number | null)[]; total: number }[] {
+  const years = new Map<number, (number | null)[]>()
+  for (const [key, r] of Object.entries(monthly)) {
+    const [y, mo] = key.split("-").map(Number) as [number, number]
+    const row = years.get(y) ?? Array<number | null>(12).fill(null)
+    row[mo - 1] = r
+    years.set(y, row)
+  }
+  return [...years.entries()]
+    .sort((a, b) => b[0] - a[0])
+    .map(([year, months]) => ({ year, months, total: months.reduce<number>((acc, r) => (r == null ? acc : (1 + acc) * (1 + r) - 1), 0) }))
+}
+
+export const EXIT_REASONS: Record<string, string> = {
+  TARGET: "Target",
+  STOP: "Stop loss",
+  TRAIL: "Trailing stop",
+  TIME: "Time limit",
+  SIGNAL: "Sell signal",
+  END_OF_TEST: "Test ended",
+}
+
+/** The deepest fall in the chart: from which peak, to which trough, and when (if ever) it was made back. */
+export function worstFall(sample: { t: number; dd: number }[]): { depth: number; peak: number; trough: number; recovered: number | null } | null {
+  if (!sample.length) return null
+  let trough = 0
+  for (let i = 1; i < sample.length; i++) if (sample[i]!.dd < sample[trough]!.dd) trough = i
+  if (sample[trough]!.dd >= 0) return null
+  let peak = trough
+  while (peak > 0 && sample[peak]!.dd < 0) peak--
+  let recovered: number | null = null
+  for (let i = trough + 1; i < sample.length; i++) {
+    if (sample[i]!.dd >= 0) {
+      recovered = sample[i]!.t
+      break
     }
   }
-  if (start != null) longest = Math.max(longest, r.drawdown.at(-1)!.time - start)
-
-  const monthly: MonthRow[] = [...r.monthly.entries()].map(([year, months]) => {
-    const pct = months.map((m) => (m == null ? null : m * 100))
-    const total = (months.reduce<number>((acc, m) => acc * (1 + (m ?? 0)), 1) - 1) * 100
-    return { year, months: pct, total }
-  })
-  let best = { pct: -Infinity, label: "" }
-  let worst = { pct: Infinity, label: "" }
-  for (const row of monthly) {
-    row.months.forEach((m, i) => {
-      if (m == null) return
-      if (m > best.pct) best = { pct: m, label: `${MONTHS[i]} ${row.year}` }
-      if (m < worst.pct) worst = { pct: m, label: `${MONTHS[i]} ${row.year}` }
-    })
-  }
-
-  const slugs = new Map(EQUITIES.map((e) => [e.symbol, e.slug]))
-  const trades: TradeRow[] = r.trades.map((t) => ({
-    no: t.no,
-    symbol: t.symbol,
-    slug: slugs.get(t.symbol),
-    side: t.side,
-    entryDate: t.entryDate.getTime(),
-    exitDate: t.exitDate.getTime(),
-    entry: t.entry,
-    exit: t.exit,
-    qty: t.qty,
-    pnl: t.pnl,
-    returnPct: t.returnPct,
-    holdDays: Math.round((t.exitDate.getTime() - t.entryDate.getTime()) / DAY_MS),
-    reason: t.reason,
-  }))
-
-  const years = (r.to.getTime() - r.from.getTime()) / (365.25 * DAY_MS)
-  return {
-    from: r.from.getTime(),
-    to: r.to.getTime(),
-    splitTime,
-    capital: r.capital,
-    finalValue: r.finalValue,
-    totalReturnPct: (r.finalValue / r.capital - 1) * 100,
-    equity: downsample(r.equity, 900, [splitIdx]),
-    benchmark: downsample(r.benchmark, 900, [splitIdx]),
-    drawdown: downsample(r.drawdown, 900, [], "min"),
-    metrics: r.metrics,
-    benchmarkMetrics: r.benchmarkMetrics,
-    inSampleCagr: r.inSampleCagr,
-    outOfSampleCagr: r.outOfSampleCagr,
-    benchmarkIsCagr: bIs,
-    benchmarkOosCagr: bOos,
-    monthly,
-    trades,
-    winRate: r.winRate,
-    profitFactor: r.profitFactor,
-    avgHoldDays: r.avgHoldDays,
-    tradesPerYear: trades.length / years,
-    longestDrawdownDays: Math.round(longest / 86400),
-    bestMonth: best,
-    worstMonth: worst,
-    sensitivity: sensitivityFor(strategy, r.metrics.cagr),
-  }
-}
-
-/** Equity sparkline and headline numbers for the strategies list. */
-export function strategySummary(strategy: Strategy, now: Date) {
-  const r = sampleResult(strategy, now)
-  const step = Math.ceil(r.equity.length / 48)
-  const spark = r.equity.filter((_, i) => i % step === 0 || i === r.equity.length - 1).map((p) => p.value)
-  return { cagr: r.metrics.cagr, maxDrawdown: r.metrics.maxDrawdown, sharpe: r.metrics.sharpe, benchmarkCagr: r.benchmarkMetrics.cagr, spark, from: r.from.getTime(), to: r.to.getTime() }
-}
-
-/** Short hex id, stable for a given seed text (run ids are uuids in lab.backtest_run; the UI shows the first 8 characters). */
-export function shortId(seed: string): string {
-  return hashString(seed).toString(16).padStart(8, "0")
+  return { depth: sample[trough]!.dd, peak: sample[peak]!.t, trough: sample[trough]!.t, recovered }
 }

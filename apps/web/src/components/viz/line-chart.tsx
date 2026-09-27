@@ -23,6 +23,12 @@ export interface ChartAnnotation {
   label: string
 }
 
+/** A shaded stretch from `from` to the end of the chart, e.g. a held-out period. */
+export interface ChartShade {
+  from: number
+  label: string
+}
+
 export interface ScrubPoint {
   t: number
   values: (number | undefined)[]
@@ -49,6 +55,7 @@ export function LineChart({
   height = 320,
   reference,
   annotations = [],
+  shade,
   yFormat = (v) => v.toLocaleString("en-IN"),
   onScrub,
   className,
@@ -59,6 +66,7 @@ export function LineChart({
   height?: number
   reference?: { value: number; label: string }
   annotations?: ChartAnnotation[]
+  shade?: ChartShade
   yFormat?: (v: number) => string
   onScrub?: (point: ScrubPoint | null) => void
   className?: string
@@ -162,7 +170,7 @@ export function LineChart({
     >
       {geo && (
         <svg width={width} height={height} className="absolute inset-0 overflow-visible">
-          <StaticLayer geo={geo} series={series} plotW={plotW} plotH={plotH} height={height} yFormat={yFormat} reference={reference} annotations={annotations} />
+          <StaticLayer geo={geo} series={series} plotW={plotW} plotH={plotH} height={height} yFormat={yFormat} reference={reference} annotations={annotations} shade={shade} />
           {labels.map((l) => (
             <text key={l.s.id} x={l.x + 8} y={l.y + 4} fontSize={12} fontWeight={500} style={{ fill: l.s.color }}>
               {l.s.label}
@@ -208,6 +216,7 @@ const StaticLayer = memo(function StaticLayer({
   yFormat,
   reference,
   annotations,
+  shade,
 }: {
   geo: Geo
   series: ChartSeries[]
@@ -217,11 +226,22 @@ const StaticLayer = memo(function StaticLayer({
   yFormat: (v: number) => string
   reference?: { value: number; label: string }
   annotations: ChartAnnotation[]
+  shade?: ChartShade
 }) {
   const right = M.left + plotW
   const main = series[0]!
+  const shadeX = shade ? Math.min(right, Math.max(M.left, geo.x(shade.from))) : null
   return (
     <g>
+      {shade && shadeX != null && shadeX < right && (
+        <g>
+          <rect x={shadeX} y={M.top - 6} width={right - shadeX} height={plotH + 6} style={{ fill: "var(--surface)" }} />
+          <line x1={shadeX} x2={shadeX} y1={M.top - 6} y2={M.top + plotH} strokeDasharray="2 3" style={{ stroke: "var(--ink-3)" }} strokeWidth={1} />
+          <text x={shadeX + 6} y={M.top + 6} fontSize={11.5} style={{ fill: "var(--ink-2)" }}>
+            {shade.label}
+          </text>
+        </g>
+      )}
       {geo.yTicks
         .filter((v) => !reference || Math.abs(geo.y(v) - geo.y(reference.value)) > 16)
         .map((v) => (

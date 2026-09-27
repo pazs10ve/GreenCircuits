@@ -1,6 +1,6 @@
 import { INDEX, getInstrument } from "@greencircuits/market/catalog"
 import { dailyCandles } from "@greencircuits/market/history"
-import type { Point } from "@greencircuits/market/lab"
+import type { Point } from "@greencircuits/market/types"
 import type { Holding } from "@/lib/stores/portfolio"
 
 /**

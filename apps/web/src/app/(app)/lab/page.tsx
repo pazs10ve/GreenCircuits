@@ -1,77 +1,72 @@
 import type { Metadata } from "next"
 import Link from "next/link"
-import { Plus } from "lucide-react"
-import { SAMPLE_STRATEGIES } from "@greencircuits/market/lab"
-import { strategySummary } from "@/lib/lab/report"
-import { recentRuns } from "@/lib/lab/runs"
+import { Section } from "@/components/editorial/section"
+import { YourTests } from "@/components/lab/your-tests"
 import { Button } from "@/components/ui/button"
-import { PageHeader, Panel } from "@/components/shell/page-header"
-import { SampleBadge } from "@/components/market/source-badge"
-import { UsageStrip } from "@/components/lab/home/usage-strip"
-import { StrategyCard } from "@/components/lab/home/strategy-card"
-import { RunsTable } from "@/components/lab/home/runs-table"
-import { TemplateGallery } from "@/components/lab/home/templates"
-import { ImportDialog } from "@/components/lab/home/import-dialog"
+import { getInstrument } from "@greencircuits/market/catalog"
+import { QUESTIONS } from "@/lib/lab/templates"
 
-export const metadata: Metadata = { title: "Strategy lab" }
+export const metadata: Metadata = {
+  title: "Lab",
+  description: "Test an investing idea on years of the demo market's prices, with Indian charges, against a sensible alternative.",
+}
 
 export default function LabPage() {
-  const now = new Date()
-  const strategies = SAMPLE_STRATEGIES.map((s) => ({ strategy: s, summary: strategySummary(s, now) }))
-  const runs = recentRuns(now)
-
   return (
-    <div className="flex flex-col gap-4">
-      <PageHeader
-        eyebrow={
-          <>
-            <SampleBadge />
-            <span>Strategy lab</span>
-          </>
-        }
-        title="Strategies"
-        description="Write entry and exit rules, backtest them on point-in-time NSE history with Indian costs, then paper trade the same rules. Runs go to a queue of Python workers."
-        actions={
-          <>
-            <ImportDialog />
-            <Button size="lg" asChild>
-              <Link href="/lab/new">
-                <Plus /> New strategy
-              </Link>
-            </Button>
-          </>
-        }
-      />
+    <div className="mx-auto max-w-[1200px] px-5 pt-8 pb-16 md:pt-12">
+      <header className="max-w-[46rem]">
+        <p className="text-[13px] text-ink-2">Lab</p>
+        <h1 className="mt-3 font-serif text-[2.375rem] leading-[1.04] font-semibold tracking-[-0.02em] md:text-[3.25rem]">Test an idea before you risk money on it</h1>
+        <p className="mt-5 font-serif text-[1.3125rem] leading-snug text-ink-2">
+          Describe a way of investing: a monthly SIP, a mix of equity and bonds, or rules for when to buy and sell. The lab runs it over years of the demo market, charges what an
+          Indian investor would pay, and puts it next to the obvious alternative.
+        </p>
+        <Button asChild size="lg" className="mt-7">
+          <Link href="/lab/new">Start a new test</Link>
+        </Button>
+      </header>
 
-      <UsageStrip />
+      <div className="mt-16 space-y-20">
+        <Section title="Start from a question" description="Each opens in the builder with the settings filled in, ready to change.">
+          <ul className="grid gap-x-10 gap-y-9 md:grid-cols-2 lg:grid-cols-3">
+            {QUESTIONS.map((q) => {
+              const inst = getInstrument(q.instrumentId)
+              const href = `/lab/new?template=${q.template}${q.universe ? "" : `&symbol=${encodeURIComponent(inst?.symbol ?? "")}`}`
+              return (
+                <li key={q.template} className="border-t border-rule pt-4">
+                  <Link href={href} className="group block">
+                    <h3 className="font-serif text-[1.25rem] leading-snug font-semibold group-hover:underline group-hover:decoration-1 group-hover:underline-offset-4">{q.question}</h3>
+                    <p className="mt-2 text-[0.9375rem] leading-relaxed text-ink-2">{q.blurb}</p>
+                    <span className="link mt-3 inline-flex items-center gap-1 text-sm font-medium">
+                      Test it <span aria-hidden="true">→</span>
+                    </span>
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
+        </Section>
 
-      <Panel
-        title="Your strategies"
-        description="Sample runs, Jan 2016 to yesterday · open one for the full report"
-        actions={<span className="num text-[11px] text-muted-foreground">{strategies.length} strategies</span>}
-      >
-        <div className="grid gap-3 p-3 sm:grid-cols-2 2xl:grid-cols-4">
-          {strategies.map(({ strategy, summary }) => (
-            <StrategyCard key={strategy.id} strategy={strategy} summary={summary} />
-          ))}
-        </div>
-      </Panel>
+        <Section id="your-tests" title="Your tests" description="Kept for this browser; there's no sign-in.">
+          <YourTests />
+        </Section>
 
-      <Panel
-        title="Recent runs"
-        description="Queued → running → done, as the workers report progress"
-        actions={<SampleBadge />}
-      >
-        <RunsTable runs={runs} />
-      </Panel>
-
-      <Panel title="Start from a template" description="Each opens the builder prefilled; change anything before you run it">
-        <TemplateGallery />
-      </Panel>
-
-      <p className="text-[11px] text-muted-foreground">
-        Backtest results are hypothetical and use sample data here. They are not a promise of future returns, and nothing in the lab is investment advice.
-      </p>
+        <Section title="How the lab tests">
+          <div className="grid max-w-5xl gap-x-12 gap-y-6 text-[0.9375rem] leading-relaxed text-ink-2 md:grid-cols-3">
+            <p>
+              <span className="font-semibold text-ink">No peeking.</span> Rules are read on a day&apos;s close and trades happen at the next day&apos;s open, so no decision uses a price
+              it couldn&apos;t have known.
+            </p>
+            <p>
+              <span className="font-semibold text-ink">Real costs.</span> Trades pay STT, stamp duty, exchange and SEBI fees, GST and depository charges, plus a little slippage.
+            </p>
+            <p>
+              <span className="font-semibold text-ink">A fair comparison.</span> Every result sits next to its alternative, and the last 30% of the period is held out, to show
+              whether an edge survives.
+            </p>
+          </div>
+        </Section>
+      </div>
     </div>
   )
 }

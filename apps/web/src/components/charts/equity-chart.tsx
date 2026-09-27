@@ -10,7 +10,7 @@ import {
   createSeriesMarkers,
   type UTCTimestamp,
 } from "lightweight-charts"
-import type { Point } from "@greencircuits/market/lab"
+import type { Point } from "@greencircuits/market/types"
 import { cn } from "@/lib/utils"
 import { useChartPalette } from "./theme"
 import { istTickFormatter } from "./time"
