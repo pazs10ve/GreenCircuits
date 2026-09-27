@@ -1,5 +1,3 @@
 # worker
 
-BullMQ consumers for notifications: in-app, web push and email, with retries and a dedupe key per notification.
-
-Phase 4.
+Planned: BullMQ consumers that deliver notifications by email and Telegram, with retries and a dedupe key per notification. For now, the alert engine writes in-app notifications directly.
