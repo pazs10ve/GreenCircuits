@@ -15,7 +15,7 @@ Dispatch goes through a BullMQ queue named `backtests` on Valkey.
 
 1. The API inserts the `lab.backtest_run` row, then adds a job whose id is the run id and whose payload is only that id.
 2. Python workers consume the queue with BullMQ's official Python client and update the row as they go: RUNNING, progress, then SUCCEEDED or FAILED.
-3. Paid plans enqueue with a higher priority (a lower number).
+3. Paid plans enqueue with a higher priority (a lower number). *Update, 2026-09-27: the project has no paid plans, so every run gets the same priority.*
 
 `lab.backtest_run` remains the durable record of inputs, status, timings, attempts and results. It is no longer the dispatch mechanism.
 

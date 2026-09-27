@@ -1,82 +1,164 @@
 # GreenCircuits
 
-A research and strategy-testing platform for Indian markets: NSE and BSE equities, F&O, MCX commodities, bonds and IPOs. Screen stocks, read option chains with live Greeks, backtest strategies with Indian transaction charges, paper trade them on live prices, and set alerts.
+A research and strategy-testing project for Indian markets. It has three parts:
 
-It is designed for **100,000 requests an hour and 1,000 concurrent users**, runs on one machine with Docker Compose, and shows its scale with load tests rather than claiming it.
+- **a daily market brief**;
+- **company pages** that read like reports;
+- **a lab** that backtests investing ideas with Indian costs, from SIPs and rebalancing to entry and exit rules.
+
+It is built in the shape of a real system:
+
+- PostgreSQL with TimescaleDB, and a REST API;
+- a market-data ingestor and a WebSocket gateway;
+- an alert engine that fires each alert exactly once;
+- Python backtest workers behind a queue.
+
+The target is 100,000 requests an hour and 1,000 concurrent users, and load tests will show whether it gets there.
+
+It is a portfolio project, not a product. Prices come from a market simulator, company figures are generated, and nothing here is investment advice.
 
 > Green is up on Indian market screens, and a circuit is the exchange's daily price band.
 
-**Status:** phase 0, foundations. The database schema (78 tables) and its TimescaleDB layer are written and tested; the services come next. See the [roadmap](#roadmap).
+## What works
 
-## Design
+- **Today:** a daily brief written from the state of the market: a headline, the index's day, what moved and why, sectors, and what's coming up. It also asks "Would it have worked?" of three ideas, using ten years of index history.
+- **Company pages:** price, the five numbers that matter, and P/E against the company's own history and its sector. Then financials, ownership, peers and events, all read from the database.
+- **Your data:** watchlists, alerts and holdings, kept on the server under an anonymous account. There is no sign-up ([ADR 0002](docs/adr/0002-anonymous-accounts.md)).
+- **Alerts:** checked on every tick, fired exactly once, and delivered as in-app notifications.
+- **Backtests:** queued on BullMQ and run by a Python engine ([ADR 0001](docs/adr/0001-backtest-jobs-on-a-queue.md)). It fills at the next day's open and charges STT, stamp duty, exchange fees, GST and DP charges. Results are compared with Nifty 50 and split into in-sample and out-of-sample periods.
+- **Demo mode:** with the backend off, the site still works, running the simulator in the browser ([ADR 0003](docs/adr/0003-live-and-demo-modes.md)).
 
-The full system design is in [`docs/blueprint.html`](docs/blueprint.html): download it and open it in a browser. It covers the specs, capacity math, high- and low-level design, the schema, UI wireframes, hosting and cost, and the load-test plan. Architecture decisions are recorded in [`docs/adr`](docs/adr).
+Not done yet: a lab interface on top of the backtest API (the lab page still shows sample runs), and the screener, F&O, IPO, bond and commodity pages in the new design. See the [roadmap](#roadmap).
 
-In short:
+## Architecture
 
-- **Web:** Next.js on Vercel.
-- **API:** Fastify, one deployable split into modules.
-- **Live prices:** an ingestor normalises the market feed and publishes quotes to Valkey; a uWebSockets.js gateway fans them out to browsers as Protobuf deltas ([`tick.proto`](packages/contracts/proto/tick.proto)).
-- **Alerts:** an in-memory engine that fires each alert exactly once.
-- **Strategy lab:** a Python engine that backtests on history and paper trades on the live feed with the same code. Backtest jobs go through a BullMQ queue ([ADR 0001](docs/adr/0001-backtest-jobs-on-a-queue.md)).
-- **Data:** PostgreSQL 17 with TimescaleDB, and Valkey for quotes, cache and queues.
+```mermaid
+flowchart LR
+  browser([Browser]) -- pages --> web[web<br/>Next.js]
+  web -- SSR and /api/v1 proxy --> api[api<br/>Fastify]
+  browser -- WebSocket --> stream[stream<br/>uWebSockets.js]
+  ingestor[ingestor<br/>simulator] -- quotes, gc:ticks --> valkey[(Valkey)]
+  ingestor -- 1-minute bars --> pg[(Postgres<br/>TimescaleDB)]
+  valkey -- gc:ticks --> stream
+  valkey -- gc:ticks --> alerts[alerts<br/>exactly once]
+  alerts -- triggers, notifications --> pg
+  api --> pg
+  api -- cache, rate limits, backtests queue --> valkey
+  valkey -- BullMQ --> worker[lab worker<br/>Python]
+  worker -- results, trades --> pg
+```
+
+- **Data:** the SQL schema in [`db/`](db) is the source of truth; numbered migrations sit on top of it. The seed loader fills it with five years of daily bars, statements, valuations, bonds and IPOs for 66 instruments.
+- **Live prices:** the ingestor publishes changed quotes every 250 ms. The gateway conflates them per client and copes with slow sockets. Frames are compact JSON arrays ([ADR 0004](docs/adr/0004-json-quote-frames.md)).
+- **Contracts:** Zod schemas in [`packages/contracts`](packages/contracts) are shared by the web app, the API and, through stored definitions, the Python engine.
+
+The full design, including specs, capacity maths, the schema, hosting and the load-test plan, is in [`docs/blueprint.html`](docs/blueprint.html); download it and open it in a browser. Decisions are recorded in [`docs/adr`](docs/adr).
+
+## Getting started
+
+Requirements:
+
+- Docker;
+- Node.js 22 or later;
+- pnpm 12 (`npx pnpm@12.6.0` works if corepack doesn't);
+- Python 3.12 with [uv](https://docs.astral.sh/uv/).
+
+```bash
+cp .env.example .env
+pnpm install
+pnpm infra:up        # TimescaleDB and Valkey; the migrate service applies the schema
+pnpm db:seed         # the demo dataset, in about five seconds
+cp apps/web/.env.example apps/web/.env.local   # live mode: the web app uses the API and the gateway
+pnpm dev             # the web app, API, gateway, ingestor and alert engine
+```
+
+In a second terminal, start the backtest worker:
+
+```bash
+cd pipelines && uv sync && uv run python -m greencircuits.lab.worker
+```
+
+Then open http://localhost:3000. The API docs are at http://localhost:4000/docs.
+
+| Process | Port | Health check |
+| --- | --- | --- |
+| web | 3000 | |
+| api | 4000 | `/health`, which also reports feed freshness |
+| stream | 4001 | `/health` |
+| ingestor | 4010 | `/health` |
+| alerts | 4011 | `/health` |
+| lab worker | 4020 | `/health` |
+| Postgres | 55432 | |
+| Valkey | 6380 | |
+
+The database and Valkey ports avoid clashing with other local projects. Change `GC_DB_PORT` or `GC_VALKEY_PORT` in `.env` if they do.
+
+- **Demo mode only:** run `pnpm --filter web dev` without `apps/web/.env.local`.
+- **After pulling new migrations:** run `pnpm db:migrate`.
+
+## Tests
+
+```bash
+pnpm typecheck && pnpm lint && pnpm test          # types, lint and unit tests
+pnpm --filter @greencircuits/api test:integration # the API against the running stack
+LAB_E2E=1 pnpm --filter @greencircuits/api test:integration   # and a backtest through the worker
+pnpm db:test                                      # schema smoke checks in a throwaway database
+cd pipelines && uv run pytest && uv run ruff check
+```
+
+[CI](.github/workflows/ci.yml) runs all of these on every push to `main` and on every pull request. The integration job starts TimescaleDB and Valkey as service containers, migrates and seeds a fresh database, starts a backtest worker, and follows a backtest from the API through the queue to its results.
+
+## Hosting and cost
+
+The web app can live on Vercel's free tier permanently, in demo mode. The backend runs with Docker Compose on a laptop, or on a short-lived VM for demos and load tests, so it costs nothing while it's off. CI uses GitHub Actions' free minutes.
+
+## Market data
+
+Today every price comes from the simulator, and every company figure is generated deterministically. Both are labelled as such in the site's masthead.
+
+Real sources are planned:
+
+- a broker API on your own account (Angel One SmartAPI or Fyers) for live prices;
+- the exchanges' daily bhavcopy files for end-of-day data.
+
+Broker and exchange terms don't allow showing their data publicly, so real data would stay behind your own login.
+
+Backtest results are hypothetical.
 
 ## Repository layout
 
 ```
 GreenCircuits/
 ├── apps/
-│   ├── web/          Next.js web app
-│   ├── api/          Fastify REST API (modular monolith)
-│   ├── stream/       uWebSockets.js gateway
-│   ├── ingestor/     feed adapters (broker, replay, simulator), quote state, 1-minute bars
-│   ├── alerts/       real-time alert engine
-│   └── worker/       BullMQ consumers: notifications
+│   ├── web/          Next.js web app, live and demo modes
+│   ├── api/          Fastify REST API (/v1, OpenAPI at /docs)
+│   ├── stream/       uWebSockets.js gateway for live quotes
+│   ├── ingestor/     market feed (the simulator today) and 1-minute bars
+│   ├── alerts/       alert engine
+│   └── worker/       planned: email and Telegram delivery
 ├── packages/
-│   ├── contracts/    Zod schemas, OpenAPI, tick.proto
-│   ├── market/       calendars, contract parsing, en-IN formatting, Black-76
-│   ├── db/           Kysely types generated from the schema
-│   └── ui/           design tokens and components
-├── pipelines/        Python: EOD pipelines, quant library, strategy lab
-├── db/               schema.sql, timescale.sql, migrate.sh, tests/
-├── compose.yml       local stack: TimescaleDB, Valkey, MinIO
-├── deploy/           production overrides (later)
-├── loadtest/         k6 scenarios and published results
-├── infra/            Terraform for on-demand load-test machines
+│   ├── contracts/    wire formats, Valkey keys, strategy and backtest schemas
+│   ├── market/       catalog, simulator, formatting, Black-76, research helpers
+│   ├── db/           Kysely types, the connection, the demo-data loader
+│   └── ui/           planned: shared design tokens
+├── pipelines/        Python: the backtest engine and its worker
+├── db/               schema.sql, timescale.sql, migrations/, migrate.sh, tests/
+├── compose.yml       local stack: TimescaleDB, Valkey, optional MinIO
+├── deploy/, infra/, loadtest/   later: production overrides, load-test machines, k6
 └── docs/             blueprint.html, adr/
 ```
 
-## Getting started
-
-Requirements: Docker, Node.js 22 or later, and Python 3.12 with [uv](https://docs.astral.sh/uv/).
-
-```bash
-cp .env.example .env
-docker compose up -d                                # TimescaleDB and Valkey; applies the schema on first start
-docker compose exec db sh tests/run.sh              # 35 smoke checks in a throwaway database
-docker compose exec db psql -U greencircuits -d greencircuits
-```
-
-Postgres listens on `localhost:55432` and Valkey on `localhost:6380`, so they don't collide with other local projects; change `GC_DB_PORT` or `GC_VALKEY_PORT` in `.env` if they do. MinIO object storage is optional: `docker compose --profile storage up -d`.
-
-The Node workspaces (`corepack enable`, then `pnpm install`) and the Python pipelines (`uv sync` in `pipelines/`) get their commands as each phase lands.
-
-## Market data
-
-Live prices come from a broker API on your own account (Angel One SmartAPI or Fyers), end-of-day data from the exchanges' daily bhavcopy files, and everything public-facing from a built-in market simulator. Broker and exchange terms don't allow showing their data to the public, so live data stays behind your own login.
-
-GreenCircuits is a research and learning tool. Nothing in it is investment advice, and backtest results are hypothetical.
-
 ## Roadmap
 
-- [ ] **0 · Foundations:** monorepo, Compose stack, schema, instrument master, simulator, CI, recording the broker feed
-- [ ] **1 · Equities:** EOD pipeline, stock pages with adjusted charts, search, fundamentals from XBRL
-- [ ] **2 · Realtime:** stream gateway, quote store in a Web Worker, broker adapter
-- [ ] **3 · F&O:** option chain with Black-76 IV and Greeks, OI analytics, payoff builder
-- [ ] **4 · Screener and alerts:** screener language compiled to SQL, alert engine, notifier
-- [ ] **5 · Strategy lab:** backtest engine and workers, results, paper trading, plans and journal
-- [ ] **6 · Prove it:** dashboards, k6 load tests, published results
-- [ ] **Stretch:** walk-forward optimisation, investment planner, IPOs, bonds, MCX, portfolio import
+- [x] **Foundations:** monorepo, Compose stack, the schema (79 tables) and migrations, the simulator, CI
+- [x] **Data and API:** the demo-data loader, a REST API with OpenAPI, company pages and the daily brief from the database
+- [x] **Realtime:** the ingestor, 1-minute bars in TimescaleDB, the WebSocket gateway, live and demo modes
+- [x] **Your data and alerts:** anonymous accounts, synced watchlists, alerts and holdings, and exactly-once alerts with in-app notifications
+- [x] **Backtest engine:** the queue, the Python engine with Indian charges and in-sample and out-of-sample results
+- [ ] **Lab interface:** build, run and read backtests in the new design
+- [ ] **The rest of the site:** Explore (screener, IPOs, bonds, commodities), F&O, portfolio and watchlists in the new design, and a case-study page
+- [ ] **Prove it:** k6 load tests at 100,000 requests an hour and 1,000 sockets, dashboards, published results
+- [ ] **Later:** real end-of-day data, a broker feed, email and Telegram alerts, paper trading, walk-forward testing
 
 ## License
 
