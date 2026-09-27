@@ -21,7 +21,7 @@ __pycache__/
 !.env.example
 
 # data: recorded ticks, downloaded exchange files, parquet exports
-data/
+/data/
 *.parquet
 
 # logs and os noise
