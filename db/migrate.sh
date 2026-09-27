@@ -9,5 +9,5 @@ if [ "$applied" = "1" ]; then
   exit 0
 fi
 
-psql -v ON_ERROR_STOP=1 -q -f /db/schema.sql -f /db/timescale.sql
+psql -v ON_ERROR_STOP=1 -q -o /dev/null -f /db/schema.sql -f /db/timescale.sql
 echo "schema applied"

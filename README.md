@@ -53,11 +53,11 @@ Requirements: Docker, Node.js 22 or later, and Python 3.12 with [uv](https://doc
 ```bash
 cp .env.example .env
 docker compose up -d                                # TimescaleDB and Valkey; applies the schema on first start
-docker compose exec db sh /db/tests/run.sh          # 35 smoke checks in a throwaway database
+docker compose exec db sh tests/run.sh              # 35 smoke checks in a throwaway database
 docker compose exec db psql -U greencircuits -d greencircuits
 ```
 
-Postgres listens on `localhost:5433` and Valkey on `localhost:6380`, so they don't collide with other local projects. MinIO object storage is optional: `docker compose --profile storage up -d`.
+Postgres listens on `localhost:55432` and Valkey on `localhost:6380`, so they don't collide with other local projects; change `GC_DB_PORT` or `GC_VALKEY_PORT` in `.env` if they do. MinIO object storage is optional: `docker compose --profile storage up -d`.
 
 The Node workspaces (`corepack enable`, then `pnpm install`) and the Python pipelines (`uv sync` in `pipelines/`) get their commands as each phase lands.
 

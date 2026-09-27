@@ -11,7 +11,7 @@
     "infra:down": "docker compose down",
     "infra:reset": "docker compose down -v",
     "db:psql": "docker compose exec db psql -U greencircuits -d greencircuits",
-    "db:test": "docker compose exec db sh /db/tests/run.sh",
+    "db:test": "docker compose exec db sh tests/run.sh",
     "build": "turbo run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",

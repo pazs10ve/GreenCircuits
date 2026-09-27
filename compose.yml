@@ -9,10 +9,12 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-greencircuits}
       POSTGRES_DB: greencircuits
     ports:
-      - "${GC_DB_PORT:-5433}:5432"
+      - "${GC_DB_PORT:-55432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./db:/db:ro
+    # exec commands start here, so they can use relative paths (Git Bash rewrites absolute ones)
+    working_dir: /db
     healthcheck:
       # TCP, not the socket: the image's init runs a socket-only server first
       test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U greencircuits -d greencircuits"]
