@@ -4,9 +4,17 @@ import numpy as np
 import pytest
 
 from greencircuits.lab.charges import delivery_charges
+from greencircuits.lab.engine import BENCHMARK_ID, alternative
 from greencircuits.lab.indicators import rsi, sma
 from greencircuits.lab.metrics import max_drawdown, summarise, xirr
-from greencircuits.lab.simulate import Series, condition_series, simulate_rules, simulate_sip
+from greencircuits.lab.simulate import (
+    Series,
+    condition_series,
+    simulate_deposit,
+    simulate_hold,
+    simulate_rules,
+    simulate_sip,
+)
 
 
 def weekdays(n: int, start: date = date(2024, 1, 1)) -> list[date]:
@@ -100,3 +108,35 @@ def test_indicators_ignore_a_leading_gap():
     s = sma(x, 5)
     assert np.isnan(s[13]) and s[14] == pytest.approx(3.0) and not np.isnan(s[-1])
     assert not np.isnan(rsi(x, 14)[-1])
+
+
+def test_a_deposit_earns_its_rate():
+    dates = weekdays(520)  # about two years
+    r = simulate_deposit(dates, 0, 10_000, 7)
+    assert r.extra["invested"] == 10_000 * len({(d.year, d.month) for d in dates})
+    assert r.extra["xirr"] == pytest.approx(0.07, abs=0.001)
+
+
+def test_holding_splits_the_money_equally():
+    a, b = series(np.linspace(100, 200, 50)), series(np.full(50, 50.0))
+    r = simulate_hold({1: a, 2: b}, 0, 100_000, costs=False)
+    # Half in each: the first doubles, the second stays flat.
+    assert r.values[0] == pytest.approx(100_000)
+    assert r.values[-1] == pytest.approx(150_000)
+
+
+def test_each_strategy_is_judged_against_the_right_alternative():
+    nifty, stock = series(np.linspace(100, 130, 300)), series(np.linspace(50, 80, 300))
+    data = {BENCHMARK_ID: nifty, 7: stock}
+    sip = {"type": "sip", "instrumentId": 7, "monthly": 10_000}
+    assert alternative(sip, data, [7], 0, 1e6)[0] == "sip_in_benchmark"
+    assert alternative({**sip, "instrumentId": BENCHMARK_ID}, data, [BENCHMARK_ID], 0, 1e6)[0] == "deposit"
+    dip = {**sip, "dip": {"fallPct": 10, "cashRatePct": 6}}
+    kind, plain = alternative(dip, data, [7], 0, 1e6)
+    assert kind == "plain_sip" and plain.extra["buys"] == plain.extra["months"]
+    mix = {"type": "rebalance", "instrumentId": BENCHMARK_ID, "equityPct": 60, "bondRatePct": 7}
+    kind, equity = alternative(mix, data, [BENCHMARK_ID], 0, 1e6)
+    assert kind == "all_equity" and equity.values[-1] == pytest.approx(1.3e6)
+    rules = {"type": "rules", "universe": [7], "entry": [], "exit": {"maxBars": 5}, "costs": "NONE"}
+    kind, held = alternative(rules, data, [7], 0, 1e6)
+    assert kind == "buy_and_hold" and held.values[-1] == pytest.approx(1.6e6)

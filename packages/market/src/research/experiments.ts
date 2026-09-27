@@ -90,6 +90,11 @@ function years(candles: Candle[]): number {
   return (candles.at(-1)!.time - candles[0]!.time) / (365.25 * 86400)
 }
 
+/** Interest between two bars, by calendar days: a 6% deposit earns 6% a year whatever the calendar. */
+function accrue(annual: number, candles: Candle[], i: number): number {
+  return i === 0 ? 1 : Math.pow(1 + annual, (candles[i]!.time - candles[i - 1]!.time) / (365 * 86400))
+}
+
 const pct1 = (v: number) => formatPct(v, 1, false)
 const signedPct0 = (v: number) => formatPct(v, 0)
 
@@ -101,7 +106,6 @@ export function sipVsDip(
   const candles = given ?? history(inst, Math.round(252 * span))
   const closes = candles.map((c) => c.close)
   const highs = rollingMax(closes, 250)
-  const cashDaily = Math.pow(1 + cashRate, 1 / 252) - 1
   let sipUnits = 0
   let dipUnits = 0
   let cash = 0
@@ -115,7 +119,7 @@ export function sipVsDip(
   const wait: Pt[] = []
 
   candles.forEach((c, i) => {
-    cash *= 1 + cashDaily
+    cash *= accrue(cashRate, candles, i)
     const m = istMonth(c.time)
     if (m !== month) {
       month = m
@@ -180,7 +184,6 @@ export function balancedMix(
   { years: span = 10, equity = 0.6, bondRate = 0.07, start = 10_00_000, candles: given }: ExperimentOptions & { equity?: number; bondRate?: number; start?: number } = {},
 ): Experiment {
   const candles = given ?? history(inst, Math.round(252 * span))
-  const bondDaily = Math.pow(1 + bondRate, 1 / 252) - 1
   const c0 = candles[0]!
   const allUnits = start / c0.close
   let units = (equity * start) / c0.close
@@ -192,7 +195,7 @@ export function balancedMix(
   const mixValues: number[] = []
 
   candles.forEach((c, i) => {
-    bonds *= 1 + bondDaily
+    bonds *= accrue(bondRate, candles, i)
     const y = istFinancialYear(c.time)
     if (y !== fy) {
       fy = y
@@ -259,7 +262,6 @@ export function oversoldDips(
   const candles = given ?? history(inst, Math.round(252 * span))
   const closes = candles.map((c) => c.close)
   const rsi = rsiSeries(closes, 14)
-  const cashDaily = Math.pow(1 + cashRate, 1 / 252) - 1
   let cash = start
   let units = 0
   let entry = 0
@@ -286,7 +288,7 @@ export function oversoldDips(
       units = 0
     }
     pending = null
-    cash *= 1 + cashDaily
+    cash *= accrue(cashRate, candles, i)
     if (units > 0) daysIn++
     const r = rsi[i]!
     const prev = rsi[i - 1]

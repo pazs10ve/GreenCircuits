@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import type { Quote } from "@greencircuits/market/types"
 import { fromWire, toWire } from "./index"
-import { BacktestRequest, StrategyDefinition, templateDefinition } from "./strategy"
+import { BacktestRequest, StrategyDefinition, TEMPLATES, templateDefinition } from "./strategy"
 
 const quote: Quote = {
   id: 7,
@@ -53,8 +53,8 @@ describe("backtest requests", () => {
   })
 
   it("offers templates that validate", () => {
-    for (const t of ["sip-vs-dip", "sip-vs-index", "rebalance", "rsi-dip"]) {
-      expect(StrategyDefinition.safeParse(templateDefinition(t, 7)).success).toBe(true)
+    for (const t of TEMPLATES) {
+      expect(StrategyDefinition.safeParse(templateDefinition(t, 7, [7, 8, 9])).success).toBe(true)
     }
     expect(templateDefinition("no-such-template", 7)).toBeNull()
   })

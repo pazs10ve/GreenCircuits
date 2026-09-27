@@ -72,25 +72,47 @@ export const BacktestRequest = z
 export type BacktestRequest = z.infer<typeof BacktestRequest>
 
 /** Starting points the site links to ("Change the rules and run it yourself"). */
-export function templateDefinition(template: string, instrumentId: number): StrategyDefinition | null {
+export const TEMPLATES = ["sip", "sip-vs-dip", "sip-vs-index", "rebalance", "rsi-dip", "trend", "breakout"] as const
+export type Template = (typeof TEMPLATES)[number]
+
+/** A template's definition for one instrument (or, for rules, a set of them). */
+export function templateDefinition(template: string, instrumentId: number, universe: number[] = [instrumentId]): StrategyDefinition | null {
+  const rules = (over: Partial<Extract<StrategyDefinition, { type: "rules" }>>): StrategyDefinition => ({
+    type: "rules",
+    universe: universe.slice(0, 50),
+    entry: [],
+    entryLogic: "ALL",
+    exit: {},
+    maxPositions: Math.min(5, universe.length),
+    costs: "DELIVERY",
+    cashRatePct: 6,
+    ...over,
+  })
   switch (template) {
-    case "sip-vs-dip":
-      return { type: "sip", instrumentId, monthly: 10_000, dip: { fallPct: 10, cashRatePct: 6 } }
+    case "sip":
     case "sip-vs-index":
       return { type: "sip", instrumentId, monthly: 10_000 }
+    case "sip-vs-dip":
+      return { type: "sip", instrumentId, monthly: 10_000, dip: { fallPct: 10, cashRatePct: 6 } }
     case "rebalance":
       return { type: "rebalance", instrumentId, equityPct: 60, bondRatePct: 7 }
     case "rsi-dip":
-      return {
-        type: "rules",
-        universe: [instrumentId],
+      return rules({
         entry: [{ left: { kind: "rsi", period: 14 }, op: "crosses_below", right: { kind: "value", value: 30 } }],
-        entryLogic: "ALL",
         exit: { targetPct: 10, maxBars: 60 },
-        maxPositions: 1,
-        costs: "DELIVERY",
-        cashRatePct: 6,
-      }
+      })
+    case "trend":
+      // In the market while the price is above its 200-day average, out while it's below.
+      return rules({
+        entry: [{ left: { kind: "price" }, op: "crosses_above", right: { kind: "sma", period: 200 } }],
+        exit: { when: [{ left: { kind: "price" }, op: "crosses_below", right: { kind: "sma", period: 200 } }] },
+      })
+    case "breakout":
+      // Buy a close above the previous year's highest high; ride it with a trailing stop.
+      return rules({
+        entry: [{ left: { kind: "price" }, op: ">", right: { kind: "high", period: 250 } }],
+        exit: { trailPct: 10 },
+      })
     default:
       return null
   }

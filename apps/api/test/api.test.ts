@@ -236,6 +236,11 @@ describe("backtests", () => {
       const stranger = new Visitor()
       await stranger.signIn()
       expect((await stranger.call("GET", `/v1/me/backtests/${runId}`)).statusCode).toBe(404)
+      expect((await stranger.call("DELETE", `/v1/me/backtests/${runId}`)).statusCode).toBe(404)
+
+      // The list says what each test was, so it can be described without opening it.
+      const { runs } = (await visitor.call("GET", "/v1/me/backtests")).json()
+      expect(runs[0]).toMatchObject({ id: runId, name: request.name, definition: { type: "rules", universe: [reliance] } })
 
       if (!process.env.LAB_E2E) return
 
@@ -247,9 +252,15 @@ describe("backtests", () => {
       expect(done.result.equity_sample.length).toBeGreaterThan(100)
       expect(done.trades.length).toBe(done.result.metrics.trades)
 
+      expect(done.result.metrics.alternative).toMatchObject({ kind: "buy_and_hold", cagr: expect.any(Number), in_sample: expect.any(Object) })
+      expect(done.result.equity_sample[0]).toMatchObject({ t: expect.any(Number), v: expect.any(Number), a: expect.any(Number), dd: 0 })
+
       const again = await visitor.call("POST", "/v1/me/backtests", request)
       expect(again.statusCode).toBe(200)
       expect(again.json()).toEqual({ runId, status: "SUCCEEDED", cached: true })
+
+      expect((await visitor.call("DELETE", `/v1/me/backtests/${runId}`)).statusCode).toBe(204)
+      expect((await visitor.call("GET", `/v1/me/backtests/${runId}`)).statusCode).toBe(404)
     },
     90_000,
   )

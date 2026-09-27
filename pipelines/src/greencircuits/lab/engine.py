@@ -17,15 +17,49 @@ from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
 from .metrics import downsample, drawdown_series, monthly_returns, summarise
-from .simulate import Series, SimResult, simulate_rebalance, simulate_rules, simulate_sip, time_weighted
+from .simulate import (
+    Series,
+    SimResult,
+    simulate_deposit,
+    simulate_hold,
+    simulate_rebalance,
+    simulate_rules,
+    simulate_sip,
+    time_weighted,
+)
 
 BENCHMARK_ID = 1  # NIFTY 50
 WARMUP_DAYS = 420  # enough history for a 200-day average or a 52-week high on the first test day
 OUT_OF_SAMPLE_SHARE = 0.3
+DEPOSIT_RATE_PCT = 7.0  # what a SIP in the index is compared with: a bank fixed deposit
 
 
 def instruments_of(d: dict[str, Any]) -> list[int]:
     return list(d["universe"]) if d["type"] == "rules" else [int(d["instrumentId"])]
+
+
+def alternative(
+    d: dict[str, Any], data: dict[int, Series], ids: list[int], start: int, capital: float
+) -> tuple[str, SimResult]:
+    """What a strategy is judged against, since "did it make money?" is the wrong question.
+
+    - a SIP that waits for dips, against investing every month anyway;
+    - a SIP in a stock, against the same SIP in the index;
+    - a SIP in the index, against the same money in a fixed deposit;
+    - an equity and bond mix, against holding only the equity;
+    - trading rules, against buying the same stocks on day one and holding them.
+    """
+    if d["type"] == "sip":
+        monthly = float(d["monthly"])
+        if d.get("dip"):
+            return "plain_sip", simulate_sip(data[ids[0]], start, monthly)
+        if ids[0] != BENCHMARK_ID:
+            return "sip_in_benchmark", simulate_sip(data[BENCHMARK_ID], start, monthly)
+        return "deposit", simulate_deposit(data[ids[0]].dates, start, monthly, DEPOSIT_RATE_PCT)
+    if d["type"] == "rebalance":
+        return "all_equity", simulate_rebalance(data[ids[0]], start, capital, 100, 0)
+    costs = d.get("costs", "DELIVERY") == "DELIVERY"
+    return "buy_and_hold", simulate_hold({i: data[i] for i in ids}, start, capital, costs)
 
 
 def load_series(conn: psycopg.Connection, ids: list[int], start: date, end: date) -> dict[int, Series]:
@@ -132,29 +166,44 @@ def _write(conn: psycopg.Connection, run: dict[str, Any], d: dict[str, Any]) -> 
     metrics["in_sample"] = summarise(rets[:split], ret_dates[:split])
     metrics["out_of_sample"] = summarise(rets[split:], ret_dates[split:])
 
+    kind, alt = alternative(d, data, ids, start, capital)
+    alt_rets = time_weighted(alt.values, alt.flows)
+    alt_base = alt.extra.get("invested", capital)
+    metrics["alternative"] = summarise(alt_rets, ret_dates) | {
+        "kind": kind,
+        "final_value": float(alt.values[-1]),
+        "total_return": float(alt.values[-1] / alt_base - 1) if alt_base else 0.0,
+        "in_sample": summarise(alt_rets[:split], ret_dates[:split]),
+        "out_of_sample": summarise(alt_rets[split:], ret_dates[split:]),
+    }
+    if "xirr" in alt.extra:
+        metrics["alternative"]["xirr"] = alt.extra["xirr"]
+
     bench = data[BENCHMARK_ID].close[start:]
     bench_values = capital * bench / bench[0]
     bench_rets = bench[1:] / bench[:-1] - 1
     benchmark = summarise(bench_rets, ret_dates) | {"instrument_id": BENCHMARK_ID}
 
-    # The curves the report draws: strategy (time-weighted for SIPs, so instalments don't read as gains),
-    # the benchmark on the same capital, and the drawdown.
+    # The report's chart: the account's value (v) against the alternative's (a); for a SIP,
+    # the money put in so far (inv), otherwise the benchmark on the same capital (b). The
+    # drawdown (dd) is on time-weighted returns, so instalments can't hide a fall.
     growth = np.concatenate([[1.0], np.cumprod(1 + rets)])
-    curve = capital * growth
-    dd = drawdown_series(curve)
-    sample = [
-        {
+    dd = drawdown_series(growth)
+    is_sip = d["type"] == "sip"
+    invested = np.cumsum(sim.flows)
+    sample = []
+    for k in downsample(len(sim.dates)):
+        point = {
             "t": _epoch(sim.dates[k]),
-            "v": round(float(curve[k]), 2),
-            "b": round(float(bench_values[k]), 2),
+            "v": round(float(sim.values[k]), 2),
+            "a": round(float(alt.values[k]), 2),
             "dd": round(float(dd[k]), 6),
         }
-        for k in downsample(len(sim.dates))
-    ]
-    if d["type"] == "sip":
-        # For a SIP the money actually in the account matters too.
-        for point, k in zip(sample, downsample(len(sim.dates))):
-            point["value"] = round(float(sim.values[k]), 2)
+        if is_sip:
+            point["inv"] = round(float(invested[k]), 2)
+        else:
+            point["b"] = round(float(bench_values[k]), 2)
+        sample.append(point)
 
     conn.execute("DELETE FROM lab.backtest_trade WHERE run_id = %s", (run_id,))
     conn.execute("DELETE FROM lab.backtest_result WHERE run_id = %s", (run_id,))

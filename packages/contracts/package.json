@@ -7,7 +7,8 @@
   "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
-    "./strategy": "./src/strategy.ts"
+    "./strategy": "./src/strategy.ts",
+    "./lab": "./src/lab.ts"
   },
   "dependencies": {
     "@greencircuits/market": "workspace:*",

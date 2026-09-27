@@ -9,13 +9,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import date
+from itertools import pairwise
 from typing import Any
 
 import numpy as np
 
 from .charges import delivery_charges
 from .indicators import ema, rolling_max, rolling_min, rsi, sma
-from .metrics import TRADING_DAYS, xirr
+from .metrics import xirr
 
 
 @dataclass
@@ -52,8 +53,11 @@ class SimResult:
     extra: dict[str, Any] = field(default_factory=dict)
 
 
-def daily_rate(annual_pct: float) -> float:
-    return (1 + annual_pct / 100) ** (1 / TRADING_DAYS) - 1
+def accrual(dates: list[date], annual_pct: float) -> np.ndarray:
+    """Interest growth for each date: the calendar days since the previous one, so a 7% deposit
+    earns 7% a year however many trading days the calendar has. The first entry is 1."""
+    days = np.array([0, *[(b - a).days for a, b in pairwise(dates)]], dtype=float)
+    return (1 + annual_pct / 100) ** (days / 365)
 
 
 def time_weighted(values: np.ndarray, flows: np.ndarray) -> np.ndarray:
@@ -71,7 +75,7 @@ def simulate_sip(s: Series, start: int, monthly: float, dip: dict | None = None)
     """Invest `monthly` on the first trading day of each month; with `dip`, save it
     instead and invest everything once the close is `fallPct` below its 52-week high."""
     n = len(s.dates)
-    rate = daily_rate(dip["cashRatePct"]) if dip else 0.0
+    grow = accrual(s.dates, dip["cashRatePct"] if dip else 0.0)
     fall = dip["fallPct"] / 100 if dip else 0.0
     high = np.array([s.close[max(0, i - 249) : i + 1].max() for i in range(n)])
     units = cash = 0.0
@@ -83,7 +87,8 @@ def simulate_sip(s: Series, start: int, monthly: float, dip: dict | None = None)
     months = idle = 0
     for k, i in enumerate(range(start, n)):
         d = s.dates[i]
-        cash *= 1 + rate
+        if k:
+            cash *= grow[i]
         if (d.year, d.month) != month:
             month = (d.year, d.month)
             months += 1
@@ -115,6 +120,38 @@ def simulate_sip(s: Series, start: int, monthly: float, dip: dict | None = None)
     )
 
 
+def simulate_deposit(dates: list[date], start: int, monthly: float, rate_pct: float) -> SimResult:
+    """The same monthly instalments put in a deposit that earns `rate_pct` a year."""
+    n = len(dates)
+    grow = accrual(dates, rate_pct)
+    cash = 0.0
+    month = None
+    values = np.zeros(n - start)
+    flows = np.zeros(n - start)
+    contributions: list[tuple[date, float]] = []
+    for k, i in enumerate(range(start, n)):
+        d = dates[i]
+        if k:
+            cash *= grow[i]
+        if (d.year, d.month) != month:
+            month = (d.year, d.month)
+            cash += monthly
+            flows[k] = monthly
+            contributions.append((d, -monthly))
+        values[k] = cash
+    final = float(values[-1])
+    return SimResult(
+        dates[start:],
+        values,
+        flows,
+        [],
+        {
+            "invested": sum(-a for _, a in contributions),
+            "xirr": xirr([*contributions, (dates[-1], final)]),
+        },
+    )
+
+
 # ------------------------------------------------------------------ rebalance
 
 
@@ -124,7 +161,7 @@ def simulate_rebalance(
     """Hold equity_pct in the instrument and the rest in bonds, reset every April."""
     n = len(s.dates)
     w = equity_pct / 100
-    rate = daily_rate(bond_rate_pct)
+    grow = accrual(s.dates, bond_rate_pct)
     units = capital * w / s.close[start]
     bonds = capital * (1 - w)
     fy = _financial_year(s.dates[start])
@@ -132,7 +169,8 @@ def simulate_rebalance(
     trades = [Trade(0, units, s.dates[start], float(s.close[start]))]
     rebalances = 0
     for k, i in enumerate(range(start, n)):
-        bonds *= 1 + rate
+        if k:
+            bonds *= grow[i]
         if _financial_year(s.dates[i]) != fy:
             fy = _financial_year(s.dates[i])
             total = units * s.close[i] + bonds
@@ -155,6 +193,25 @@ def simulate_rebalance(
 
 def _financial_year(d: date) -> int:
     return d.year if d.month >= 4 else d.year - 1
+
+
+def simulate_hold(universe: dict[int, Series], start: int, capital: float, costs: bool) -> SimResult:
+    """Split the capital equally across the universe on the first day and hold it: the
+    yardstick for a set of trading rules. Pays the buy-side charges, like the rules do."""
+    ids = list(universe)
+    n = len(universe[ids[0]].dates)
+    budget = capital / len(ids)
+    units = {}
+    trades = []
+    for i in ids:
+        price = float(universe[i].close[start])
+        fee = delivery_charges(budget, "B") if costs else 0.0
+        units[i] = (budget - fee) / price
+        trades.append(Trade(i, units[i], universe[i].dates[start], price, charges=fee))
+    values = np.zeros(n - start)
+    for k, t in enumerate(range(start, n)):
+        values[k] = sum(units[i] * universe[i].close[t] for i in ids)
+    return SimResult(universe[ids[0]].dates[start:], values, np.zeros(n - start), trades, {})
 
 
 # ---------------------------------------------------------------------- rules
@@ -217,7 +274,7 @@ def simulate_rules(
     ex = d["exit"]
     max_pos = int(d.get("maxPositions", 5))
     costs = d.get("costs", "DELIVERY") == "DELIVERY"
-    rate = daily_rate(float(d.get("cashRatePct", 0)))
+    grow = accrual(dates, float(d.get("cashRatePct", 0)))
     slip = slippage_bps / 10_000
 
     cash = capital
@@ -229,7 +286,8 @@ def simulate_rules(
     days_invested = 0
 
     for k, t in enumerate(range(start, n)):
-        cash *= 1 + rate
+        if k:
+            cash *= grow[t]
         # 1. Fill yesterday's decisions at today's open.
         for i, reason in list(pending_exit.items()):
             p = open_pos.pop(i)

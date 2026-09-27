@@ -13,7 +13,7 @@ import { ensureUser, sessionUserId } from "../lib/session"
  */
 
 /** Bumped whenever the engine's results could change for the same inputs. */
-export const ENGINE_VERSION = "py-0.2"
+export const ENGINE_VERSION = "py-0.4"
 
 const stable = (value: unknown): string =>
   JSON.stringify(value, (_k, v) => (v && typeof v === "object" && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).sort()) : v))
@@ -114,8 +114,23 @@ export const labRoutes: FastifyPluginAsyncZod = async (app) => {
     const runs = await db
       .selectFrom("lab.backtest_run as r")
       .innerJoin("lab.strategy as s", "s.id", "r.strategy_id")
+      .innerJoin("lab.strategy_version as v", (j) => j.onRef("v.strategy_id", "=", "r.strategy_id").onRef("v.version", "=", "r.strategy_version"))
       .leftJoin("lab.backtest_result as res", "res.run_id", "r.id")
-      .select(["r.id", "s.name", "r.strategy_version", "r.status", "r.progress_pct", "r.queued_at", "r.started_at", "r.finished_at", "r.date_from", "r.date_to", "r.error", "res.metrics"])
+      .select([
+        "r.id",
+        "s.name",
+        "r.strategy_version",
+        "v.definition",
+        "r.status",
+        "r.progress_pct",
+        "r.queued_at",
+        "r.started_at",
+        "r.finished_at",
+        "r.date_from",
+        "r.date_to",
+        "r.error",
+        "res.metrics",
+      ])
       .where("r.user_id", "=", userId)
       .orderBy("r.queued_at", "desc")
       .limit(20)
@@ -170,6 +185,19 @@ export const labRoutes: FastifyPluginAsyncZod = async (app) => {
         db.selectFrom("lab.backtest_trade").selectAll().where("run_id", "=", run.id).orderBy("trade_no").limit(1000).execute(),
       ])
       return { run, result: result ?? null, trades }
+    },
+  )
+
+  app.delete(
+    "/me/backtests/:id",
+    { schema: { tags: ["lab"], summary: "Delete a backtest", params: z.object({ id: z.uuid() }) } },
+    async (req, reply) => {
+      const userId = sessionUserId(req)
+      if (!userId) return reply.code(404).send({ error: "not_found" })
+      // A queued job for it finds no row and is skipped by the worker.
+      const deleted = await db.deleteFrom("lab.backtest_run").where("id", "=", req.params.id).where("user_id", "=", userId).returning("id").executeTakeFirst()
+      if (!deleted) return reply.code(404).send({ error: "not_found" })
+      return reply.code(204).send()
     },
   )
 }
