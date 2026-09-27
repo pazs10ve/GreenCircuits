@@ -3,18 +3,18 @@
 import Link from "next/link"
 import { useMemo, useState } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
-import { Bell, BellRing, Mail, Plus, Send, Trash2 } from "lucide-react"
+import { BellRing, Plus, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { DataTable } from "@/components/data/data-table"
 import { AlertDialogButton } from "@/components/market/alert-dialog"
 import { InstrumentPicker } from "@/components/market/instrument-picker"
 import { LiveChange, LivePrice } from "@/components/market/price"
 import { Segmented } from "@/components/market/segmented"
-import { Stat } from "@/components/market/stat"
-import { Panel } from "@/components/shell/page-header"
+import { Figure, Figures } from "@/components/editorial/figures"
+import { PageHead } from "@/components/editorial/page-head"
+import { Section } from "@/components/editorial/section"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { getInstrument } from "@greencircuits/market/catalog"
 import type { Instrument, Quote } from "@greencircuits/market/types"
 import { formatDateIST, formatNumber, formatPct, formatPrice, formatTimeIST } from "@greencircuits/market/format"
@@ -25,11 +25,7 @@ import { cn } from "@/lib/utils"
 
 type Filter = "ALL" | "ACTIVE" | "TRIGGERED" | "PAUSED"
 
-const CHANNEL_ICON: Record<AlertChannel, { icon: typeof Bell; label: string }> = {
-  IN_APP: { icon: Bell, label: "In-app" },
-  EMAIL: { icon: Mail, label: "Email" },
-  TELEGRAM: { icon: Send, label: "Telegram" },
-}
+const CHANNEL: Record<AlertChannel, string> = { IN_APP: "in the app", EMAIL: "by email", TELEGRAM: "on Telegram" }
 
 interface Row {
   alert: Alert
@@ -53,9 +49,28 @@ function distanceOf(a: Alert, q: Quote | undefined): number | undefined {
   }
 }
 
+/** The alert's threshold as written: a day's move, an index level or a price in rupees. */
 function level(a: Alert, inst: Instrument): string {
-  return isPercent(a.condition) ? formatPct(a.value) : `₹${formatPrice(a.value, inst.tick)}`
+  if (isPercent(a.condition)) return formatPct(a.value)
+  return inst.kind === "INDEX" ? formatNumber(a.value, 2) : `₹${formatPrice(a.value, inst.tick >= 0.05 ? inst.tick : 0.01)}`
 }
+
+/** What the alert waits for, as a phrase: "falling below ₹1,400", "falling more than 1.5% in a day". */
+function waitingFor(a: Alert, inst: Instrument): string {
+  const v = formatNumber(Math.abs(a.value), 1)
+  switch (a.condition) {
+    case "PRICE_ABOVE":
+      return `rising above ${level(a, inst)}`
+    case "PRICE_BELOW":
+      return `falling below ${level(a, inst)}`
+    case "CHANGE_ABOVE":
+      return a.value >= 0 ? `rising more than ${v}% in a day` : `a day's move above ${formatPct(a.value)}`
+    case "CHANGE_BELOW":
+      return a.value <= 0 ? `falling more than ${v}% in a day` : `a day's move below ${formatPct(a.value)}`
+  }
+}
+
+const WORDS = ["No", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve"]
 
 export function AlertsView() {
   const { mode } = useMarket()
@@ -97,25 +112,26 @@ export function AlertsView() {
     () => [
       {
         id: "instrument",
-        header: "Instrument",
-        accessorFn: (r) => r.inst.symbol,
+        header: "Name",
+        accessorFn: (r) => r.inst.name,
+        meta: { sticky: true },
         cell: ({ row: { original: r } }) => (
-          <Link href={`/stocks/${r.inst.slug}`} className="block min-w-28">
-            <span className="block text-xs font-medium hover:underline">{r.inst.symbol}</span>
-            <span className="block max-w-40 truncate text-[11px] text-muted-foreground">{r.inst.name}</span>
+          <Link href={r.inst.kind === "COMMODITY" ? `/commodities?c=${r.inst.slug}` : `/stocks/${r.inst.slug}`} className="group block min-w-40 leading-snug">
+            <span className="block max-w-52 truncate font-medium text-ink group-hover:underline group-hover:decoration-1 group-hover:underline-offset-4">{r.inst.name}</span>
+            <span className="block max-w-52 truncate text-[13px] text-ink-3">{r.inst.symbol}</span>
           </Link>
         ),
       },
       {
         id: "condition",
-        header: "Condition",
+        header: "When",
         accessorFn: (r) => r.alert.condition,
         cell: ({ row: { original: r } }) => (
           <span className="block min-w-44">
             <span className="block">
               {CONDITION_LABEL[r.alert.condition]} <span className="num font-medium">{level(r.alert, r.inst)}</span>
             </span>
-            {r.alert.note && <span className="block max-w-56 truncate text-[11px] text-muted-foreground">{r.alert.note}</span>}
+            {r.alert.note && <span className="block max-w-56 truncate text-[13px] text-ink-3">{r.alert.note}</span>}
           </span>
         ),
       },
@@ -129,24 +145,24 @@ export function AlertsView() {
       },
       {
         id: "distance",
-        header: "To trigger",
+        header: "How far",
         accessorFn: (r) => (r.distance == null ? Number.POSITIVE_INFINITY : r.distance),
         meta: { align: "right" },
         cell: ({ row: { original: r } }) => {
           if (r.alert.status === "TRIGGERED")
             return (
-              <span className="num text-[11px] text-muted-foreground">
-                at ₹{formatPrice(r.alert.triggeredPrice, r.inst.tick)}
+              <span className="num text-[13px] text-ink-3">
+                went off at ₹{formatPrice(r.alert.triggeredPrice, r.inst.tick)}
               </span>
             )
-          if (r.distance == null) return <span className="text-muted-foreground">–</span>
-          if (r.distance <= 0) return <span className="font-medium text-primary">Met</span>
+          if (r.distance == null) return <span className="text-ink-3">–</span>
+          if (r.distance <= 0) return <span className="font-medium text-accent-ink">There now</span>
           const near = r.distance < 1
           return (
-            <span className={cn("inline-flex items-center gap-2", near && "font-medium text-primary")}>
-              <span className="relative hidden h-1 w-12 rounded-full bg-muted sm:inline-block" aria-hidden="true">
+            <span className={cn("inline-flex items-center gap-2", near && "font-medium text-accent-ink")}>
+              <span className="relative hidden h-1 w-12 rounded-full bg-surface-2 sm:inline-block" aria-hidden="true">
                 <span
-                  className={cn("absolute inset-y-0 left-0 rounded-full", near ? "bg-primary" : "bg-muted-foreground/50")}
+                  className={cn("absolute inset-y-0 left-0 rounded-full", near ? "bg-accent-ink" : "bg-ink-3")}
                   style={{ width: `${Math.max(4, 100 - Math.min(100, r.distance * 20))}%` }}
                 />
               </span>
@@ -157,24 +173,12 @@ export function AlertsView() {
       },
       {
         id: "channels",
-        header: "Channels",
+        header: "Tells you",
         enableSorting: false,
         cell: ({ row: { original: r } }) => (
-          <span className="flex gap-1.5">
-            {r.alert.channels.map((c) => {
-              const Icon = CHANNEL_ICON[c].icon
-              return (
-                <Tooltip key={c}>
-                  <TooltipTrigger asChild>
-                    <span className="flex size-5 items-center justify-center rounded border bg-background">
-                      <Icon className="size-3 text-muted-foreground" aria-label={CHANNEL_ICON[c].label} />
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent>{CHANNEL_ICON[c].label}</TooltipContent>
-                </Tooltip>
-              )
-            })}
-            {r.alert.repeat && <span className="rounded border px-1 text-[10px] leading-5 text-muted-foreground">Daily</span>}
+          <span className="text-ink-2">
+            {r.alert.channels.map((c) => CHANNEL[c]).join(", ")}
+            {r.alert.repeat && <span className="text-ink-3">, once a day</span>}
           </span>
         ),
       },
@@ -184,9 +188,9 @@ export function AlertsView() {
         accessorFn: (r) => r.alert.status,
         cell: ({ row: { original: r } }) =>
           r.alert.status === "TRIGGERED" ? (
-            <span className="inline-flex items-center gap-1.5 text-[11px]">
-              <span className="size-1.5 rounded-full bg-primary" />
-              Triggered {r.alert.triggeredAt && formatDateIST(r.alert.triggeredAt, "short")}
+            <span className="inline-flex items-center gap-1.5 text-[13px]">
+              <BellRing className="size-3.5 text-accent-ink" aria-hidden="true" />
+              Went off {r.alert.triggeredAt && formatDateIST(r.alert.triggeredAt, "short")}
             </span>
           ) : (
             <span className="inline-flex items-center gap-2">
@@ -196,16 +200,16 @@ export function AlertsView() {
                 onCheckedChange={(on) => update(r.alert.id, { status: on ? "ACTIVE" : "PAUSED" })}
                 aria-label={`${r.alert.status === "ACTIVE" ? "Pause" : "Resume"} alert on ${r.inst.symbol}`}
               />
-              <span className="text-[11px] text-muted-foreground">{r.alert.status === "ACTIVE" ? "Active" : "Paused"}</span>
+              <span className="text-[13px] text-ink-3">{r.alert.status === "ACTIVE" ? "Watching" : "Paused"}</span>
             </span>
           ),
       },
       {
         id: "created",
-        header: "Created",
+        header: "Set",
         accessorFn: (r) => r.alert.createdAt.getTime(),
         meta: { align: "right" },
-        cell: ({ row: { original: r } }) => <span className="text-muted-foreground">{formatDateIST(r.alert.createdAt, "short")}</span>,
+        cell: ({ row: { original: r } }) => <span className="text-ink-3">{formatDateIST(r.alert.createdAt, "short")}</span>,
       },
       {
         id: "actions",
@@ -240,120 +244,122 @@ export function AlertsView() {
     [update, remove],
   )
 
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        {[
-          { label: "Active", value: counts.active, hint: "Checked on every tick" },
-          { label: "Triggered", value: counts.triggered, hint: "Waiting for you to re-arm" },
-          { label: "Paused", value: counts.paused, hint: "Not evaluated" },
-          { label: "Plan limit", value: `${alerts.length} of 100`, hint: "Pro trial" },
-        ].map((s) => (
-          <div key={s.label} className="rounded-lg border bg-card p-3">
-            <Stat label={s.label} value={s.value} hint={s.hint} size="lg" className="space-y-1.5" />
-          </div>
-        ))}
-      </div>
+  const watching = rows.length && filter === "ALL" ? rows.filter((r) => r.alert.status === "ACTIVE" && r.distance != null) : []
+  const nearest = [...watching].sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity))[0]
+  const last = recent[0]
+  const lastInst = last && getInstrument(last.instrumentId)
+  const lede =
+    alerts.length === 0
+      ? "No alerts yet. Pick a company, index or commodity, and a price or a day's move to watch for."
+      : [
+          `${WORDS[counts.active] ?? counts.active} ${counts.active === 1 ? "alert is" : "alerts are"} watching the market.`,
+          nearest && nearest.distance! > 0
+            ? `The nearest is waiting for ${nearest.inst.name} ${waitingFor(nearest.alert, nearest.inst)}, ${isPercent(nearest.alert.condition) ? `${formatNumber(nearest.distance!, 2)} points` : `${formatNumber(nearest.distance!, 1)}%`} away.`
+            : "",
+          last && lastInst ? `The last to go off was ${lastInst.name}, ${waitingFor(last, lastInst)}.` : "",
+        ]
+          .filter(Boolean)
+          .join(" ")
 
-      <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_320px]">
-        <Panel
+  return (
+    <div>
+      <PageHead
+        title="Alerts"
+        lede={lede}
+        actions={
+          <InstrumentPicker
+            onSelect={(inst) => setCreating(inst.id)}
+            trigger={
+              <Button>
+                <Plus /> New alert
+              </Button>
+            }
+          />
+        }
+      />
+
+      <Figures className="mt-10 lg:grid-cols-4">
+        <Figure label="Watching" value={String(counts.active)} hint="checked on every price" />
+        <Figure label="Went off" value={String(counts.triggered)} hint="waiting to be re-armed" />
+        <Figure label="Paused" value={String(counts.paused)} hint="not checked" />
+        <Figure label="Allowed" value={`${alerts.length} of 100`} hint="alerts per person" />
+      </Figures>
+
+      <div className="mt-16 grid grid-cols-[minmax(0,1fr)] gap-x-12 gap-y-16 xl:grid-cols-[minmax(0,1fr)_18rem]">
+        <Section
           title="Your alerts"
-          actions={
-            <>
-              <Segmented
-                value={filter}
-                onChange={setFilter}
-                options={[
-                  { value: "ALL", label: "All" },
-                  { value: "ACTIVE", label: "Active" },
-                  { value: "TRIGGERED", label: "Triggered" },
-                  { value: "PAUSED", label: "Paused" },
-                ]}
-                aria-label="Filter alerts"
-                className="hidden sm:flex"
-              />
-              <InstrumentPicker
-                onSelect={(inst) => setCreating(inst.id)}
-                trigger={
-                  <Button size="lg">
-                    <Plus /> New alert
-                  </Button>
-                }
-              />
-            </>
+          action={
+            <Segmented
+              value={filter}
+              onChange={setFilter}
+              options={[
+                { value: "ALL", label: "All" },
+                { value: "ACTIVE", label: "Watching" },
+                { value: "TRIGGERED", label: "Went off" },
+                { value: "PAUSED", label: "Paused" },
+              ]}
+              aria-label="Show"
+            />
           }
         >
           <DataTable
             columns={columns}
             data={rows}
             getRowId={(r) => r.alert.id}
-            empty={filter === "ALL" ? "No alerts yet. Pick an instrument to create one." : "No alerts in this state."}
+            empty={filter === "ALL" ? "No alerts yet. Use New alert to set one." : "No alerts here."}
           />
-        </Panel>
+        </Section>
 
-        <div className="grid content-start gap-4 md:grid-cols-2 2xl:grid-cols-1">
-          <Panel title="Recently triggered">
+        <div className="space-y-14">
+          <Section title="Recently went off">
             {recent.length === 0 ? (
-              <p className="px-4 py-6 text-center text-[12px] text-muted-foreground">Nothing has triggered yet.</p>
+              <p className="text-sm text-ink-2">Nothing has gone off yet.</p>
             ) : (
-              <ul className="divide-y divide-border/60">
+              <ul className="divide-y divide-rule border-b border-rule">
                 {recent.map((a) => {
                   const inst = getInstrument(a.instrumentId)!
                   return (
-                    <li key={a.id} className="flex gap-2.5 px-4 py-2.5">
-                      <BellRing className="mt-0.5 size-3.5 shrink-0 text-primary" />
-                      <span className="min-w-0">
-                        <span className="block truncate text-xs font-medium">
-                          {inst.symbol} · {CONDITION_LABEL[a.condition].toLowerCase()} {level(a, inst)}
-                        </span>
-                        <span className="num block text-[11px] text-muted-foreground">
-                          ₹{formatPrice(a.triggeredPrice, inst.tick)} · {formatDateIST(a.triggeredAt!, "short")} {formatTimeIST(a.triggeredAt!)} IST
-                        </span>
-                      </span>
+                    <li key={a.id} className="py-3">
+                      <p className="text-[0.9375rem] leading-snug">
+                        <span className="font-medium">{inst.name}</span>, {waitingFor(a, inst)}
+                      </p>
+                      <p className="num mt-0.5 text-sm text-ink-3">
+                        at ₹{formatPrice(a.triggeredPrice, inst.tick)}, {formatDateIST(a.triggeredAt!, "short")} {formatTimeIST(a.triggeredAt!)} IST
+                      </p>
                     </li>
                   )
                 })}
               </ul>
             )}
-          </Panel>
-          <Panel title="Delivery">
-            <ul className="divide-y divide-border/60 text-xs">
-              <li className="flex items-center gap-3 px-4 py-3">
-                <Bell className="size-4 text-muted-foreground" />
-                <span className="flex-1">
-                  <span className="block font-medium">In-app</span>
-                  <span className="block text-[11px] text-muted-foreground">Toasts and the bell menu, on any page</span>
-                </span>
-                <span className="text-[11px] font-medium text-up">On</span>
-              </li>
-              <li className="flex items-center gap-3 px-4 py-3">
-                <Mail className="size-4 text-muted-foreground" />
-                <span className="flex-1">
-                  <span className="block font-medium">Email</span>
-                  <span className="block text-[11px] text-muted-foreground">Sent by the alert engine once accounts exist</span>
-                </span>
-                <span className="text-[11px] text-muted-foreground">Needs account</span>
-              </li>
-              <li className="flex items-center gap-3 px-4 py-3">
-                <Send className="size-4 text-muted-foreground" />
-                <span className="flex-1">
-                  <span className="block font-medium">Telegram</span>
-                  <span className="block text-[11px] text-muted-foreground">Via the GreenCircuits bot, linked from settings</span>
-                </span>
-                <span className="text-[11px] text-muted-foreground">Needs account</span>
-              </li>
-            </ul>
-            <p className="border-t px-4 py-3 text-[11px] text-muted-foreground">
+          </Section>
+          <Section title="How they reach you">
+            <dl className="divide-y divide-rule border-b border-rule text-sm">
+              <div className="flex items-baseline justify-between gap-3 py-3">
+                <dt>
+                  <span className="block font-medium">In the app</span>
+                  <span className="block text-ink-3">A note on whatever page you&apos;re on</span>
+                </dt>
+                <dd className="text-up">On</dd>
+              </div>
+              <div className="flex items-baseline justify-between gap-3 py-3">
+                <dt>
+                  <span className="block font-medium">Email and Telegram</span>
+                  <span className="block text-ink-3">Planned; not built yet</span>
+                </dt>
+                <dd className="text-ink-3">Off</dd>
+              </div>
+            </dl>
+            <p className="mt-3 text-sm leading-relaxed text-ink-3">
               {mode === "live"
-                ? "The alert engine checks alerts on the server against the price feed; they show up here as they fire."
-                : "In the demo, alerts are checked in this browser against the simulated feed."}{" "}
-              Turn on a sound in{" "}
-              <Link href="/account" className="text-primary hover:underline">
-                settings
+                ? "The alert engine checks alerts on the server against every price, and each one fires exactly once."
+                : "In the demo, this browser checks your alerts against the simulated prices."}{" "}
+              A sound can go with them: turn it on in{" "}
+              <Link href="/account" className="link">
+                your account
               </Link>
               .
             </p>
-          </Panel>
+          </Section>
         </div>
       </div>
 

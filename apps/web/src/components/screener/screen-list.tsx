@@ -5,7 +5,6 @@ import { Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Panel } from "@/components/shell/page-header"
 import { useQuoteReader } from "@/lib/stream/hooks"
 import { cn } from "@/lib/utils"
 import { PRESETS } from "./presets"
@@ -13,7 +12,10 @@ import { compileQuery } from "./query"
 import { useSavedScreens } from "./saved-screens"
 import { toLiveRows, useScreener } from "./screener-context"
 
-/** Preset and saved screens, each with its current match count. Stacks into swipeable rows on small screens. */
+/**
+ * Ready-made screens and the ones you saved, each with how many companies
+ * match it now. A column on wide screens, a row you swipe on small ones.
+ */
 export function ScreenList({ className }: { className?: string }) {
   const { rows, run, active } = useScreener()
   const saved = useSavedScreens((s) => s.screens)
@@ -33,11 +35,11 @@ export function ScreenList({ className }: { className?: string }) {
   }, [rows, read, saved])
 
   return (
-    <Panel className={className} title="Screens" description="Presets and the screens you save" bodyClassName="py-2">
-      <SectionLabel>Presets</SectionLabel>
-      <ul className="no-scrollbar flex gap-1.5 overflow-x-auto px-2 pb-1 lg:flex-col lg:gap-0.5 lg:overflow-visible">
+    <nav aria-label="Screens" className={className}>
+      <Heading>Ready-made screens</Heading>
+      <ul className="no-scrollbar -mx-5 flex gap-6 overflow-x-auto px-5 lg:mx-0 lg:block lg:overflow-visible lg:px-0">
         {PRESETS.map((p) => (
-          <li key={p.id} className="w-56 shrink-0 lg:w-auto">
+          <li key={p.id} className="w-60 shrink-0 lg:w-auto lg:border-b lg:border-rule">
             <ScreenButton
               name={p.name}
               detail={p.description}
@@ -49,15 +51,13 @@ export function ScreenList({ className }: { className?: string }) {
         ))}
       </ul>
 
-      <SectionLabel className="mt-2 border-t pt-3">Saved</SectionLabel>
+      <Heading className="mt-8">Your screens</Heading>
       {saved.length === 0 ? (
-        <p className="px-4 pb-2 text-[11px] leading-relaxed text-muted-foreground">
-          Screens you save appear here. They stay in this browser.
-        </p>
+        <p className="py-3 text-sm leading-relaxed text-ink-2">Screens you save show up here. They stay in this browser.</p>
       ) : (
-        <ul className="no-scrollbar flex gap-1.5 overflow-x-auto px-2 pb-1 lg:flex-col lg:gap-0.5 lg:overflow-visible">
+        <ul className="no-scrollbar -mx-5 flex gap-6 overflow-x-auto px-5 lg:mx-0 lg:block lg:overflow-visible lg:px-0">
           {saved.map((s) => (
-            <li key={s.id} className="group/saved relative w-56 shrink-0 lg:w-auto">
+            <li key={s.id} className="group/saved relative w-60 shrink-0 lg:w-auto lg:border-b lg:border-rule">
               <ScreenButton
                 name={s.name}
                 detail={s.query}
@@ -70,7 +70,7 @@ export function ScreenList({ className }: { className?: string }) {
               <Button
                 variant="ghost"
                 size="icon-xs"
-                className="absolute top-1.5 right-1.5 text-muted-foreground opacity-100 hover:text-destructive lg:opacity-0 lg:group-hover/saved:opacity-100 lg:focus-visible:opacity-100"
+                className="absolute top-2.5 right-0 text-ink-3 opacity-100 hover:text-down lg:opacity-0 lg:group-hover/saved:opacity-100 lg:focus-visible:opacity-100"
                 aria-label={`Delete saved screen ${s.name}`}
                 onClick={() => {
                   remove(s.id)
@@ -83,12 +83,12 @@ export function ScreenList({ className }: { className?: string }) {
           ))}
         </ul>
       )}
-    </Panel>
+    </nav>
   )
 }
 
-function SectionLabel({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <h3 className={cn("px-4 pb-1.5 text-[10px] font-medium tracking-wide text-muted-foreground uppercase", className)}>{children}</h3>
+function Heading({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <h2 className={cn("border-b border-ink pb-2 text-sm font-semibold", className)}>{children}</h2>
 }
 
 function ScreenButton({
@@ -114,22 +114,24 @@ function ScreenButton({
       onClick={onClick}
       aria-current={active ? "true" : undefined}
       className={cn(
-        "flex h-full w-full flex-col gap-0.5 rounded-md border px-2.5 py-2 text-left transition-colors outline-none hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring/40 lg:border-transparent",
-        active && "border-primary/40 bg-primary/5 hover:bg-primary/10 lg:border-primary/30",
+        "group flex w-full flex-col gap-1 py-3 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
+        active && "-mx-2 w-[calc(100%+1rem)] bg-surface px-2",
         className,
       )}
     >
-      <span className="flex items-center justify-between gap-2">
-        <span className={cn("truncate text-xs font-medium", active && "text-primary")}>{name}</span>
+      <span className="flex items-baseline justify-between gap-3">
+        <span className={cn("text-[0.9375rem] group-hover:underline group-hover:decoration-1 group-hover:underline-offset-4", active ? "font-semibold" : "font-medium")}>
+          {name}
+        </span>
         {count === undefined ? (
           <Skeleton className="h-3.5 w-5 shrink-0" />
         ) : (
-          <span className="num shrink-0 text-[11px] text-muted-foreground" title={count === null ? "This query has an error" : `${count} stocks match`}>
-            {count === null ? "!" : count}
+          <span className={cn("num shrink-0 text-sm", count === null ? "text-down" : "text-ink-3")} title={count === null ? "This query has an error" : `${count} companies match`}>
+            {count === null ? "error" : count}
           </span>
         )}
       </span>
-      <span className={cn("line-clamp-2 text-[11px] leading-snug text-muted-foreground", mono && "font-mono text-[10.5px]")}>{detail}</span>
+      <span className={cn("line-clamp-2 text-sm leading-snug text-ink-2", mono && "font-mono text-[13px]")}>{detail}</span>
     </button>
   )
 }

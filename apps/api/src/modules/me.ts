@@ -253,7 +253,9 @@ export const meRoutes: FastifyPluginAsyncZod = async (app) => {
         .where("user_id", "=", userId)
         .orderBy("created_at", "desc")
         .limit(20)
-      if (req.query.after) q = q.where("created_at", ">", new Date(req.query.after))
+      // The cursor is a JavaScript date, to the millisecond; Postgres keeps microseconds, so compare at the cursor's precision
+      // or the newest notification would come back on every poll.
+      if (req.query.after) q = q.where(sql<Date>`date_trunc('milliseconds', created_at)`, ">", new Date(req.query.after))
       return { notifications: await q.execute() }
     },
   )

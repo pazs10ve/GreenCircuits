@@ -2,7 +2,7 @@
 
 import { useEffect } from "react"
 import Link from "next/link"
-import { AlertTriangle, RotateCcw } from "lucide-react"
+import { RotateCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 export default function AppError({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {
@@ -11,24 +11,21 @@ export default function AppError({ error, retry }: { error: Error & { digest?: s
   }, [error])
 
   return (
-    <div className="mx-auto flex max-w-md flex-col items-center gap-4 py-24 text-center">
-      <span className="flex size-10 items-center justify-center rounded-full border border-down/40 bg-down-muted">
-        <AlertTriangle className="size-4 text-down" />
-      </span>
-      <div className="space-y-1.5">
-        <h1 className="font-display text-xl font-bold">Something broke on this page</h1>
-        <p className="text-[13px] text-muted-foreground">
-          The rest of the app still works. Try again, or head back to the markets overview.
-          {error.digest && <span className="num mt-1 block text-[11px]">Reference {error.digest}</span>}
+    <div className="mx-auto max-w-[1200px] px-5 pt-16 pb-24">
+      <div className="max-w-[36rem] border-t border-ink pt-6">
+        <h1 className="font-serif text-[2rem] leading-tight font-semibold tracking-[-0.02em]">Something went wrong on this page</h1>
+        <p className="mt-3 text-[1.0625rem] leading-relaxed text-ink-2">
+          The rest of the site still works. Try the page again, or go back to today&apos;s market.
         </p>
-      </div>
-      <div className="flex gap-2">
-        <Button onClick={() => retry()}>
-          <RotateCcw /> Try again
-        </Button>
-        <Button asChild variant="outline">
-          <Link href="/markets">Markets</Link>
-        </Button>
+        {error.digest && <p className="num mt-2 text-sm text-ink-3">Reference {error.digest}</p>}
+        <div className="mt-6 flex gap-2">
+          <Button onClick={() => retry()}>
+            <RotateCcw /> Try again
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/">Today</Link>
+          </Button>
+        </div>
       </div>
     </div>
   )

@@ -1,18 +1,13 @@
 import type { Metadata } from "next"
-import { PageHeader } from "@/components/shell/page-header"
-import { SourceBadge } from "@/components/market/source-badge"
 import { AlertsView } from "@/components/alerts/alerts-view"
+import { SectionNav } from "@/components/shell/section-nav"
 
 export const metadata: Metadata = { title: "Alerts" }
 
 export default function AlertsPage() {
   return (
-    <div className="flex flex-col gap-4">
-      <PageHeader
-        eyebrow={<SourceBadge />}
-        title="Alerts"
-        description="Price and day-change alerts, checked against every tick and delivered wherever you are in the app."
-      />
+    <div className="mx-auto max-w-[1200px] px-5 pt-6 pb-20">
+      <SectionNav section="portfolio" />
       <AlertsView />
     </div>
   )

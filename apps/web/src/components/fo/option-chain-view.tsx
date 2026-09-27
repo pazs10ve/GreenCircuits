@@ -4,7 +4,6 @@ import { useMemo, useState } from "react"
 import { toast } from "sonner"
 import type { OptionType } from "@greencircuits/market/black76"
 import { formatNumber, formatPrice } from "@greencircuits/market/format"
-import { Panel } from "@/components/shell/page-header"
 import { cn } from "@/lib/utils"
 import { foUnderlying, formatExpiry, type LiveRow, type OiUnit } from "./chain-model"
 import { ChainControls, type StrikeWindow } from "./chain-controls"
@@ -84,7 +83,7 @@ export function OptionChainView({ id, initialExpiry }: { id: number; initialExpi
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-10">
       <ChainControls
         inst={inst}
         expiries={expiries}
@@ -99,15 +98,18 @@ export function OptionChainView({ id, initialExpiry }: { id: number; initialExpi
       />
       <ChainStats inst={inst} chain={chain} quote={quote} vix={vix} nowMs={nowMs} unit={unit} />
       <div className="@container">
-        <div className="grid gap-4 @min-[80rem]:grid-cols-[minmax(0,1fr)_400px]">
-          <Panel
-            title={expiry ? `Option chain · ${formatExpiry(expiry.date)}` : "Option chain"}
-            description={
-              unit === "lakh"
-                ? "OI and volume in lakh units · IV in % · Greeks per unit"
-                : `OI and volume in contracts of ${formatNumber(inst.lot ?? 1, 0)} · IV in %`
-            }
-          >
+        <div className="grid gap-x-10 gap-y-14 @min-[74rem]:grid-cols-[minmax(0,1fr)_380px]">
+          <section className="min-w-0 border-t border-ink pt-4" aria-labelledby="chain-title">
+            <div className="mb-4">
+              <h2 id="chain-title" className="font-serif text-[1.375rem] leading-tight font-semibold tracking-[-0.01em]">
+                {expiry ? `Expiring ${formatExpiry(expiry.date, true)}` : "The chain"}
+              </h2>
+              <p className="mt-1 text-sm text-ink-2">
+                {unit === "lakh"
+                  ? "Calls on the left, puts on the right. Open interest and volume in lakh units, IV in per cent, Greeks per unit."
+                  : `Calls on the left, puts on the right. Open interest and volume in contracts of ${formatNumber(inst.lot ?? 1, 0)}, IV in per cent.`}
+              </p>
+            </div>
             <ChainTable
               rows={rows}
               spot={chain?.spot}
@@ -121,7 +123,7 @@ export function OptionChainView({ id, initialExpiry }: { id: number; initialExpi
               scrollKey={`${viewKey}:${centre}`}
               symbol={inst.symbol}
             />
-          </Panel>
+          </section>
           <div id="strategy-builder" className={cn("min-w-0 scroll-mt-20")}>
             <StrategyBuilder
               inst={inst}

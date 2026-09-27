@@ -15,9 +15,9 @@ import { StocksTable } from "./stocks-table"
 export type DirectoryView = "stocks" | "indices" | "sectors"
 
 const VIEWS = [
-  { value: "stocks", label: `Stocks · ${EQUITIES.length}` },
-  { value: "indices", label: `Indices · ${INDICES.length}` },
-  { value: "sectors", label: `Sectors · ${SECTORS.length}` },
+  { value: "stocks", label: `Stocks ${EQUITIES.length}` },
+  { value: "indices", label: `Indices ${INDICES.length}` },
+  { value: "sectors", label: `Sectors ${SECTORS.length}` },
 ] as const
 
 const SECTOR_COUNTS = new Map(SECTORS.map((s) => [s, EQUITIES.filter((e) => e.sector === s).length]))
@@ -32,6 +32,7 @@ function writeUrl(view: DirectoryView, sector: Sector | "all", query: string) {
   window.history.replaceState(null, "", search ? `?${search}` : window.location.pathname)
 }
 
+/** Every stock, index and sector, one table at a time, with a search and a sector filter for stocks. */
 export function StocksDirectory({
   stocks,
   indices,
@@ -74,12 +75,12 @@ export function StocksDirectory({
   }, [])
 
   return (
-    <section className="flex min-w-0 flex-col rounded-lg border bg-card">
-      <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
-        <Segmented value={view} onChange={changeView} options={VIEWS} aria-label="Directory view" />
+    <div className="mt-10">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+        <Segmented value={view} onChange={changeView} options={VIEWS} aria-label="Show" />
         {view === "stocks" && (
-          <div className="flex w-full flex-wrap items-center gap-2 sm:ml-auto sm:w-auto">
-            <InputGroup className="w-full sm:w-64">
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+            <InputGroup className="h-9 w-full bg-card sm:w-64">
               <InputGroupAddon>
                 <Search />
               </InputGroupAddon>
@@ -87,8 +88,8 @@ export function StocksDirectory({
                 type="search"
                 value={query}
                 onChange={(e) => changeQuery(e.target.value)}
-                placeholder="Symbol or company name"
-                aria-label="Search stocks by symbol or company name"
+                placeholder="Company or symbol"
+                aria-label="Search stocks by company or symbol"
                 autoComplete="off"
                 spellCheck={false}
                 className="[&::-webkit-search-cancel-button]:appearance-none"
@@ -102,14 +103,14 @@ export function StocksDirectory({
               )}
             </InputGroup>
             <Select value={sector} onValueChange={(v) => changeSector(v as Sector | "all")}>
-              <SelectTrigger aria-label="Filter by sector" className="w-full sm:w-48">
+              <SelectTrigger aria-label="Filter by sector" className="h-9 w-full bg-card sm:w-48">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent position="popper" align="end">
-                <SelectItem value="all">All sectors</SelectItem>
+                <SelectItem value="all">Every sector</SelectItem>
                 {SECTORS.map((s) => (
                   <SelectItem key={s} value={s}>
-                    {s} <span className="num text-muted-foreground">{SECTOR_COUNTS.get(s)}</span>
+                    {s} <span className="num text-ink-3">{SECTOR_COUNTS.get(s)}</span>
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -120,6 +121,6 @@ export function StocksDirectory({
       {view === "stocks" && <StocksTable data={stocks} query={query} sector={sector} onClear={clearFilters} />}
       {view === "indices" && <IndicesTable data={indices} />}
       {view === "sectors" && <SectorsTable onPick={pickSector} />}
-    </section>
+    </div>
   )
 }

@@ -10,9 +10,9 @@ const HEIGHT = 260
 const M = { top: 14, right: 16, bottom: 26, left: 44 }
 
 const SERIES = [
-  { key: "today", label: "Today", stroke: "var(--primary)", width: 2, dash: undefined, swatch: "bg-primary" },
-  { key: "monthAgo", label: "A month ago", stroke: "var(--muted-foreground)", width: 1.5, dash: "5 4", swatch: "bg-muted-foreground" },
-  { key: "yearAgo", label: "A year ago", stroke: "var(--chart-5)", width: 1.5, dash: "1.5 3.5", swatch: "bg-chart-5" },
+  { key: "today", label: "Today", stroke: "var(--ink)", width: 2, dash: undefined, swatch: "bg-ink" },
+  { key: "monthAgo", label: "A month ago", stroke: "var(--ink-3)", width: 1.5, dash: "5 4", swatch: "bg-ink-3" },
+  { key: "yearAgo", label: "A year ago", stroke: "var(--accent-ink)", width: 1.5, dash: "1.5 3.5", swatch: "bg-accent-ink" },
 ] as const
 
 type SeriesKey = (typeof SERIES)[number]["key"]
@@ -108,19 +108,19 @@ export function YieldCurveChart({ points }: { points: CurvePoint[] }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-2 px-4 pt-3">
+      <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-2">
         <div aria-live="polite" className="min-w-0">
-          <div className="text-[11px] text-muted-foreground">
+          <div className="text-[13px] text-ink-3">
             {tenorLabel(point.tenor)} G-Sec{point.tenor === 10 ? " · benchmark" : ""}
           </div>
           <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
-            <span className="num text-xl leading-tight font-semibold tracking-tight">{formatNumber(point.today, 2)}%</span>
-            <span className="num text-[11px] text-muted-foreground">
+            <span className="figure text-[1.75rem] leading-tight">{formatNumber(point.today, 2)}%</span>
+            <span className="num text-[13px] text-ink-3">
               {bp(point.today, point.monthAgo)} vs a month ago · {bp(point.today, point.yearAgo)} vs a year ago
             </span>
           </div>
         </div>
-        <ul className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground" aria-label="Legend">
+        <ul className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-ink-3" aria-label="Legend">
           {SERIES.map((s) => (
             <li key={s.key} className="flex items-center gap-1.5">
               <svg width="16" height="6" aria-hidden="true" className="shrink-0">
@@ -139,7 +139,7 @@ export function YieldCurveChart({ points }: { points: CurvePoint[] }) {
         aria-label="Yield curve chart. Use the left and right arrow keys to read each maturity."
         onKeyDown={onKeyDown}
         onBlur={() => setActive(null)}
-        className="relative mx-1 mb-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+        className="relative rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
         style={{ height: HEIGHT }}
       >
         {width > 0 && (
@@ -155,7 +155,7 @@ export function YieldCurveChart({ points }: { points: CurvePoint[] }) {
             {yTicks.map((v) => (
               <g key={v}>
                 <line x1={M.left} x2={width - M.right} y1={y(v)} y2={y(v)} stroke="var(--border)" />
-                <text x={M.left - 8} y={y(v)} dy="0.32em" textAnchor="end" className="num fill-muted-foreground text-[10px]">
+                <text x={M.left - 8} y={y(v)} dy="0.32em" textAnchor="end" className="num fill-ink-3 text-[11px]">
                   {formatNumber(v, 1)}%
                 </text>
               </g>
@@ -166,13 +166,13 @@ export function YieldCurveChart({ points }: { points: CurvePoint[] }) {
                 x={x(points[i]!.tenor)}
                 y={HEIGHT - 8}
                 textAnchor="middle"
-                className={cn("num text-[10px]", i === shown ? "fill-foreground font-medium" : "fill-muted-foreground")}
+                className={cn("num text-[11px]", i === shown ? "fill-ink font-medium" : "fill-ink-3")}
               >
                 {tenorLabel(points[i]!.tenor)}
               </text>
             ))}
 
-            <line x1={x(point.tenor)} x2={x(point.tenor)} y1={M.top} y2={HEIGHT - M.bottom} stroke="var(--muted-foreground)" strokeOpacity={0.5} strokeDasharray="3 3" />
+            <line x1={x(point.tenor)} x2={x(point.tenor)} y1={M.top} y2={HEIGHT - M.bottom} stroke="var(--ink-3)" strokeOpacity={0.5} strokeDasharray="3 3" />
 
             {[...SERIES].reverse().map((s) => (
               <path
@@ -187,7 +187,7 @@ export function YieldCurveChart({ points }: { points: CurvePoint[] }) {
               />
             ))}
             {points.map((p, i) => (
-              <circle key={p.tenor} cx={x(p.tenor)} cy={y(p.today)} r={i === shown ? 0 : 2.25} fill="var(--primary)" />
+              <circle key={p.tenor} cx={x(p.tenor)} cy={y(p.today)} r={i === shown ? 0 : 2.25} fill="var(--ink)" />
             ))}
             {SERIES.map((s) => (
               <circle

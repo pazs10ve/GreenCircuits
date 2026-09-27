@@ -19,6 +19,11 @@ import { cn } from "@/lib/utils"
 import { SITE_NAV } from "./nav"
 
 const MORE_PAGES = [
+  { label: "Screener", href: "/screener" },
+  { label: "Futures and options", href: "/fo" },
+  { label: "IPOs", href: "/ipos" },
+  { label: "Bonds", href: "/bonds" },
+  { label: "Commodities", href: "/commodities" },
   { label: "Watchlists", href: "/watchlists" },
   { label: "Alerts", href: "/alerts" },
   { label: "Your account", href: "/account" },

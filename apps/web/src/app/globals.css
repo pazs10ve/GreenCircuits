@@ -187,11 +187,6 @@
     font-weight: 500;
     letter-spacing: -0.015em;
   }
-  /* Kept for pages not yet redesigned. */
-  .font-display {
-    font-family: var(--font-newsreader), ui-serif, Georgia, serif;
-    font-weight: 600;
-  }
   .text-up {
     color: var(--up);
   }

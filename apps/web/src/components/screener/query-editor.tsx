@@ -4,7 +4,6 @@ import { useId, useLayoutEffect, useMemo, useRef } from "react"
 import { Play, TriangleAlert, Wand2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Kbd, KbdGroup } from "@/components/ui/kbd"
-import { Panel } from "@/components/shell/page-header"
 import { cn } from "@/lib/utils"
 import { FieldReference } from "./field-reference"
 import { applyFix, highlight, type HighlightKind } from "./query"
@@ -13,13 +12,13 @@ import { useScreener } from "./screener-context"
 /** Colours only: weights would change glyph widths and break the overlay's alignment. */
 const TONE: Record<HighlightKind, string> = {
   plain: "",
-  field: "text-foreground",
-  unknown: "text-destructive",
-  keyword: "text-primary",
-  number: "text-chart-5",
+  field: "text-ink",
+  unknown: "text-down",
+  keyword: "font-medium text-accent-ink",
+  number: "text-chart-3",
   string: "text-chart-2",
-  operator: "text-muted-foreground",
-  paren: "text-muted-foreground",
+  operator: "text-ink-3",
+  paren: "text-ink-3",
   invalid: "text-destructive",
 }
 
@@ -70,16 +69,19 @@ export function QueryEditor({ className }: { className?: string }) {
   }
 
   return (
-    <Panel
-      className={className}
-      title={active ? active.name : applied.empty ? "New screen" : "Custom screen"}
-      description={
-        active
-          ? `${active.kind === "preset" ? "Preset" : "Saved screen"}${active.description ? ` · ${active.description}` : ""}`
-          : "Conditions on fundamentals, technicals and live price"
-      }
-      actions={
-        <>
+    <section className={cn("border-t border-ink pt-4", className)} aria-labelledby={`${inputId}-title`}>
+      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+        <div className="min-w-0">
+          <h2 id={`${inputId}-title`} className="font-serif text-[1.375rem] leading-tight font-semibold tracking-[-0.01em]">
+            {active ? active.name : applied.empty ? "A new screen" : "Your screen"}
+          </h2>
+          <p className="mt-1 text-sm text-ink-2">
+            {active
+              ? `${active.kind === "preset" ? "A ready-made screen" : "One of your screens"}${active.description ? `: ${active.description.charAt(0).toLowerCase()}${active.description.slice(1)}` : ""}`
+              : "Conditions on fundamentals, technicals and the live price."}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
           <FieldReference
             onInsert={insert}
             onCloseAutoFocus={(e) => {
@@ -91,27 +93,26 @@ export function QueryEditor({ className }: { className?: string }) {
               pendingCaret.current = null
             }}
           />
-          <Button size="sm" onClick={() => run()}>
+          <Button onClick={() => run()}>
             <Play /> Run
           </Button>
-        </>
-      }
-      bodyClassName="flex flex-col gap-2.5 p-3"
-    >
+        </div>
+      </div>
+      <div className="mt-4 flex flex-col gap-2.5">
       <label htmlFor={inputId} className="sr-only">
         Screen query
       </label>
       <div
         className={cn(
-          "relative rounded-md border border-input bg-input/20 transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/30 dark:bg-input/30",
-          error && "border-destructive/60 focus-within:border-destructive/60 focus-within:ring-destructive/20",
+          "relative rounded-md border border-input bg-card transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/30",
+          error && "border-down/60 focus-within:border-down/60 focus-within:ring-down/20",
         )}
       >
         <div ref={mirror} aria-hidden="true" className={cn("pointer-events-none absolute inset-0 overflow-hidden", TEXT)}>
           {segments.map((s, i) => (
             <span
               key={i}
-              className={cn(TONE[s.kind], s.error && "underline decoration-destructive decoration-wavy decoration-1 underline-offset-[5px]")}
+              className={cn(TONE[s.kind], s.error && "underline decoration-down decoration-wavy decoration-1 underline-offset-[5px]")}
             >
               {s.text}
             </span>
@@ -142,7 +143,7 @@ export function QueryEditor({ className }: { className?: string }) {
           aria-describedby={error ? `${errorId} ${hintId}` : hintId}
           placeholder="roe > 15 AND pe < 30 AND debt_equity < 0.5"
           className={cn(
-            "relative block min-h-[92px] w-full resize-none overflow-hidden bg-transparent text-transparent caret-foreground outline-none [field-sizing:content] selection:bg-primary/25 placeholder:text-muted-foreground",
+            "relative block min-h-[92px] w-full resize-none overflow-hidden bg-transparent text-transparent caret-ink outline-none [field-sizing:content] selection:bg-accent-ink/20 placeholder:text-ink-3",
             TEXT,
           )}
         />
@@ -152,7 +153,7 @@ export function QueryEditor({ className }: { className?: string }) {
         <div
           id={errorId}
           role="alert"
-          className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive"
+          className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 rounded-md border border-down/30 bg-down-soft/60 px-3 py-2 text-sm text-down"
         >
           <TriangleAlert className="size-3.5 shrink-0" aria-hidden="true" />
           <p className="min-w-0 flex-1">{error.message}</p>
@@ -161,7 +162,7 @@ export function QueryEditor({ className }: { className?: string }) {
               type="button"
               size="xs"
               variant="outline"
-              className="border-destructive/30 text-foreground"
+              className="border-down/30 text-ink"
               onClick={() => run(applyFix(draft, error.fix!))}
             >
               <Wand2 /> {error.fix.label}
@@ -170,12 +171,12 @@ export function QueryEditor({ className }: { className?: string }) {
         </div>
       )}
 
-      <div id={hintId} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
+      <div id={hintId} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-[13px] text-ink-3">
         <span className="font-mono">
           AND · OR · NOT · ( ) · &gt; &gt;= &lt; &lt;= = != · + − * /
         </span>
         <span className="flex items-center gap-1.5">
-          {dirty && !error && <span className="text-primary">Edited, not run yet ·</span>}
+          {dirty && !error && <span className="text-accent-ink">Edited, not run yet ·</span>}
           <KbdGroup>
             <Kbd>Ctrl</Kbd>
             <Kbd>Enter</Kbd>
@@ -183,6 +184,7 @@ export function QueryEditor({ className }: { className?: string }) {
           <span>to run</span>
         </span>
       </div>
-    </Panel>
+      </div>
+    </section>
   )
 }

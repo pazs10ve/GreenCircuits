@@ -6,7 +6,8 @@ import { upcomingEvents, type MarketEvent } from "@greencircuits/market/referenc
 import { companyProfile, type CompanyProfile } from "@greencircuits/market/research/company"
 import { sipAgainstIndex, sipVsDip, type Experiment } from "@greencircuits/market/research/experiments"
 import type { Instrument } from "@greencircuits/market/types"
-import { apiGet, istNoon } from "./api"
+import { istNoon } from "./api"
+import { liveGet } from "./market"
 
 export interface CompanyData {
   profile: CompanyProfile
@@ -23,7 +24,7 @@ interface ApiCompany extends Omit<CompanyData, "events" | "source"> {
 
 /** A company page's data: from the API (Postgres), or the demo generators when no backend is running. */
 export async function getCompany(inst: Instrument): Promise<CompanyData> {
-  const api = await apiGet<ApiCompany>(`/v1/companies/${inst.slug}`, { revalidate: 60 })
+  const api = await liveGet<ApiCompany>(`/v1/companies/${inst.slug}`, { revalidate: 60 })
   if (api) return { ...api, events: api.events.map((e) => ({ ...e, date: istNoon(e.date) })), source: "api" }
 
   const peers = EQUITIES.filter((e) => e.sector === inst.sector)

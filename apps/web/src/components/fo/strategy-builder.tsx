@@ -5,7 +5,6 @@ import { Eraser, MousePointerClick } from "lucide-react"
 import { toast } from "sonner"
 import type { Instrument } from "@greencircuits/market/types"
 import { Button } from "@/components/ui/button"
-import { Panel } from "@/components/shell/page-header"
 import { cn } from "@/lib/utils"
 import type { LiveChain } from "./chain-model"
 import {
@@ -88,33 +87,35 @@ export function StrategyBuilder({
   }
 
   return (
-    <Panel
-      className={cn("scroll-mt-20", className)}
-      title="Strategy builder"
-      description={legs.length ? `${legs.length} ${legs.length === 1 ? "leg" : "legs"} · ${inst.symbol} · lot ${lot}` : "Payoff at expiry and today"}
-      actions={
-        legs.length > 0 && (
+    <section className={cn("scroll-mt-20 border-t border-ink pt-4", className)} aria-labelledby="strategy-title">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 id="strategy-title" className="font-serif text-[1.375rem] leading-tight font-semibold tracking-[-0.01em]">
+            Build a strategy
+          </h2>
+          <p className="mt-1 text-sm text-ink-2">
+            {legs.length ? `${legs.length} ${legs.length === 1 ? "leg" : "legs"} in ${inst.symbol}, lots of ${lot}.` : "What it pays at expiry, and today."}
+          </p>
+        </div>
+        {legs.length > 0 && (
           <Button variant="ghost" size="sm" onClick={() => onLegsChange([])}>
             <Eraser /> Clear
           </Button>
-        )
-      }
-    >
-      <div className="flex flex-col gap-4 p-4">
+        )}
+      </div>
+      <div className="mt-5 flex flex-col gap-6">
         <PresetPicker onPick={loadPreset} disabled={!chain} />
         {legs.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 rounded-md border border-dashed px-4 py-8 text-center">
-            <MousePointerClick className="size-5 text-muted-foreground" aria-hidden="true" />
-            <p className="text-xs font-medium">No legs yet</p>
-            <p className="max-w-64 text-[11px] text-muted-foreground">
-              Click an LTP in the chain to buy it, shift-click to sell, or start from a preset above.
-            </p>
+          <div className="flex flex-col items-center gap-2 border-y border-rule px-4 py-10 text-center">
+            <MousePointerClick className="size-5 text-ink-3" aria-hidden="true" />
+            <p className="text-sm font-medium">No legs yet</p>
+            <p className="max-w-64 text-sm text-ink-2">Click a price in the chain to buy it, shift-click to sell, or start from a strategy above.</p>
           </div>
         ) : (
           <>
             <LegsList legs={legs} onChange={onLegsChange} />
             <div>
-              <div className="mb-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+              <div className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-ink-3">
                 <span className="inline-flex items-center gap-1.5">
                   <svg width="18" height="6" aria-hidden="true">
                     <line x1="0" x2="18" y1="3" y2="3" stroke="var(--up)" strokeWidth="2" />
@@ -123,12 +124,12 @@ export function StrategyBuilder({
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <svg width="18" height="6" aria-hidden="true">
-                    <line x1="0" x2="18" y1="3" y2="3" stroke="var(--primary)" strokeWidth="1.5" strokeDasharray="4 3" />
+                    <line x1="0" x2="18" y1="3" y2="3" stroke="var(--ink)" strokeWidth="1.5" strokeDasharray="4 3" />
                   </svg>
-                  Today (T+0)
+                  Today
                 </span>
                 <span className="inline-flex items-center gap-1.5">
-                  <span className="size-2 rounded-full border-[1.5px] border-primary" aria-hidden="true" />
+                  <span className="size-2 rounded-full border-[1.5px] border-ink" aria-hidden="true" />
                   Breakeven
                 </span>
               </div>
@@ -142,6 +143,6 @@ export function StrategyBuilder({
           </>
         )}
       </div>
-    </Panel>
+    </section>
   )
 }

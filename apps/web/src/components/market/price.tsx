@@ -111,20 +111,9 @@ export function LiveChange({
 }
 
 /** Percent change on a soft tint, for dense lists. */
-export function ChangePill({ pct, className }: { pct: number | undefined; className?: string }) {
-  if (pct == null) return <Skeleton className={cn("h-5 w-14 rounded", className)} />
+/** A day's change in per cent, coloured by its sign, for table columns. */
+export function DayChange({ pct, className }: { pct: number | undefined; className?: string }) {
+  if (pct == null) return <Skeleton className={cn("inline-block h-[1em] w-12 align-middle", className)} />
   const dir = direction(pct)
-  return (
-    <span
-      className={cn(
-        "num inline-flex h-6 items-center justify-end rounded px-1.5 text-[13px]",
-        dir === "up" && "bg-up-soft text-up",
-        dir === "down" && "bg-down-soft text-down",
-        dir === "flat" && "bg-surface text-ink-2",
-        className,
-      )}
-    >
-      {formatPct(pct)}
-    </span>
-  )
+  return <span className={cn("num", dir === "up" && "text-up", dir === "down" && "text-down", dir === "flat" && "text-ink-2", className)}>{formatPct(pct)}</span>
 }

@@ -6,13 +6,14 @@ import { EQUITIES, marketCapCr } from "@greencircuits/market/catalog"
 import type { Instrument, Quote, Sector } from "@greencircuits/market/types"
 import { formatCompact, formatCrore, formatNumber } from "@greencircuits/market/format"
 import { useQuoteReader } from "@/lib/stream/hooks"
+import { useMarket } from "@/lib/stream/market-context"
 import { DataTable } from "@/components/data/data-table"
-import { ChangePill, Price } from "@/components/market/price"
+import { DayChange, Price } from "@/components/market/price"
 import { Sparkline } from "@/components/market/sparkline"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { InstrumentCell, MiniRange } from "./cells"
-import type { StockStatic } from "./derive"
+import { withLive, type StockStatic } from "./derive"
 
 interface Row {
   inst: Instrument
@@ -36,34 +37,34 @@ function normalise(text: string): string {
 const columns: ColumnDef<Row>[] = [
   {
     id: "stock",
-    header: "Stock",
-    accessorFn: (r) => r.inst.symbol,
+    header: "Company",
+    accessorFn: (r) => r.inst.name,
     cell: ({ row }) => <InstrumentCell inst={row.original.inst} />,
-    meta: { sticky: true, className: "min-w-[150px]" },
+    meta: { sticky: true, className: "min-w-[200px]" },
   },
   {
     id: "ltp",
-    header: "LTP",
+    header: "Price",
     accessorFn: (r) => r.ltp,
     cell: ({ row }) => <Price value={row.original.q?.ltp} tick={row.original.inst.tick} />,
     meta: { align: "right" },
   },
   {
     id: "change",
-    header: "Change",
+    header: "Day",
     accessorFn: (r) => r.q?.changePct ?? 0,
-    cell: ({ row }) => <ChangePill pct={row.original.q?.changePct} />,
+    cell: ({ row }) => <DayChange pct={row.original.q?.changePct} />,
     meta: { align: "right" },
   },
   {
     id: "trend",
-    header: "30D",
+    header: "30 days",
     cell: ({ row }) => <Sparkline data={row.original.spark} width={84} height={24} className="h-6 w-[84px]" />,
     meta: { className: "w-[108px]" },
   },
   {
     id: "mcap",
-    header: "Market cap",
+    header: "Market value",
     accessorFn: (r) => r.mcap,
     cell: ({ row }) => formatCrore(row.original.mcap),
     meta: { align: "right" },
@@ -72,12 +73,12 @@ const columns: ColumnDef<Row>[] = [
     id: "pe",
     header: "P/E",
     accessorFn: (r) => r.pe,
-    cell: ({ row }) => (row.original.pe == null ? <span className="text-muted-foreground">–</span> : formatNumber(row.original.pe, 1)),
+    cell: ({ row }) => (row.original.pe == null ? <span className="text-ink-3">–</span> : formatNumber(row.original.pe, 1)),
     meta: { align: "right" },
   },
   {
     id: "range",
-    header: "52W range",
+    header: "52-week range",
     accessorFn: (r) => r.pos52,
     cell: ({ row }) => {
       const r = row.original
@@ -86,15 +87,15 @@ const columns: ColumnDef<Row>[] = [
   },
   {
     id: "volume",
-    header: "Vol / avg",
+    header: "Volume",
     accessorFn: (r) => r.relVol ?? 0,
     cell: ({ row }) => {
       const { q, relVol } = row.original
       if (!q || relVol == null) return <Skeleton className="ml-auto h-6 w-14" />
       return (
-        <span className="flex flex-col items-end leading-tight">
+        <span className="flex flex-col items-end leading-snug">
           <span>{formatCompact(q.volume)}</span>
-          <span className="text-[10px] text-muted-foreground">{formatNumber(relVol, 2)}× avg</span>
+          <span className="text-[13px] text-ink-3">{formatNumber(relVol, 1)}× usual</span>
         </span>
       )
     },
@@ -104,7 +105,7 @@ const columns: ColumnDef<Row>[] = [
     id: "sector",
     header: "Sector",
     accessorFn: (r) => r.inst.sector,
-    cell: ({ row }) => <span className="text-muted-foreground">{row.original.inst.sector}</span>,
+    cell: ({ row }) => <span className="text-ink-2">{row.original.inst.sector}</span>,
   },
 ]
 
@@ -121,6 +122,7 @@ export function StocksTable({
   onClear: () => void
 }) {
   const read = useQuoteReader(1000)
+  const { dataset } = useMarket()
   const statics = useMemo(() => new Map(data.map((d) => [d.id, d])), [data])
 
   const rows = useMemo(() => {
@@ -138,7 +140,7 @@ export function StocksTable({
       out.push({
         inst,
         q,
-        spark: q ? [...s.spark, q.ltp] : s.spark,
+        spark: withLive(s.spark, q?.ltp, dataset === "real"),
         low52,
         high52,
         ltp,
@@ -150,7 +152,7 @@ export function StocksTable({
       })
     }
     return out
-  }, [read, statics, query, sector])
+  }, [read, statics, query, sector, dataset])
 
   const filtered = query.trim() !== "" || sector !== "all"
 
@@ -162,24 +164,27 @@ export function StocksTable({
         initialSorting={[{ id: "mcap", desc: true }]}
         getRowId={(r) => String(r.inst.id)}
         getRowHref={(r) => `/stocks/${r.inst.slug}`}
-        maxHeight="min(72vh, 780px)"
         empty={
           <span className="inline-flex flex-wrap items-center justify-center gap-1">
-            No stocks match
-            {query.trim() && <span className="font-medium text-foreground">“{query.trim()}”</span>}
+            No company matches
+            {query.trim() && <span className="font-medium text-ink">“{query.trim()}”</span>}
             {sector !== "all" && <span>in {sector}</span>}.
             <Button variant="link" size="sm" className="h-auto px-1" onClick={onClear}>
-              Clear filters
+              Clear the filters
             </Button>
           </span>
         }
       />
-      <div className="flex flex-wrap items-center justify-between gap-2 border-t px-4 py-2 text-[11px] text-muted-foreground">
+      <p className="mt-3 flex flex-wrap justify-between gap-x-6 gap-y-1 text-sm text-ink-3">
         <span className="num">
-          {rows.length} of {EQUITIES.length} stocks{filtered ? " match" : ""}
+          {rows.length} of {EQUITIES.length} companies{filtered ? " match" : ""}
         </span>
-        <span>Market cap and P/E combine the live price with sample shares and earnings.</span>
-      </div>
+        <span>
+          {dataset === "real"
+            ? "Market value and P/E use the live price with each company's shares and last twelve months' earnings."
+            : "Market value and P/E combine the live price with sample shares and earnings."}
+        </span>
+      </p>
     </div>
   )
 }

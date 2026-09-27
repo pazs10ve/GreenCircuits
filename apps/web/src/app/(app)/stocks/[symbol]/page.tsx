@@ -21,9 +21,8 @@ import type { Instrument } from "@greencircuits/market/types"
 import { formatNumber } from "@greencircuits/market/format"
 import { balancedMix, sipVsDip, type Experiment } from "@greencircuits/market/research/experiments"
 import { marketSeed, openingQuotes } from "@greencircuits/market/session"
-import { apiGet } from "@/lib/data/api"
 import { getCompany } from "@/lib/data/company"
-import { getFeed } from "@/lib/data/market"
+import { getFeed, liveGet } from "@/lib/data/market"
 
 export async function generateMetadata({ params }: PageProps<"/stocks/[symbol]">): Promise<Metadata> {
   const { symbol } = await params
@@ -163,7 +162,7 @@ const longDate = (date: string) => new Intl.DateTimeFormat("en-IN", { day: "nume
 
 /** An index, currency or commodity: from the API when the backend runs, else the demo generators. */
 async function marketView(inst: Instrument) {
-  const [overview, feed] = await Promise.all([apiGet<Overview>(`/v1/market/overview/${inst.slug}`, { revalidate: 60 }), getFeed()])
+  const [overview, feed] = await Promise.all([liveGet<Overview>(`/v1/market/overview/${inst.slug}`, { revalidate: 60 }), getFeed()])
   if (overview) {
     return {
       closed: feed.closed,

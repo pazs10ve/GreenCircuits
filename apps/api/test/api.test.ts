@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto"
 import { Redis } from "ioredis"
+import { sql } from "kysely"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { templateDefinition } from "@greencircuits/contracts/strategy"
 import { createDb } from "@greencircuits/db"
@@ -369,6 +370,18 @@ describe("your data", () => {
 
     await expect.poll(() => announcements, { timeout: 2000 }).toBe(3)
     subscriber.disconnect()
+  })
+
+  it("doesn't hand back the newest notification to a poll that has seen it", async () => {
+    const visitor = new Visitor()
+    const userId = await visitor.start()
+    // Postgres keeps microseconds; the poll's cursor is a JavaScript date, to the millisecond.
+    await sql`INSERT INTO app.notification (user_id, kind, title, body, created_at)
+              VALUES (${userId}, 'ALERT', 'Test', 'Test', '2026-09-27T18:41:49.561234Z')`.execute(db)
+    const first = (await visitor.call("GET", "/v1/me/notifications")).json().notifications
+    expect(first).toHaveLength(1)
+    const after = new Date(first[0].created_at).toISOString()
+    expect((await visitor.call("GET", `/v1/me/notifications?after=${encodeURIComponent(after)}`)).json().notifications).toEqual([])
   })
 
   it("builds a feed from what the visitor follows", async () => {

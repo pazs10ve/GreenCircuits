@@ -30,14 +30,14 @@ export function LegsList({ legs, onChange }: { legs: StrategyLeg[]; onChange: (l
 
   return (
     <div>
-      <div className="grid grid-cols-[28px_76px_minmax(0,1fr)_64px_24px] items-center gap-2 pb-1 text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
+      <div className="grid grid-cols-[28px_76px_minmax(0,1fr)_64px_24px] items-center gap-2 border-b border-ink pb-2 text-xs text-ink-3">
         <span>Side</span>
         <span className="text-center">Lots</span>
         <span>Contract</span>
         <span className="text-right">Entry</span>
         <span className="sr-only">Remove</span>
       </div>
-      <ul className="divide-y divide-border/60 border-y border-border/60">
+      <ul className="divide-y divide-rule border-b border-rule">
         {legs.map((l) => {
           const name = `${formatNumber(l.strike, 0)} ${l.type}`
           return (
@@ -59,7 +59,7 @@ export function LegsList({ legs, onChange }: { legs: StrategyLeg[]; onChange: (l
                   onClick={() => update(l.id, { lots: Math.max(1, l.lots - 1) })}
                   disabled={l.lots <= 1}
                   aria-label="One lot fewer"
-                  className="flex h-full w-6 cursor-pointer items-center justify-center text-muted-foreground hover:text-foreground disabled:cursor-default disabled:opacity-40"
+                  className="flex h-full w-6 cursor-pointer items-center justify-center text-ink-3 hover:text-ink disabled:cursor-default disabled:opacity-40"
                 >
                   <Minus className="size-3" />
                 </button>
@@ -71,7 +71,7 @@ export function LegsList({ legs, onChange }: { legs: StrategyLeg[]; onChange: (l
                   onClick={() => update(l.id, { lots: Math.min(MAX_LOTS, l.lots + 1) })}
                   disabled={l.lots >= MAX_LOTS}
                   aria-label="One lot more"
-                  className="flex h-full w-6 cursor-pointer items-center justify-center text-muted-foreground hover:text-foreground disabled:cursor-default disabled:opacity-40"
+                  className="flex h-full w-6 cursor-pointer items-center justify-center text-ink-3 hover:text-ink disabled:cursor-default disabled:opacity-40"
                 >
                   <Plus className="size-3" />
                 </button>
@@ -79,7 +79,7 @@ export function LegsList({ legs, onChange }: { legs: StrategyLeg[]; onChange: (l
               <span className="min-w-0 truncate text-xs">
                 <span className="num font-medium">{formatNumber(l.strike, 0)}</span>{" "}
                 <span className="font-medium">{l.type}</span>
-                <span className="num text-muted-foreground"> · {formatDateIST(l.expiry, "short")}</span>
+                <span className="num text-ink-3"> · {formatDateIST(l.expiry, "short")}</span>
               </span>
               <span className="num text-right text-xs">{formatPrice(l.entry)}</span>
               <Button

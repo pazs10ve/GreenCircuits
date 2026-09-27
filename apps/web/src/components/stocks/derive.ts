@@ -186,6 +186,16 @@ export function boundDecimals(value: number): number {
 // -------------------------------------------------------- shared data shapes
 
 /** Per-stock values computed on the server for the directory table. */
+/**
+ * A month of closes with the live price as the last point. Real data already
+ * holds today's close, which the live price replaces; the demo's history ends
+ * yesterday, so the live price is added.
+ */
+export function withLive(spark: number[], ltp: number | undefined, replaceLast: boolean): number[] {
+  if (ltp == null) return spark
+  return replaceLast ? [...spark.slice(0, -1), ltp] : [...spark, ltp]
+}
+
 export interface StockStatic {
   id: number
   spark: number[]

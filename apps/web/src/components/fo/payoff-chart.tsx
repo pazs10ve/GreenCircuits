@@ -117,7 +117,7 @@ export function PayoffChart({
           {ticks(yMin, yMax, yStep).map((v) => (
             <g key={v}>
               <line x1={PAD.l} x2={width - PAD.r} y1={Y(v)} y2={Y(v)} stroke="var(--border)" strokeDasharray={v === 0 ? undefined : "2 4"} />
-              <text x={PAD.l - 6} y={Y(v)} textAnchor="end" dominantBaseline="middle" className="num fill-muted-foreground text-[10px]">
+              <text x={PAD.l - 6} y={Y(v)} textAnchor="end" dominantBaseline="middle" className="num fill-ink-3 text-[11px]">
                 {rupeesShort(v)}
               </text>
             </g>
@@ -125,7 +125,7 @@ export function PayoffChart({
 
           <path d={area} fill="var(--up)" fillOpacity={0.14} clipPath={`url(#${uid}-up)`} />
           <path d={area} fill="var(--down)" fillOpacity={0.14} clipPath={`url(#${uid}-dn)`} />
-          <line x1={PAD.l} x2={width - PAD.r} y1={zeroY} y2={zeroY} stroke="var(--muted-foreground)" strokeOpacity={0.55} />
+          <line x1={PAD.l} x2={width - PAD.r} y1={zeroY} y2={zeroY} stroke="var(--ink-3)" strokeOpacity={0.55} />
           <path d={expiryPath} fill="none" stroke="var(--up)" strokeWidth={1.75} strokeLinejoin="round" clipPath={`url(#${uid}-up)`} />
           <path d={expiryPath} fill="none" stroke="var(--down)" strokeWidth={1.75} strokeLinejoin="round" clipPath={`url(#${uid}-dn)`} />
           <path d={path(today)} fill="none" stroke="var(--primary)" strokeWidth={1.5} strokeDasharray="5 4" strokeLinejoin="round" />
@@ -133,7 +133,7 @@ export function PayoffChart({
           {spot >= xMin && spot <= xMax && (
             <g>
               <line x1={X(spot)} x2={X(spot)} y1={PAD.t} y2={height - PAD.b} stroke="var(--foreground)" strokeOpacity={0.45} strokeDasharray="3 3" />
-              <text x={X(spot)} y={PAD.t - 6} textAnchor="middle" className="num fill-foreground text-[10px] font-medium">
+              <text x={X(spot)} y={PAD.t - 6} textAnchor="middle" className="num fill-ink text-[11px] font-medium">
                 Spot {formatNumber(spot, 0)}
               </text>
             </g>
@@ -143,13 +143,13 @@ export function PayoffChart({
             <g key={b}>
               <line x1={X(b)} x2={X(b)} y1={zeroY} y2={height - PAD.b} stroke="var(--primary)" strokeOpacity={0.5} />
               <circle cx={X(b)} cy={zeroY} r={3.5} fill="var(--card)" stroke="var(--primary)" strokeWidth={1.5} />
-              <text x={X(b)} y={height - 7} textAnchor="middle" className="num fill-primary text-[10px] font-medium">
+              <text x={X(b)} y={height - 7} textAnchor="middle" className="num fill-ink text-[11px] font-medium">
                 {formatNumber(b, 0)}
               </text>
             </g>
           ))}
           {xTicks.map((v) => (
-            <text key={v} x={X(v)} y={height - 7} textAnchor="middle" className="num fill-muted-foreground text-[10px]">
+            <text key={v} x={X(v)} y={height - 7} textAnchor="middle" className="num fill-ink-3 text-[11px]">
               {formatNumber(v, 0)}
             </text>
           ))}
@@ -165,7 +165,7 @@ export function PayoffChart({
       )}
       {h != null && (
         <div
-          className="pointer-events-none absolute top-5 w-40 rounded-md border bg-popover px-2.5 py-2 text-[11px] shadow-md"
+          className="pointer-events-none absolute top-5 w-44 rounded-md border bg-popover px-2.5 py-2 text-xs shadow-md"
           style={{ left: tipLeft }}
         >
           <div className="num mb-1 font-semibold">At {formatNumber(xs[h]!, 2)}</div>
@@ -180,7 +180,7 @@ export function PayoffChart({
 function Row({ label, value }: { label: string; value: number }) {
   return (
     <div className="flex items-center justify-between gap-2">
-      <span className="text-muted-foreground">{label}</span>
+      <span className="text-ink-3">{label}</span>
       <span className={cn("num font-medium", value > 0.5 ? "text-up" : value < -0.5 ? "text-down" : "")}>{signedRupees(value)}</span>
     </div>
   )

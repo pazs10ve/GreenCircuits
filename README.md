@@ -34,8 +34,10 @@ It is a portfolio project, not a product. Out of the box, prices come from a mar
   - **The report:** it has the growth chart, the numbers, drawdowns, month-by-month returns and trades, plus a held-out final 30% of the period that shows whether an edge survives.
 - **Demo mode:** with the backend off, the site still works, running the simulator in the browser ([ADR 0003](docs/adr/0003-live-and-demo-modes.md)).
 - **Real data, locally:** `pnpm data:real` loads ten years of NSE prices, results, shareholding, index membership, events, flows and IPOs from Yahoo Finance and NSE. The ingestor then follows real prices, and every page says whether it's showing real or sample figures ([ADR 0007](docs/adr/0007-real-data-for-local-use.md)).
+- **Explore:** every stock, index and sector; a screener with its own query language; option chains with a strategy builder; IPOs; bonds with the yield curve and a calculator; and commodities.
+- **Portfolio:** holdings with a year's look-back against the Nifty, sectors and capital gains tax; watchlists; and alerts.
 
-Not done yet: the screener, F&O, IPO, bond and commodity pages in the new design. See the [roadmap](#roadmap).
+Still to come: a case-study page and the load tests. See the [roadmap](#roadmap).
 
 ## Architecture
 
@@ -192,7 +194,8 @@ GreenCircuits/
 - [x] **Lab in demo mode:** the engine in TypeScript, checked against the Python one with golden files
 - [x] **Accounts and the feed:** sign-up that keeps anonymous data, sessions, and a personalised feed built the same way on the server and in the browser
 - [x] **Real data, locally:** a loader for prices, results, shareholding and market data from free sources, a Yahoo price feed, and labels that say which data a page shows
-- [ ] **The rest of the site:** Explore (screener, IPOs, bonds, commodities), F&O, portfolio and watchlists in the new design, and a case-study page
+- [x] **The rest of the site:** stocks, the screener, F&O, IPOs, bonds, commodities, holdings, watchlists and alerts in the new design
+- [ ] **A case-study page** about how it's built and what the load tests found
 - [ ] **Prove it:** k6 load tests at 100,000 requests an hour and 1,000 sockets, dashboards, published results
 - [ ] **Later:** a licensed broker feed, email verification and password reset, email and Telegram alerts, paper trading, walk-forward testing
 

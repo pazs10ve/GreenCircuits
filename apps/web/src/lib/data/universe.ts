@@ -1,5 +1,5 @@
 import { cache } from "react"
-import { apiGet } from "./api"
+import { liveGet } from "./market"
 
 /** One instrument's row in GET /v1/market/universe. */
 export interface UniverseRow {
@@ -25,4 +25,4 @@ export interface Universe {
 }
 
 /** Sparklines, 52-week ranges and index members for the list pages, from the API; null in demo mode. */
-export const getUniverse = cache(() => apiGet<Universe>("/v1/market/universe", { revalidate: 60 }))
+export const getUniverse = cache(() => liveGet<Universe>("/v1/market/universe", { revalidate: 60 }))

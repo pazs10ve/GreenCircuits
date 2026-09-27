@@ -55,7 +55,7 @@ export function ChainControls({
     <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
       <div className="flex flex-wrap items-center gap-2">
         <Select value={inst.slug} onValueChange={(slug) => router.push(`/fo/${slug}`)}>
-          <SelectTrigger aria-label="Underlying" className="h-8 w-[152px] font-medium">
+          <SelectTrigger aria-label="Underlying" className="h-9 w-[160px] bg-card font-medium">
             <SelectValue />
           </SelectTrigger>
           <SelectContent position="popper" align="start">
@@ -80,37 +80,35 @@ export function ChainControls({
 
         {expiry ? (
           <Select value={expiry.key} onValueChange={onExpiry}>
-            <SelectTrigger aria-label="Expiry" className="h-8 w-[196px]">
+            <SelectTrigger aria-label="Expiry" className="h-9 w-[210px] bg-card">
               <SelectValue />
             </SelectTrigger>
             <SelectContent position="popper" align="start">
               {expiries.map((e) => (
                 <SelectItem key={e.key} value={e.key}>
                   <span className="num">{formatExpiry(e.date, true)}</span>
-                  <span className="font-mono text-[10px] tracking-wide text-muted-foreground uppercase">
-                    {e.monthly ? "Monthly" : "Weekly"}
-                  </span>
+                  <span className="text-xs text-ink-3">{e.monthly ? "monthly" : "weekly"}</span>
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         ) : (
-          <Skeleton className="h-8 w-[196px]" />
+          <Skeleton className="h-9 w-[210px]" />
         )}
       </div>
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 md:ml-auto">
         <div className="flex items-center gap-2">
-          <span className="text-[11px] text-muted-foreground">Strikes</span>
+          <span className="text-[13px] text-ink-3">Strikes</span>
           <Segmented value={strikes} onChange={onStrikes} options={WINDOWS} aria-label="Strikes around the money" />
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[11px] text-muted-foreground">OI in</span>
+          <span className="text-[13px] text-ink-3">OI in</span>
           <Segmented value={unit} onChange={onUnit} options={UNITS} aria-label="Open interest and volume unit" />
         </div>
         <div className="flex items-center gap-2">
           <Switch id="chain-greeks" checked={greeks} onCheckedChange={onGreeks} />
-          <Label htmlFor="chain-greeks" className="text-[11px] font-normal">
+          <Label htmlFor="chain-greeks" className="text-[13px] font-normal text-ink-2">
             Greeks
           </Label>
         </div>

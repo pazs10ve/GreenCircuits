@@ -1,14 +1,11 @@
 "use client"
 
 import { useId } from "react"
-import { RotateCcw } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Segmented } from "@/components/market/segmented"
-import { Stat } from "@/components/market/stat"
-import { Panel } from "@/components/shell/page-header"
+import { Figure, Figures } from "@/components/editorial/figures"
 import { formatNumber, formatPct } from "@greencircuits/market/format"
 import { cn } from "@/lib/utils"
 import { FREQUENCY_LABEL, YIELD_CAP, YIELD_FLOOR, bondMetrics, rateShocks, yieldFromPrice } from "./bond-math"
@@ -62,146 +59,137 @@ export function BondCalculator({ className }: { className?: string }) {
   }
 
   return (
-    <Panel
-      className={className}
-      title="Bond calculator"
-      description="Per ₹100 face value · clean price, duration, rate shocks"
-      actions={
+    <div className={cn("grid gap-x-14 gap-y-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]", className)}>
+      <div>
         <Segmented
           value={calc.solve}
           onChange={switchSolve}
           options={[
-            { value: "price", label: "Price" },
-            { value: "yield", label: "Yield" },
+            { value: "price", label: "Price from yield" },
+            { value: "yield", label: "Yield from price" },
           ]}
-          aria-label="Solve for"
+          aria-label="Work out"
         />
-      }
-      bodyClassName="flex flex-col gap-4 p-4"
-    >
-      {calc.source && (
-        <div className="-mt-1 flex items-center justify-between gap-2 rounded-md bg-muted/60 px-2.5 py-1.5 text-[11px]">
-          <span className="min-w-0 truncate">
-            <span className="text-muted-foreground">Loaded </span>
-            <span className="font-medium">{calc.source}</span>
-          </span>
-          <Button variant="ghost" size="xs" onClick={calc.reset}>
-            <RotateCcw /> Reset
-          </Button>
-        </div>
-      )}
-
-      <div className="grid grid-cols-2 gap-x-3 gap-y-3">
-        <NumberField
-          id={couponId}
-          label="Coupon, % a year"
-          value={zero ? "0" : calc.coupon}
-          disabled={zero}
-          error={errors.coupon}
-          onChange={(v) => calc.set({ coupon: v, source: null })}
-        />
-        {calc.solve === "price" ? (
-          <NumberField id={ytmId} label="Yield to maturity, %" value={calc.ytm} error={errors.ytm} onChange={(v) => calc.set({ ytm: v })} />
-        ) : (
-          <NumberField id={priceId} label="Clean price, ₹" value={calc.price} error={errors.price} onChange={(v) => calc.set({ price: v })} />
-        )}
-        <NumberField id={yearsId} label="Years to maturity" value={calc.years} error={errors.years} onChange={(v) => calc.set({ years: v, source: null })} />
-        <Field className="gap-1.5">
-          <FieldLabel htmlFor={freqId} className="text-[11px] font-normal text-muted-foreground">
-            Coupon frequency
-          </FieldLabel>
-          <Select value={String(calc.frequency)} onValueChange={(v) => calc.set({ frequency: Number(v), source: null })}>
-            <SelectTrigger id={freqId} className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {FREQUENCIES.map((f) => (
-                <SelectItem key={f} value={String(f)}>
-                  {f === 0 ? "Zero coupon (T-Bill)" : FREQUENCY_LABEL[f]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Field>
-      </div>
-
-      <div className="rounded-lg border bg-muted/30 p-3" aria-live="polite">
-        {m && ytm != null ? (
-          <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
-            <div className="space-y-1">
-              <div className="text-[11px] text-muted-foreground">{calc.solve === "price" ? "Clean price" : "Yield to maturity"}</div>
-              <div className="num text-2xl leading-none font-semibold tracking-tight">
-                {calc.solve === "price" ? `₹${formatNumber(m.price, 2)}` : `${formatNumber(ytm, 2)}%`}
-              </div>
-            </div>
-            <div className="num text-right text-[11px] text-muted-foreground">
-              {calc.solve === "price" ? `at ${formatNumber(ytm, 2)}% YTM` : `at ₹${formatNumber(m.price, 2)} clean`}
-              <br />
-              {zero ? `${Math.round(years! * 365)} days to maturity` : `${m.periods} coupons left`}
-            </div>
-          </div>
-        ) : (
-          <p className="py-2 text-xs text-muted-foreground">
-            {outOfRange
-              ? `That price implies a yield outside ${YIELD_FLOOR}% to ${YIELD_CAP}%. Check the price is per ₹100 face value.`
-              : "Fix the highlighted inputs to see the result."}
+        {calc.source && (
+          <p className="mt-4 text-sm text-ink-2">
+            Filled in from <span className="font-medium text-ink">{calc.source}</span>.{" "}
+            <button type="button" onClick={calc.reset} className="link">
+              Start again
+            </button>
           </p>
         )}
+        <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-4">
+          <NumberField
+            id={couponId}
+            label="Coupon, % a year"
+            value={zero ? "0" : calc.coupon}
+            disabled={zero}
+            error={errors.coupon}
+            onChange={(v) => calc.set({ coupon: v, source: null })}
+          />
+          {calc.solve === "price" ? (
+            <NumberField id={ytmId} label="Yield to maturity, %" value={calc.ytm} error={errors.ytm} onChange={(v) => calc.set({ ytm: v })} />
+          ) : (
+            <NumberField id={priceId} label="Price per ₹100, ₹" value={calc.price} error={errors.price} onChange={(v) => calc.set({ price: v })} />
+          )}
+          <NumberField id={yearsId} label="Years to maturity" value={calc.years} error={errors.years} onChange={(v) => calc.set({ years: v, source: null })} />
+          <Field className="gap-1.5">
+            <FieldLabel htmlFor={freqId} className="text-[13px] font-normal text-ink-3">
+              Interest paid
+            </FieldLabel>
+            <Select value={String(calc.frequency)} onValueChange={(v) => calc.set({ frequency: Number(v), source: null })}>
+              <SelectTrigger id={freqId} className="w-full bg-card">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {FREQUENCIES.map((f) => (
+                  <SelectItem key={f} value={String(f)}>
+                    {f === 0 ? "None: a discount bill" : FREQUENCY_LABEL[f]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-        <Stat label="Macaulay duration" value={m ? `${formatNumber(m.macaulay, 2)} yrs` : "–"} />
-        <Stat label="Modified duration" value={m ? formatNumber(m.modified, 2) : "–"} hint="% move per 1% in yield" />
-        <Stat
-          label="PV01"
-          value={m ? `₹${formatNumber(m.pv01, 4)}` : "–"}
-          hint={m ? `₹${formatNumber(m.pv01 * 1e5, 0)} per ₹1 Cr face` : undefined}
-        />
-        <Stat
-          label="Current yield"
-          value={m ? (m.currentYield == null ? "None" : `${formatNumber(m.currentYield, 2)}%`) : "–"}
-          hint={m ? `Convexity ${formatNumber(m.convexity, 1)}` : undefined}
-        />
-      </div>
+      <div aria-live="polite">
+        {m && ytm != null ? (
+          <div>
+            <p className="text-[13px] text-ink-3">{calc.solve === "price" ? "Price per ₹100 of face value" : "Yield to maturity"}</p>
+            <p className="figure mt-1.5 text-[2.75rem] leading-none">{calc.solve === "price" ? `₹${formatNumber(m.price, 2)}` : `${formatNumber(ytm, 2)}%`}</p>
+            <p className="num mt-2.5 text-sm text-ink-2">
+              {calc.solve === "price" ? `At a ${formatNumber(ytm, 2)}% yield` : `At ₹${formatNumber(m.price, 2)}`}
+              {zero ? `, ${Math.round(years! * 365)} days to maturity.` : `, with ${m.periods} interest payments left.`}
+            </p>
+          </div>
+        ) : (
+          <p className="text-[0.9375rem] text-ink-2">
+            {outOfRange
+              ? `That price implies a yield outside ${YIELD_FLOOR}% to ${YIELD_CAP}%. Check it's the price per ₹100 of face value.`
+              : "Fix the highlighted boxes to see the answer."}
+          </p>
+        )}
 
-      <div>
-        <div className="mb-1.5 text-[11px] font-medium">If yields move 25 bp</div>
-        <table className="w-full text-xs">
+        <Figures className="mt-8 sm:grid-cols-2 lg:grid-cols-4">
+          <Figure label="Macaulay duration" value={m ? `${formatNumber(m.macaulay, 2)} yrs` : "–"} hint="when the money comes back, on average" />
+          <Figure label="Modified duration" value={m ? formatNumber(m.modified, 2) : "–"} hint="% price move per point of yield" />
+          <Figure label="PV01" value={m ? `₹${formatNumber(m.pv01, 4)}` : "–"} hint={m ? `₹${formatNumber(m.pv01 * 1e5, 0)} per ₹1 crore of face` : undefined} />
+          <Figure
+            label="Current yield"
+            value={m ? (m.currentYield == null ? "None" : `${formatNumber(m.currentYield, 2)}%`) : "–"}
+            hint={m ? `convexity ${formatNumber(m.convexity, 1)}` : undefined}
+          />
+        </Figures>
+
+        <table className="mt-10 w-full text-sm">
+          <caption className="mb-2 text-left text-sm font-semibold">If yields move a quarter of a point</caption>
           <thead>
-            <tr className="text-[10px] tracking-wide text-muted-foreground uppercase">
-              <th scope="col" className="pb-1 text-left font-medium">Yield</th>
-              <th scope="col" className="pb-1 text-right font-medium">Price</th>
-              <th scope="col" className="pb-1 text-right font-medium">Change</th>
-              <th scope="col" className="pb-1 text-right font-medium">Duration est.</th>
+            <tr className="border-b border-ink text-xs text-ink-3">
+              <th scope="col" className="pb-2 text-left font-normal">
+                Yield
+              </th>
+              <th scope="col" className="pb-2 text-right font-normal">
+                Price
+              </th>
+              <th scope="col" className="pb-2 text-right font-normal">
+                Change
+              </th>
+              <th scope="col" className="pb-2 text-right font-normal">
+                Duration&apos;s guess
+              </th>
             </tr>
           </thead>
           <tbody className="num">
             {shocks.length === 0 && (
-              <tr>
-                <td colSpan={4} className="border-t py-2 text-muted-foreground">
+              <tr className="border-b border-rule">
+                <td colSpan={4} className="py-2.5 text-ink-3">
                   –
                 </td>
               </tr>
             )}
             {shocks.map((s) => (
-              <tr key={s.bp} className="border-t border-border/60">
-                <th scope="row" className="py-1.5 text-left font-normal">
+              <tr key={s.bp} className="border-b border-rule">
+                <th scope="row" className="py-2.5 text-left font-normal">
                   {formatNumber(s.yield, 2)}%{" "}
-                  <span className="text-muted-foreground">({s.bp > 0 ? "+" : "−"}{Math.abs(s.bp)} bp)</span>
+                  <span className="text-ink-3">
+                    ({s.bp > 0 ? "+" : "−"}
+                    {Math.abs(s.bp)} bp)
+                  </span>
                 </th>
-                <td className="py-1.5 text-right">{formatNumber(s.price, 2)}</td>
-                <td className={cn("py-1.5 text-right", s.changePct >= 0 ? "text-up" : "text-down")}>{formatPct(s.changePct)}</td>
-                <td className="py-1.5 text-right text-muted-foreground">{formatPct(s.durationPct)}</td>
+                <td className="py-2.5 text-right">₹{formatNumber(s.price, 2)}</td>
+                <td className={cn("py-2.5 text-right", s.changePct >= 0 ? "text-up" : "text-down")}>{formatPct(s.changePct)}</td>
+                <td className="py-2.5 text-right text-ink-3">{formatPct(s.durationPct)}</td>
               </tr>
             ))}
           </tbody>
         </table>
-        <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-          The gap between the full repricing and the duration estimate is convexity. Prices assume whole coupon periods and no accrued
-          interest; T-Bills use the simple discount formula on a 365-day year.
+        <p className="mt-3 text-sm leading-relaxed text-ink-3">
+          The gap between the full repricing and duration&apos;s guess is convexity. Prices assume whole interest periods and no accrued interest; bills use the simple
+          discount formula on a 365-day year.
         </p>
       </div>
-    </Panel>
+    </div>
   )
 }
 
@@ -222,7 +210,7 @@ function NumberField({
 }) {
   return (
     <Field className="gap-1.5" data-invalid={error ? true : undefined}>
-      <FieldLabel htmlFor={id} className="text-[11px] font-normal text-muted-foreground">
+      <FieldLabel htmlFor={id} className="text-[13px] font-normal text-ink-3">
         {label}
       </FieldLabel>
       <Input
@@ -233,10 +221,10 @@ function NumberField({
         onChange={(e) => onChange(e.target.value)}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? `${id}-error` : undefined}
-        className="num"
+        className="num bg-card"
       />
       {error && (
-        <p id={`${id}-error`} className="text-[11px] text-destructive">
+        <p id={`${id}-error`} className="text-[13px] text-down">
           {error}
         </p>
       )}

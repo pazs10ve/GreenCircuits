@@ -46,10 +46,10 @@ export function ScreenerActions() {
   return (
     <>
       <SaveScreenButton />
-      <Button variant="outline" size="lg" onClick={exportCsv}>
+      <Button variant="outline" onClick={exportCsv}>
         <Download /> Export CSV
       </Button>
-      <Button size="lg" asChild>
+      <Button asChild>
         <Link href={`/lab/new?screen=${encodeURIComponent(applied.source.trim())}`}>
           <FlaskConical /> Backtest this screen
         </Link>
@@ -77,14 +77,14 @@ function SaveScreenButton() {
     const trimmed = name.trim()
     if (!trimmed || applied.empty) return
     save(trimmed, applied.source.trim())
-    toast.success(`Saved “${trimmed}”`, { description: "Find it under Saved screens. It stays in this browser." })
+    toast.success(`Saved “${trimmed}”`, { description: "It's under Your screens, in this browser." })
     setOpen(false)
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="lg" disabled={applied.empty}>
+        <Button variant="outline" disabled={applied.empty}>
           <BookmarkPlus /> Save screen
         </Button>
       </DialogTrigger>
@@ -92,7 +92,7 @@ function SaveScreenButton() {
         <form onSubmit={submit} className="contents">
           <DialogHeader>
             <DialogTitle>Save screen</DialogTitle>
-            <DialogDescription>Saved screens stay in this browser and appear in the screens list.</DialogDescription>
+            <DialogDescription>Saved screens stay in this browser and show up under Your screens.</DialogDescription>
           </DialogHeader>
           <FieldGroup className="gap-3">
             <Field>
@@ -101,7 +101,7 @@ function SaveScreenButton() {
             </Field>
             <Field>
               <FieldTitle>Query</FieldTitle>
-              <pre className="rounded-md border bg-muted/40 px-2.5 py-2 font-mono text-[12px] leading-relaxed break-words whitespace-pre-wrap">
+              <pre className="rounded-md border bg-surface px-2.5 py-2 font-mono text-[13px] leading-relaxed break-words whitespace-pre-wrap">
                 {applied.source.trim()}
               </pre>
               {unsaved && (

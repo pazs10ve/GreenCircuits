@@ -87,9 +87,13 @@ function maxPainOf(rows: OiChain["rows"]): number {
   return best
 }
 
-/** Sample OI for one expiry, in units (a multiple of the lot). Changes slowly, minute by minute. */
-export function oiChain(inst: Instrument, expiry: Date, now: Date): OiChain {
-  const base = buildChain(inst, inst.prevClose, expiry, undefined, now, ANCHOR_STRIKES)
+/**
+ * Sample OI for one expiry, in units (a multiple of the lot), laid out around
+ * the previous close (`anchor`: the live quote's, or the demo catalog's).
+ * Changes slowly, minute by minute.
+ */
+export function oiChain(inst: Instrument, expiry: Date, now: Date, anchor = inst.prevClose): OiChain {
+  const base = buildChain(inst, anchor, expiry, undefined, now, ANCHOR_STRIKES)
   const lot = base.lot
   const side = (q: OptionQuote, t: number): OiSide => ({
     oi: Math.round((q.oi * t) / lot) * lot,
@@ -194,12 +198,12 @@ export function previousSessionClose(now: Date): Date {
 
 /**
  * Option closes in the previous session (`at`, from previousSessionClose): the
- * chain priced at yesterday's spot, VIX and time to expiry.
+ * chain priced at yesterday's spot and VIX (the live quotes' previous closes,
+ * or the demo catalog's) and time to expiry.
  */
-export function prevCloseLtps(inst: Instrument, expiry: Date, at: Date): PrevCloses {
+export function prevCloseLtps(inst: Instrument, expiry: Date, at: Date, spot = inst.prevClose, vix = getInstrument(INDEX.VIX)!.prevClose): PrevCloses {
   if (expiry.getTime() <= at.getTime()) return new Map()
-  const vix = getInstrument(INDEX.VIX)!.prevClose
-  const chain = buildChain(inst, inst.prevClose, expiry, vix, at, ANCHOR_STRIKES)
+  const chain = buildChain(inst, spot, expiry, vix, at, ANCHOR_STRIKES)
   return new Map(chain.rows.map((r) => [r.strike, { ce: r.ce.ltp, pe: r.pe.ltp }]))
 }
 

@@ -5,22 +5,18 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import { boundDecimals } from "./derive"
 
-/** Symbol over name, linking to the instrument page. The current instrument is marked and not linked. */
+/** Name over symbol, linking to the instrument page. The current instrument is marked and not linked. */
 export function InstrumentCell({ inst, current = false, className }: { inst: Instrument; current?: boolean; className?: string }) {
   const body = (
     <>
-      <span className="flex items-center gap-1.5 font-medium text-foreground">
-        <span className="group-hover/link:underline">{inst.symbol}</span>
-        {current && (
-          <span className="rounded-sm bg-primary/15 px-1 py-px text-[9px] font-semibold tracking-wide text-primary uppercase">
-            This stock
-          </span>
-        )}
+      <span className="truncate font-medium text-ink">
+        <span className="group-hover/link:underline group-hover/link:decoration-1 group-hover/link:underline-offset-4">{inst.name}</span>
+        {current && <span className="ml-1.5 text-xs font-normal text-ink-3">this stock</span>}
       </span>
-      <span className="truncate text-[11px] text-muted-foreground">{inst.name}</span>
+      <span className="truncate text-[13px] text-ink-3">{inst.symbol}</span>
     </>
   )
-  const base = cn("flex max-w-[200px] min-w-0 flex-col leading-tight", className)
+  const base = cn("flex max-w-[240px] min-w-0 flex-col leading-snug", className)
   if (current) return <div className={base}>{body}</div>
   return (
     <Link href={`/stocks/${inst.slug}`} className={cn("group/link", base)}>
@@ -50,24 +46,16 @@ export function MiniRange({
   const text = `${label}: ${formatPrice(low, tick)} to ${formatPrice(high, tick)}, now ${formatPrice(value, tick)}`
   return (
     <span role="img" aria-label={text} title={text} className={cn("inline-flex w-24 flex-col gap-1 align-middle", className)}>
-      <span className="relative mt-0.5 h-1 rounded-full bg-muted">
-        <span className="absolute inset-y-0 left-0 rounded-full bg-muted-foreground/30" style={{ width: `${pos}%` }} />
+      <span className="relative mt-0.5 h-1 rounded-full bg-surface-2">
         <span
-          className="absolute top-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground ring-2 ring-card transition-[left] duration-500"
+          className="absolute top-1/2 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-paper bg-ink transition-[left] duration-500"
           style={{ left: `${pos}%` }}
         />
       </span>
-      <span className="num flex justify-between gap-1 text-[10px] leading-none text-muted-foreground">
+      <span className="num flex justify-between gap-1 text-[11px] leading-none text-ink-3">
         <span>{formatNumber(low, boundDecimals(low))}</span>
         <span>{formatNumber(high, boundDecimals(high))}</span>
       </span>
     </span>
   )
 }
-
-/** Small uppercase column header for hand-built tables, matching DataTable. */
-export const TH =
-  "h-8 border-b bg-card px-3 text-[10px] font-medium tracking-wide whitespace-nowrap text-muted-foreground uppercase"
-
-/** Body cell for hand-built tables, matching DataTable. */
-export const TD = "h-9 border-b border-border/60 px-3 whitespace-nowrap"

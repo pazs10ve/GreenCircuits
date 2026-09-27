@@ -9,6 +9,7 @@ import { DataTable } from "@/components/data/data-table"
 import { AlertDialogButton } from "@/components/market/alert-dialog"
 import { LiveChange, LivePrice } from "@/components/market/price"
 import { Sparkline } from "@/components/market/sparkline"
+import { withLive } from "@/components/stocks/derive"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -34,13 +35,13 @@ interface Row {
 }
 
 function DayRange({ q }: { q: Quote | undefined }) {
-  if (!q) return <span className="text-muted-foreground">–</span>
+  if (!q) return <span className="text-ink-3">–</span>
   const span = Math.max(q.high - q.low, 1e-9)
   const pos = ((q.ltp - q.low) / span) * 100
   return (
-    <span className="inline-flex w-24 flex-col gap-1" title="Day's low to high">
-      <span className="relative h-1 rounded-full bg-muted">
-        <span className="absolute top-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground/80" style={{ left: `${pos}%` }} />
+    <span className="inline-flex w-24 flex-col gap-1" title="The day's low to high">
+      <span className="relative h-1 rounded-full bg-surface-2">
+        <span className="absolute top-1/2 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-paper bg-ink" style={{ left: `${pos}%` }} />
       </span>
     </span>
   )
@@ -53,7 +54,7 @@ export function WatchlistTable({ list }: { list: Watchlist }) {
   const add = useWatchlists((s) => s.add)
 
   // A month of closes: the API's in live mode, the generators' in the demo.
-  const { mode } = useMarket()
+  const { mode, dataset } = useMarket()
   const universe = useUniverse()
   const sparks = useMemo(
     () => new Map(list.ids.map((id) => [id, mode === "live" ? (universe.data?.byId.get(id)?.spark ?? []) : sparkline(getInstrument(id)!, 30)])),
@@ -69,34 +70,35 @@ export function WatchlistTable({ list }: { list: Watchlist }) {
     () => [
       {
         id: "instrument",
-        header: "Instrument",
-        accessorFn: (r) => r.inst.symbol,
+        header: "Name",
+        accessorFn: (r) => r.inst.name,
+        meta: { sticky: true },
         cell: ({ row: { original: r } }) => (
-          <Link href={r.inst.kind === "COMMODITY" ? `/commodities?c=${r.inst.slug}` : `/stocks/${r.inst.slug}`} className="block min-w-36">
-            <span className="block text-xs font-medium hover:underline">{r.inst.symbol}</span>
-            <span className="block max-w-48 truncate text-[11px] text-muted-foreground">
-              {r.inst.exchange} · {r.inst.name}
+          <Link href={r.inst.kind === "COMMODITY" ? `/commodities?c=${r.inst.slug}` : `/stocks/${r.inst.slug}`} className="group block min-w-44 leading-snug">
+            <span className="block max-w-60 truncate font-medium text-ink group-hover:underline group-hover:decoration-1 group-hover:underline-offset-4">{r.inst.name}</span>
+            <span className="block max-w-60 truncate text-[13px] text-ink-3">
+              {r.inst.symbol} · {r.inst.exchange}
             </span>
           </Link>
         ),
       },
       {
         id: "ltp",
-        header: "LTP",
+        header: "Price",
         accessorFn: (r) => r.q?.ltp ?? 0,
         meta: { align: "right" },
-        cell: ({ row: { original: r } }) => <LivePrice id={r.inst.id} className="font-medium" />,
+        cell: ({ row: { original: r } }) => <LivePrice id={r.inst.id} />,
       },
       {
         id: "change",
-        header: "Change",
+        header: "Day",
         accessorFn: (r) => r.q?.changePct ?? 0,
         meta: { align: "right" },
         cell: ({ row: { original: r } }) => <LiveChange id={r.inst.id} />,
       },
       {
         id: "range",
-        header: "Day range",
+        header: "Day's range",
         enableSorting: false,
         cell: ({ row: { original: r } }) => <DayRange q={r.q} />,
       },
@@ -109,14 +111,14 @@ export function WatchlistTable({ list }: { list: Watchlist }) {
           r.q && r.inst.avgVolume > 0 ? (
             <span title={`${formatNumber(r.q.volume / r.inst.avgVolume, 2)}× the average day`}>{formatCompact(r.q.volume)}</span>
           ) : (
-            <span className="text-muted-foreground">–</span>
+            <span className="text-ink-3">–</span>
           ),
       },
       {
         id: "trend",
         header: "30 days",
         enableSorting: false,
-        cell: ({ row: { original: r } }) => <Sparkline data={r.q ? [...r.spark, r.q.ltp] : r.spark} width={84} height={24} />,
+        cell: ({ row: { original: r } }) => <Sparkline data={withLive(r.spark, r.q?.ltp, dataset === "real")} width={84} height={24} />,
       },
       {
         id: "actions",
@@ -164,8 +166,8 @@ export function WatchlistTable({ list }: { list: Watchlist }) {
         ),
       },
     ],
-    [list.id, list.ids.length, move, removeItem, add],
+    [list.id, list.ids.length, move, removeItem, add, dataset],
   )
 
-  return <DataTable columns={columns} data={rows} getRowId={(r) => String(r.inst.id)} className="rounded-b-lg" />
+  return <DataTable columns={columns} data={rows} getRowId={(r) => String(r.inst.id)} />
 }

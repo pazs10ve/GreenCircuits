@@ -88,13 +88,13 @@ export function ChainTable({
     if (ready) scrollToSpot()
   }, [ready, scrollKey, scrollToSpot])
 
-  const cellBase = "h-9 border-b border-border/60 px-2 text-right whitespace-nowrap"
-  const headBase = "sticky top-7 z-20 h-7 border-b bg-card px-2 text-right text-[10px] font-medium tracking-wide text-muted-foreground uppercase"
+  const cellBase = "h-10 border-b border-rule px-2 text-right whitespace-nowrap"
+  const headBase = "sticky top-7 z-20 h-8 border-b border-ink bg-paper px-2 text-right text-xs font-normal text-ink-3"
 
   const renderCell = (col: Col, row: LiveRow, type: OptionType) => {
     const q = type === "CE" ? row.ce : row.pe
     const itm = spot != null && (type === "CE" ? row.strike < spot : row.strike > spot)
-    const shade = itm ? "bg-muted/80" : "group-hover/row:bg-muted/40"
+    const shade = itm ? "bg-surface" : "group-hover/row:bg-surface/60"
     if (col === "ltp") {
       return (
         <LtpCell key={col} q={q} row={row} type={type} held={held.get(`${row.strike}:${type}`)} onTrade={onTrade} symbol={symbol} className={shade} />
@@ -113,7 +113,7 @@ export function ChainTable({
       )
     }
     return (
-      <td key={col} className={cn(cellBase, "num", shade, col === "iv" || col === "oiChg" || col === "vol" ? "" : "text-muted-foreground")}>
+      <td key={col} className={cn(cellBase, "num", shade, col === "iv" || col === "oiChg" || col === "vol" ? "" : "text-ink-3")}>
         {cellText(col, q, unit, lot)}
       </td>
     )
@@ -122,7 +122,7 @@ export function ChainTable({
   return (
     <div>
       <div ref={ref} className="scrollbar-thin h-[min(680px,70svh)] overflow-auto overscroll-x-contain">
-        <table className="w-full table-fixed border-separate border-spacing-0 text-xs" style={{ minWidth }}>
+        <table className="w-full table-fixed border-separate border-spacing-0 text-[13px]" style={{ minWidth }}>
           <colgroup>
             {calls.map((c) => <col key={`c-${c}`} style={{ width: WIDTH[c] }} />)}
             <col style={{ width: STRIKE_WIDTH }} />
@@ -133,18 +133,18 @@ export function ChainTable({
           </caption>
           <thead>
             <tr>
-              <th scope="colgroup" colSpan={calls.length} className="sticky top-0 z-20 h-7 border-b bg-card px-3 text-right text-[11px] font-semibold">
+              <th scope="colgroup" colSpan={calls.length} className="sticky top-0 z-20 h-7 border-b border-rule bg-paper px-3 text-right text-sm font-semibold">
                 Calls
               </th>
               <th
                 scope="col"
                 rowSpan={2}
                 data-strike-head
-                className="sticky top-0 right-0 left-0 z-30 border-x border-b bg-card px-2 text-center text-[10px] font-medium tracking-wide text-muted-foreground uppercase"
+                className="sticky top-0 right-0 left-0 z-30 border-x border-b border-rule bg-paper px-2 text-center text-xs font-normal text-ink-3"
               >
                 Strike
               </th>
-              <th scope="colgroup" colSpan={puts.length} className="sticky top-0 z-20 h-7 border-b bg-card px-3 text-left text-[11px] font-semibold">
+              <th scope="colgroup" colSpan={puts.length} className="sticky top-0 z-20 h-7 border-b border-rule bg-paper px-3 text-left text-sm font-semibold">
                 Puts
               </th>
             </tr>
@@ -158,7 +158,7 @@ export function ChainTable({
               Array.from({ length: SKELETON_ROWS }, (_, i) => (
                 <tr key={i}>
                   {[...calls, "strike", ...puts].map((c, j) => (
-                    <td key={j} className={cn(cellBase, c === "strike" && "sticky right-0 left-0 z-10 border-x bg-card")}>
+                    <td key={j} className={cn(cellBase, c === "strike" && "sticky right-0 left-0 z-10 border-x border-rule bg-paper")}>
                       <Skeleton className="ml-auto h-3 w-3/4" />
                     </td>
                   ))}
@@ -173,14 +173,14 @@ export function ChainTable({
                     <th
                       scope="row"
                       className={cn(
-                        "sticky right-0 left-0 z-10 h-9 border-x border-b border-b-border/60 bg-card px-2 text-center font-semibold group-hover/row:bg-muted",
-                        row.strike === atm && "text-primary",
+                        "sticky right-0 left-0 z-10 h-10 border-x border-b border-rule bg-paper px-2 text-center font-semibold group-hover/row:bg-surface",
+                        row.strike === atm && "text-accent-ink",
                       )}
                     >
                       <span className="num">{formatNumber(row.strike, 0)}</span>
                       {row.strike === maxPain && (
-                        <abbr title="Max pain" className="ml-1 align-top text-[8px] font-medium tracking-wide text-muted-foreground no-underline">
-                          MP
+                        <abbr title="Max pain: where option buyers as a whole would lose most at expiry" className="ml-1 align-top text-[10px] font-normal text-ink-3 no-underline">
+                          max pain
                         </abbr>
                       )}
                     </th>
@@ -192,10 +192,10 @@ export function ChainTable({
           </tbody>
         </table>
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t px-4 py-2 text-[11px] text-muted-foreground">
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm text-ink-3">
         <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <span className="inline-flex items-center gap-1.5">
-            <span className="size-2.5 rounded-[2px] bg-muted-foreground/25" aria-hidden="true" /> In the money
+            <span className="size-2.5 rounded-[2px] bg-surface-2" aria-hidden="true" /> In the money
           </span>
           <span>
             Click an LTP to buy, <Kbd>Shift</Kbd>-click or press <Kbd>S</Kbd> to sell
@@ -235,13 +235,13 @@ function cellText(col: Col, q: ChainQuote, unit: OiUnit, lot: number): string {
 }
 
 function SpotRow({ spot, calls, puts }: { spot: number | undefined; calls: number; puts: number }) {
-  const line = <span className="absolute inset-x-0 top-1/2 h-px bg-primary/70" />
+  const line = <span className="absolute inset-x-0 top-1/2 h-px bg-accent-ink/70" />
   return (
     <tr aria-hidden="true" data-spot-marker>
       <td colSpan={calls} className="relative h-6 p-0">{line}</td>
-      <td className="sticky right-0 left-0 z-10 h-6 border-x bg-card p-0 text-center">
+      <td className="sticky right-0 left-0 z-10 h-6 border-x border-rule bg-paper p-0 text-center">
         {line}
-        <span className="num relative inline-flex h-4 items-center rounded-sm bg-primary px-1.5 text-[10px] font-semibold text-primary-foreground">
+        <span className="num relative inline-flex h-5 items-center rounded-sm bg-accent-ink px-1.5 text-[11px] font-semibold text-paper">
           {formatPrice(spot)}
         </span>
       </td>
@@ -270,7 +270,7 @@ function LtpCell({
   const change = q.prevLtp ? ((q.ltp - q.prevLtp) / q.prevLtp) * 100 : undefined
   const name = `${symbol} ${formatNumber(row.strike, 0)} ${type}`
   return (
-    <td className={cn("group/cell relative h-9 border-b border-border/60 p-0", className)}>
+    <td className={cn("group/cell relative h-10 border-b border-rule p-0", className)}>
       <button
         type="button"
         onClick={(e) => onTrade(row, type, e.shiftKey ? "SELL" : "BUY")}
@@ -281,13 +281,13 @@ function LtpCell({
           }
         }}
         aria-label={`${name}, last ${formatPrice(q.ltp)}. Enter to buy, S to sell.`}
-        className="flex size-full cursor-pointer flex-col items-end justify-center px-2 leading-tight outline-none hover:bg-primary/10 focus-visible:bg-primary/10 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset"
+        className="flex size-full cursor-pointer flex-col items-end justify-center px-2 leading-tight outline-none hover:bg-surface-2 focus-visible:bg-surface-2 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset"
       >
         <span className="num font-medium">{formatPrice(q.ltp)}</span>
         <span
           className={cn(
-            "num text-[10px]",
-            change == null || Math.abs(change) < 0.005 ? "text-muted-foreground" : change > 0 ? "text-up" : "text-down",
+            "num text-[11px]",
+            change == null || Math.abs(change) < 0.005 ? "text-ink-3" : change > 0 ? "text-up" : "text-down",
           )}
         >
           {change == null ? "–" : formatPct(change, 1)}

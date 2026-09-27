@@ -11,7 +11,7 @@ import { DataTable } from "@/components/data/data-table"
 import { Change, Price } from "@/components/market/price"
 import { Sparkline } from "@/components/market/sparkline"
 import { InstrumentCell, MiniRange } from "./cells"
-import type { IndexStatic } from "./derive"
+import { withLive, type IndexStatic } from "./derive"
 
 interface Row {
   inst: Instrument
@@ -32,14 +32,14 @@ const columns: ColumnDef<Row>[] = [
   },
   {
     id: "value",
-    header: "Value",
+    header: "Level",
     accessorFn: (r) => r.q?.ltp ?? r.inst.prevClose,
     cell: ({ row }) => <Price value={row.original.q?.ltp} tick={row.original.inst.tick} className="font-medium" />,
     meta: { align: "right" },
   },
   {
     id: "change",
-    header: "Change",
+    header: "Day",
     accessorFn: (r) => r.q?.changePct ?? 0,
     cell: ({ row }) => {
       const { q, inst } = row.original
@@ -49,7 +49,7 @@ const columns: ColumnDef<Row>[] = [
   },
   {
     id: "trend",
-    header: "30D",
+    header: "30 days",
     cell: ({ row }) => <Sparkline data={row.original.spark} width={96} height={26} className="h-[26px] w-24" />,
   },
   {
@@ -63,7 +63,7 @@ const columns: ColumnDef<Row>[] = [
   },
   {
     id: "range",
-    header: "52W range",
+    header: "52-week range",
     accessorFn: (r) => ((r.q?.ltp ?? r.inst.prevClose) - r.low52) / Math.max(r.high52 - r.low52, 1e-9),
     cell: ({ row }) => {
       const r = row.original
@@ -78,7 +78,7 @@ const columns: ColumnDef<Row>[] = [
       row.original.s.members > 0 ? (
         <span title="Members among the stocks this site follows">{row.original.s.members}</span>
       ) : (
-        <span className="text-muted-foreground">–</span>
+        <span className="text-ink-3">–</span>
       ),
     meta: { align: "right" },
   },
@@ -87,14 +87,14 @@ const columns: ColumnDef<Row>[] = [
     header: "F&O lot",
     accessorFn: (r) => r.s.lot ?? 0,
     cell: ({ row }) =>
-      row.original.s.lot ? formatNumber(row.original.s.lot, 0) : <span className="text-muted-foreground">–</span>,
+      row.original.s.lot ? formatNumber(row.original.s.lot, 0) : <span className="text-ink-3">–</span>,
     meta: { align: "right" },
   },
   {
     id: "exchange",
     header: "Exchange",
     accessorFn: (r) => r.inst.exchange,
-    cell: ({ row }) => <span className="text-muted-foreground">{row.original.inst.exchange}</span>,
+    cell: ({ row }) => <span className="text-ink-3">{row.original.inst.exchange}</span>,
   },
 ]
 
@@ -114,13 +114,13 @@ export function IndicesTable({ data }: { data: IndexStatic[] }) {
         inst,
         q,
         s,
-        spark: q ? [...s.spark, q.ltp] : s.spark,
+        spark: withLive(s.spark, q?.ltp, dataset === "real"),
         low52: q ? Math.min(s.low52, q.low) : s.low52,
         high52: q ? Math.max(s.high52, q.high) : s.high52,
       })
     }
     return out
-  }, [read, statics])
+  }, [read, statics, dataset])
 
   return (
     <div className="flex flex-col">
@@ -130,7 +130,7 @@ export function IndicesTable({ data }: { data: IndexStatic[] }) {
         getRowId={(r) => String(r.inst.id)}
         getRowHref={(r) => `/stocks/${r.inst.slug}`}
       />
-      <p className="border-t px-4 py-2 text-[11px] text-muted-foreground">
+      <p className="mt-3 text-sm text-ink-3">
         {dataset === "real"
           ? `Members counts only constituents among the ${EQUITIES.length} stocks this site follows.`
           : `Members counts only constituents inside the simulated ${EQUITIES.length}-stock universe; where there are members, the simulator builds the index level from them.`}

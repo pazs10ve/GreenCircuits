@@ -3,7 +3,7 @@
 import type { Instrument, Quote } from "@greencircuits/market/types"
 import { formatCompact, formatNumber, formatPrice, formatSigned } from "@greencircuits/market/format"
 import { Change } from "@/components/market/price"
-import { Stat } from "@/components/market/stat"
+import { Figure, Figures } from "@/components/editorial/figures"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatCountdown, formatExpiry, formatOi, ivPercentile, type LiveChain, type OiUnit } from "./chain-model"
 
@@ -23,7 +23,7 @@ export function ChainStats({
   nowMs: number | null
   unit: OiUnit
 }) {
-  const unitHint = unit === "lakh" ? "Lakh units, all strikes" : "Contracts, all strikes"
+  const unitHint = unit === "lakh" ? "lakh units, all strikes" : "contracts, all strikes"
   const stats: { label: string; value: React.ReactNode; hint: React.ReactNode }[] = chain
     ? [
         {
@@ -44,12 +44,12 @@ export function ChainStats({
         {
           label: "IV percentile",
           value: formatNumber(ivPercentile(inst, chain.atmIv), 0),
-          hint: "Sample, past year",
+          hint: "sample, past year",
         },
         {
           label: "PCR (OI)",
           value: formatNumber(chain.pcr, 2),
-          hint: "Put OI ÷ call OI",
+          hint: "put OI ÷ call OI",
         },
         {
           label: "Max pain",
@@ -72,19 +72,16 @@ export function ChainStats({
     : []
 
   return (
-    <section
-      aria-label="Chain summary"
-      className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-lg border bg-card p-4 sm:grid-cols-3 md:grid-cols-5 2xl:grid-cols-10"
-    >
+    <Figures className="grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-5" aria-label="The chain in numbers">
       {chain
-        ? stats.map((s) => <Stat key={s.label} label={s.label} value={s.value} hint={s.hint} />)
+        ? stats.map((st) => <Figure key={st.label} label={st.label} value={st.value} hint={st.hint} size="sm" />)
         : Array.from({ length: 10 }, (_, i) => (
-            <div key={i} className="space-y-1.5">
+            <div key={i} className="space-y-2 border-t border-rule pt-3">
               <Skeleton className="h-3 w-16" />
-              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-5 w-20" />
               <Skeleton className="h-3 w-24" />
             </div>
           ))}
-    </section>
+    </Figures>
   )
 }

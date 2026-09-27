@@ -28,9 +28,11 @@ declare module "@tanstack/react-table" {
 }
 
 /**
- * The app's table: sortable headers, sticky header row, tabular numbers,
- * optional row links. Cells can render live components (LivePrice etc.), so
- * the data array only needs to change when sort keys change.
+ * The app's table, set like a newspaper's: an ink rule under the headings,
+ * hairlines between rows, tabular figures, no boxes. Headings sort, the
+ * heading row stays put while the body scrolls, and rows can link somewhere.
+ * Cells can render live components (LivePrice etc.), so the data array only
+ * needs to change when sort keys change.
  */
 export function DataTable<T>({
   columns,
@@ -72,7 +74,7 @@ export function DataTable<T>({
 
   return (
     <div className={cn("scrollbar-thin relative w-full overflow-auto", className)} style={{ maxHeight }}>
-      <table className="w-full border-separate border-spacing-0 text-xs">
+      <table className="w-full border-separate border-spacing-0 text-sm">
         <thead className="sticky top-0 z-10">
           {table.getHeaderGroups().map((group) => (
             <tr key={group.id}>
@@ -88,7 +90,7 @@ export function DataTable<T>({
                     colSpan={header.colSpan}
                     aria-sort={dir === "asc" ? "ascending" : dir === "desc" ? "descending" : undefined}
                     className={cn(
-                      "h-8 border-b bg-card px-3 text-[10px] font-medium tracking-wide whitespace-nowrap text-muted-foreground uppercase",
+                      "border-b border-ink bg-paper px-3 pt-1 pb-2 align-bottom text-xs font-normal whitespace-nowrap text-ink-3 first:pl-0 last:pr-0",
                       meta?.align === "right" ? "text-right" : meta?.align === "center" ? "text-center" : "text-left",
                       meta?.sticky && "sticky left-0 z-20",
                       meta?.className,
@@ -99,9 +101,9 @@ export function DataTable<T>({
                         type="button"
                         onClick={header.column.getToggleSortingHandler()}
                         className={cn(
-                          "inline-flex items-center gap-1 uppercase hover:text-foreground",
+                          "group/sort inline-flex items-center gap-1 hover:text-ink",
                           meta?.align === "right" && "flex-row-reverse",
-                          dir && "text-foreground",
+                          dir && "text-ink",
                         )}
                       >
                         {label}
@@ -110,7 +112,7 @@ export function DataTable<T>({
                         ) : dir === "desc" ? (
                           <ArrowDown className="size-3" />
                         ) : (
-                          <ChevronsUpDown className="size-3 opacity-40" />
+                          <ChevronsUpDown className="size-3 opacity-0 transition-opacity group-hover/sort:opacity-50" />
                         )}
                       </button>
                     ) : (
@@ -125,7 +127,7 @@ export function DataTable<T>({
         <tbody>
           {rows.length === 0 && (
             <tr>
-              <td colSpan={table.getVisibleLeafColumns().length} className="px-3 py-10 text-center text-muted-foreground">
+              <td colSpan={table.getVisibleLeafColumns().length} className="py-10 text-center text-ink-2">
                 {empty}
               </td>
             </tr>
@@ -148,8 +150,8 @@ export function DataTable<T>({
                     <td
                       key={cell.id}
                       className={cn(
-                        "border-b border-border/60 bg-card px-3 whitespace-nowrap group-hover/row:bg-muted",
-                        dense ? "h-8" : "h-10",
+                        "border-b border-rule bg-paper px-3 whitespace-nowrap first:pl-0 last:pr-0 group-hover/row:bg-surface",
+                        dense ? "h-10" : "h-12",
                         meta?.align === "right" ? "num text-right" : meta?.align === "center" ? "text-center" : "text-left",
                         meta?.sticky && "sticky left-0 z-[1]",
                         meta?.className,

@@ -1,18 +1,13 @@
 import type { Metadata } from "next"
-import { PageHeader } from "@/components/shell/page-header"
-import { SourceBadge } from "@/components/market/source-badge"
 import { PortfolioView } from "@/components/portfolio/portfolio-view"
+import { SectionNav } from "@/components/shell/section-nav"
 
-export const metadata: Metadata = { title: "Portfolio" }
+export const metadata: Metadata = { title: "Holdings" }
 
 export default function PortfolioPage() {
   return (
-    <div className="flex flex-col gap-4">
-      <PageHeader
-        eyebrow={<SourceBadge />}
-        title="Portfolio"
-        description="Holdings at live prices, allocation and concentration, a one-year look-back against the Nifty, and your tax position."
-      />
+    <div className="mx-auto max-w-[1200px] px-5 pt-6 pb-20">
+      <SectionNav section="portfolio" />
       <PortfolioView />
     </div>
   )

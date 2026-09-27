@@ -26,7 +26,7 @@ interface ApiToday {
 
 /** Everything the Today page needs besides live quotes: from the API, or the generators in demo mode. */
 export async function getTodayContext(): Promise<TodayContext> {
-  const api = await apiGet<ApiToday>("/v1/market/today", { revalidate: 60 })
+  const api = await liveGet<ApiToday>("/v1/market/today", { revalidate: 60 })
   if (api && api.experiments.length) {
     return { ...api, events: api.events.map((e) => ({ ...e, date: istNoon(e.date) })), source: "api" }
   }
@@ -80,3 +80,13 @@ export const getFeed = cache(async (): Promise<Feed> => {
   const closed = isTrading(res.source, niftyTs, now) ? null : sessionWhen(istDate(niftyTs ?? now), today)
   return { quotes: res.quotes, source: res.source, dataset, closed, today }
 })
+
+/**
+ * A read from the API for a page in live mode, and null in demo mode. Next's
+ * fetch cache keeps the API's last answers after the API stops, and those
+ * mustn't sit beside the demo's simulated prices.
+ */
+export async function liveGet<T>(path: string, options?: Parameters<typeof apiGet>[1]): Promise<T | null> {
+  const feed = await getFeed()
+  return feed.quotes ? apiGet<T>(path, options) : null
+}
