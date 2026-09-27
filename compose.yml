@@ -1,0 +1,69 @@
+# Local development stack. From the repo root: docker compose up -d
+name: greencircuits
+
+services:
+  db:
+    image: timescale/timescaledb:2.30.1-pg17
+    environment:
+      POSTGRES_USER: greencircuits
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-greencircuits}
+      POSTGRES_DB: greencircuits
+    ports:
+      - "${GC_DB_PORT:-5433}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db:/db:ro
+    healthcheck:
+      # TCP, not the socket: the image's init runs a socket-only server first
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U greencircuits -d greencircuits"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  # Applies db/schema.sql and db/timescale.sql once, to an empty database.
+  migrate:
+    image: timescale/timescaledb:2.30.1-pg17
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGUSER: greencircuits
+      PGPASSWORD: ${POSTGRES_PASSWORD:-greencircuits}
+      PGDATABASE: greencircuits
+    volumes:
+      - ./db:/db:ro
+    entrypoint: ["sh", "/db/migrate.sh"]
+    restart: "no"
+
+  valkey:
+    image: valkey/valkey:8-alpine
+    command: ["valkey-server", "--appendonly", "yes"]   # BullMQ queues survive restarts
+    ports:
+      - "${GC_VALKEY_PORT:-6380}:6379"
+    volumes:
+      - valkeydata:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  # Object storage for raw exchange files and archives. Optional: --profile storage
+  minio:
+    image: quay.io/minio/minio:latest
+    profiles: ["storage"]
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: greencircuits
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-greencircuits-dev}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - miniodata:/data
+
+volumes:
+  pgdata:
+  valkeydata:
+  miniodata:

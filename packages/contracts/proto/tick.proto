@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package greencircuits.stream.v1;
+
+// Gateway to client: one frame per flush, holding only the instruments that
+// changed since the previous frame for this client.
+message QuoteBatch {
+  int64 ts_ms = 1;          // gateway flush time, Unix milliseconds
+  repeated Quote q = 2;
+}
+
+// Prices are integers scaled by 10^4, exact even for 0.0025 currency ticks.
+message Quote {
+  uint32 id = 1;            // ref.instrument.id
+  sint64 ltp = 2;           // last traded price
+  sint64 chg = 3;           // change from previous close
+  uint64 vol = 4;           // day volume
+  uint64 oi = 5;            // open interest (derivatives)
+  sint64 o = 6;             // quote mode and above
+  sint64 h = 7;
+  sint64 l = 8;
+  sint64 pc = 9;            // previous close
+  repeated Level bid = 10;  // depth mode
+  repeated Level ask = 11;
+  int64 exch_ts_ms = 12;    // exchange timestamp; clients report tick lag against it
+  Source src = 13;          // drives the LIVE / DELAYED / EOD / SIMULATED badge
+}
+
+message Level {
+  sint64 price = 1;
+  uint64 qty = 2;
+  uint32 orders = 3;
+}
+
+enum Source {
+  SOURCE_UNSPECIFIED = 0;
+  SOURCE_LIVE = 1;
+  SOURCE_DELAYED = 2;
+  SOURCE_EOD = 3;
+  SOURCE_SIMULATED = 4;
+}

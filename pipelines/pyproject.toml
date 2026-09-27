@@ -1,0 +1,26 @@
+[project]
+name = "greencircuits-pipelines"
+version = "0.1.0"
+description = "EOD pipelines, quant library and strategy lab for GreenCircuits"
+requires-python = ">=3.12"
+dependencies = [
+  "polars>=1.0",
+  "numpy>=2.0",
+  "scipy>=1.13",
+  "psycopg[binary]>=3.2",
+  "httpx>=0.27",
+  "bullmq>=3.0",
+]
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/greencircuits"]
+
+[tool.ruff]
+line-length = 110

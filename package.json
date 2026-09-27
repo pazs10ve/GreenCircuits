@@ -1,0 +1,24 @@
+{
+  "name": "greencircuits",
+  "private": true,
+  "description": "Research and strategy-testing platform for Indian markets",
+  "packageManager": "pnpm@12.6.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "infra:up": "docker compose up -d",
+    "infra:down": "docker compose down",
+    "infra:reset": "docker compose down -v",
+    "db:psql": "docker compose exec db psql -U greencircuits -d greencircuits",
+    "db:test": "docker compose exec db sh /db/tests/run.sh",
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "test": "turbo run test"
+  },
+  "devDependencies": {
+    "turbo": "^2.11.4",
+    "typescript": "^7.0.2"
+  }
+}

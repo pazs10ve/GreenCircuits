@@ -1,0 +1,35 @@
+# dependencies and builds
+node_modules/
+.pnpm-store/
+dist/
+build/
+.next/
+.turbo/
+coverage/
+*.tsbuildinfo
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# secrets and local config
+.env
+.env.*
+!.env.example
+
+# data: recorded ticks, downloaded exchange files, parquet exports
+data/
+*.parquet
+
+# logs and os noise
+*.log
+.DS_Store
+Thumbs.db
+
+# editors
+.idea/
+.vscode/*
+!.vscode/extensions.json
