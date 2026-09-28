@@ -1,0 +1,29 @@
+{
+  "scenario": "ws-fanout",
+  "url": "ws://127.0.0.1:4101/v1/stream",
+  "subs": 100,
+  "stages": [
+    {
+      "stage": 1,
+      "clients": 1000,
+      "openSockets": 700,
+      "rampSeconds": 4.4,
+      "measuredSeconds": 180,
+      "framesPerSecond": 2799.8,
+      "quotesPerSecond": 55996.9,
+      "mbPerSecondIn": 3.11,
+      "lagMs": {
+        "count": 10080000,
+        "mean": 151.7,
+        "p50": 139,
+        "p90": 226,
+        "p95": 232,
+        "p99": 254,
+        "max": 346
+      },
+      "socketErrors": 300,
+      "closedUnexpectedly": 0,
+      "clientsWithNoFrames": 0
+    }
+  ]
+}

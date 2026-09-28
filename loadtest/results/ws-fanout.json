@@ -1,0 +1,51 @@
+{
+  "scenario": "ws-fanout",
+  "url": "ws://127.0.0.1:4101/v1/stream",
+  "subs": 100,
+  "stages": [
+    {
+      "stage": 1,
+      "clients": 1000,
+      "openSockets": 1000,
+      "rampSeconds": 5.4,
+      "measuredSeconds": 600,
+      "framesPerSecond": 3999.9,
+      "quotesPerSecond": 79998.4,
+      "mbPerSecondIn": 4.45,
+      "lagMs": {
+        "count": 48000000,
+        "mean": 83,
+        "p50": 83,
+        "p90": 130,
+        "p95": 137,
+        "p99": 154,
+        "max": 255
+      },
+      "socketErrors": 0,
+      "closedUnexpectedly": 0,
+      "clientsWithNoFrames": 0
+    },
+    {
+      "stage": 2,
+      "clients": 3000,
+      "openSockets": 3000,
+      "rampSeconds": 14.7,
+      "measuredSeconds": 600,
+      "framesPerSecond": 7417.2,
+      "quotesPerSecond": 148343.3,
+      "mbPerSecondIn": 8.25,
+      "lagMs": {
+        "count": 89005980,
+        "mean": 8191.6,
+        "p50": 8162,
+        "p90": 14713,
+        "p95": 15685,
+        "p99": 16834,
+        "max": 18546
+      },
+      "socketErrors": 0,
+      "closedUnexpectedly": 0,
+      "clientsWithNoFrames": 0
+    }
+  ]
+}

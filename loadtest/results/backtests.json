@@ -1,0 +1,36 @@
+{
+  "scenario": "backtest-burst",
+  "submitted": 50,
+  "accepted": 50,
+  "servedFromCache": 0,
+  "runs": 50,
+  "succeeded": 50,
+  "failed": 0,
+  "queueWaitSeconds": {
+    "count": 50,
+    "mean": 3.4,
+    "p50": 3.3,
+    "p90": 6,
+    "p95": 7.1,
+    "p99": 8.2,
+    "max": 8.2
+  },
+  "runSeconds": {
+    "count": 50,
+    "mean": 0.2,
+    "p50": 0.1,
+    "p90": 0.6,
+    "p95": 0.9,
+    "p99": 1,
+    "max": 1
+  },
+  "totalSeconds": {
+    "count": 50,
+    "mean": 3.6,
+    "p50": 3.4,
+    "p90": 7,
+    "p95": 8.1,
+    "p99": 8.7,
+    "max": 8.7
+  }
+}

@@ -1,0 +1,5110 @@
+{
+  "summary": [
+    {
+      "service": "api",
+      "samples": 144,
+      "avgCores": 0.11,
+      "peakCores": 0.63,
+      "avgMB": 144,
+      "peakMB": 273
+    },
+    {
+      "service": "stream",
+      "samples": 144,
+      "avgCores": 0.52,
+      "peakCores": 1.03,
+      "avgMB": 127,
+      "peakMB": 140
+    },
+    {
+      "service": "ingestor",
+      "samples": 144,
+      "avgCores": 0.01,
+      "peakCores": 0.02,
+      "avgMB": 109,
+      "peakMB": 132
+    },
+    {
+      "service": "alerts-a",
+      "samples": 144,
+      "avgCores": 0.04,
+      "peakCores": 0.07,
+      "avgMB": 104,
+      "peakMB": 135
+    },
+    {
+      "service": "alerts-b",
+      "samples": 144,
+      "avgCores": 0.04,
+      "peakCores": 0.07,
+      "avgMB": 104,
+      "peakMB": 133
+    },
+    {
+      "service": "worker",
+      "samples": 144,
+      "avgCores": 0,
+      "peakCores": 0.44,
+      "avgMB": 81,
+      "peakMB": 200
+    },
+    {
+      "service": "greencircuits-db-1",
+      "samples": 144,
+      "avgCores": 0.07,
+      "peakCores": 0.6,
+      "avgMB": 1331,
+      "peakMB": 1394
+    },
+    {
+      "service": "gc-lt-valkey",
+      "samples": 144,
+      "avgCores": 0.02,
+      "peakCores": 0.06,
+      "avgMB": 36,
+      "peakMB": 69
+    }
+  ],
+  "samples": [
+    {
+      "t": "2026-09-28T17:02:41.612Z",
+      "api": {
+        "cores": 0.09,
+        "mb": 151
+      },
+      "stream": {
+        "cores": 0.24,
+        "mb": 131
+      },
+      "ingestor": {
+        "cores": 0.02,
+        "mb": 129
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 119
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 122
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 64
+      },
+      "greencircuits-db-1": {
+        "cores": 0.05,
+        "mb": 1311
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 16
+      }
+    },
+    {
+      "t": "2026-09-28T17:02:54.648Z",
+      "api": {
+        "cores": 0.09,
+        "mb": 154
+      },
+      "stream": {
+        "cores": 0.52,
+        "mb": 137
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 131
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 126
+      },
+      "alerts-b": {
+        "cores": 0.05,
+        "mb": 119
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 64
+      },
+      "greencircuits-db-1": {
+        "cores": 0.1,
+        "mb": 1318
+      },
+      "gc-lt-valkey": {
+        "cores": 0.01,
+        "mb": 19
+      }
+    },
+    {
+      "t": "2026-09-28T17:03:07.728Z",
+      "api": {
+        "cores": 0.1,
+        "mb": 158
+      },
+      "stream": {
+        "cores": 0.53,
+        "mb": 135
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 131
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 127
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 129
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 64
+      },
+      "greencircuits-db-1": {
+        "cores": 0.03,
+        "mb": 1315
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 21
+      }
+    },
+    {
+      "t": "2026-09-28T17:03:20.820Z",
+      "api": {
+        "cores": 0.1,
+        "mb": 157
+      },
+      "stream": {
+        "cores": 0.54,
+        "mb": 136
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 132
+      },
+      "alerts-a": {
+        "cores": 0.05,
+        "mb": 127
+      },
+      "alerts-b": {
+        "cores": 0.02,
+        "mb": 128
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 64
+      },
+      "greencircuits-db-1": {
+        "cores": 0.06,
+        "mb": 1312
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 20
+      }
+    },
+    {
+      "t": "2026-09-28T17:03:33.879Z",
+      "api": {
+        "cores": 0.09,
+        "mb": 160
+      },
+      "stream": {
+        "cores": 0.53,
+        "mb": 138
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 130
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 116
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 130
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 64
+      },
+      "greencircuits-db-1": {
+        "cores": 0.03,
+        "mb": 1316
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 19
+      }
+    },
+    {
+      "t": "2026-09-28T17:03:46.958Z",
+      "api": {
+        "cores": 0.1,
+        "mb": 163
+      },
+      "stream": {
+        "cores": 0.57,
+        "mb": 135
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 131
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 125
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 128
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 64
+      },
+      "greencircuits-db-1": {
+        "cores": 0.1,
+        "mb": 1317
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 23
+      }
+    },
+    {
+      "t": "2026-09-28T17:04:00.109Z",
+      "api": {
+        "cores": 0.09,
+        "mb": 158
+      },
+      "stream": {
+        "cores": 0.54,
+        "mb": 138
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 131
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 125
+      },
+      "alerts-b": {
+        "cores": 0.05,
+        "mb": 126
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 64
+      },
+      "greencircuits-db-1": {
+        "cores": 0.03,
+        "mb": 1318
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 23
+      }
+    },
+    {
+      "t": "2026-09-28T17:04:13.206Z",
+      "api": {
+        "cores": 0.08,
+        "mb": 158
+      },
+      "stream": {
+        "cores": 0.52,
+        "mb": 136
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 131
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 128
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 129
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 64
+      },
+      "greencircuits-db-1": {
+        "cores": 0.09,
+        "mb": 1311
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 26
+      }
+    },
+    {
+      "t": "2026-09-28T17:04:26.305Z",
+      "api": {
+        "cores": 0.08,
+        "mb": 167
+      },
+      "stream": {
+        "cores": 0.51,
+        "mb": 138
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 131
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 129
+      },
+      "alerts-b": {
+        "cores": 0.02,
+        "mb": 125
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 64
+      },
+      "greencircuits-db-1": {
+        "cores": 0.05,
+        "mb": 1317
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 26
+      }
+    },
+    {
+      "t": "2026-09-28T17:04:39.392Z",
+      "api": {
+        "cores": 0.08,
+        "mb": 161
+      },
+      "stream": {
+        "cores": 0.53,
+        "mb": 139
+      },
+      "ingestor": {
+        "cores": 0.02,
+        "mb": 130
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 131
+      },
+      "alerts-b": {
+        "cores": 0.05,
+        "mb": 130
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 64
+      },
+      "greencircuits-db-1": {
+        "cores": 0.11,
+        "mb": 1318
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 27
+      }
+    },
+    {
+      "t": "2026-09-28T17:04:51.531Z",
+      "api": {
+        "cores": 0.11,
+        "mb": 170
+      },
+      "stream": {
+        "cores": 0.53,
+        "mb": 133
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 128
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 130
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 130
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 64
+      },
+      "greencircuits-db-1": {
+        "cores": 0.05,
+        "mb": 1318
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 28
+      }
+    },
+    {
+      "t": "2026-09-28T17:05:04.659Z",
+      "api": {
+        "cores": 0.08,
+        "mb": 163
+      },
+      "stream": {
+        "cores": 0.55,
+        "mb": 138
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 131
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 132
+      },
+      "alerts-b": {
+        "cores": 0.05,
+        "mb": 131
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 64
+      },
+      "greencircuits-db-1": {
+        "cores": 0.08,
+        "mb": 1320
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 28
+      }
+    },
+    {
+      "t": "2026-09-28T17:05:17.757Z",
+      "api": {
+        "cores": 0.09,
+        "mb": 161
+      },
+      "stream": {
+        "cores": 0.53,
+        "mb": 135
+      },
+      "ingestor": {
+        "cores": 0,
+        "mb": 130
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 130
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 127
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 64
+      },
+      "greencircuits-db-1": {
+        "cores": 0.05,
+        "mb": 1317
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 30
+      }
+    },
+    {
+      "t": "2026-09-28T17:05:30.809Z",
+      "api": {
+        "cores": 0.08,
+        "mb": 162
+      },
+      "stream": {
+        "cores": 0.53,
+        "mb": 136
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 131
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 133
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 132
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 64
+      },
+      "greencircuits-db-1": {
+        "cores": 0.03,
+        "mb": 1318
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 31
+      }
+    },
+    {
+      "t": "2026-09-28T17:05:43.875Z",
+      "api": {
+        "cores": 0.07,
+        "mb": 161
+      },
+      "stream": {
+        "cores": 0.53,
+        "mb": 136
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 130
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 127
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 133
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 64
+      },
+      "greencircuits-db-1": {
+        "cores": 0.02,
+        "mb": 1320
+      },
+      "gc-lt-valkey": {
+        "cores": 0.01,
+        "mb": 30
+      }
+    },
+    {
+      "t": "2026-09-28T17:05:56.944Z",
+      "api": {
+        "cores": 0.06,
+        "mb": 164
+      },
+      "stream": {
+        "cores": 0.53,
+        "mb": 136
+      },
+      "ingestor": {
+        "cores": 0.02,
+        "mb": 129
+      },
+      "alerts-a": {
+        "cores": 0.02,
+        "mb": 130
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 130
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 64
+      },
+      "greencircuits-db-1": {
+        "cores": 0.02,
+        "mb": 1315
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 31
+      }
+    },
+    {
+      "t": "2026-09-28T17:06:09.997Z",
+      "api": {
+        "cores": 0.1,
+        "mb": 160
+      },
+      "stream": {
+        "cores": 0.53,
+        "mb": 136
+      },
+      "ingestor": {
+        "cores": 0.02,
+        "mb": 131
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 127
+      },
+      "alerts-b": {
+        "cores": 0.02,
+        "mb": 130
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 64
+      },
+      "greencircuits-db-1": {
+        "cores": 0.03,
+        "mb": 1321
+      },
+      "gc-lt-valkey": {
+        "cores": 0.01,
+        "mb": 34
+      }
+    },
+    {
+      "t": "2026-09-28T17:06:23.079Z",
+      "api": {
+        "cores": 0.07,
+        "mb": 160
+      },
+      "stream": {
+        "cores": 0.53,
+        "mb": 136
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 130
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 116
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 127
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 64
+      },
+      "greencircuits-db-1": {
+        "cores": 0.05,
+        "mb": 1319
+      },
+      "gc-lt-valkey": {
+        "cores": 0.01,
+        "mb": 34
+      }
+    },
+    {
+      "t": "2026-09-28T17:06:36.273Z",
+      "api": {
+        "cores": 0.07,
+        "mb": 157
+      },
+      "stream": {
+        "cores": 0.51,
+        "mb": 130
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 130
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 133
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 133
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 64
+      },
+      "greencircuits-db-1": {
+        "cores": 0.03,
+        "mb": 1321
+      },
+      "gc-lt-valkey": {
+        "cores": 0.01,
+        "mb": 35
+      }
+    },
+    {
+      "t": "2026-09-28T17:06:49.495Z",
+      "api": {
+        "cores": 0.07,
+        "mb": 168
+      },
+      "stream": {
+        "cores": 0.53,
+        "mb": 136
+      },
+      "ingestor": {
+        "cores": 0,
+        "mb": 131
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 131
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 124
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 64
+      },
+      "greencircuits-db-1": {
+        "cores": 0.1,
+        "mb": 1320
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 32
+      }
+    },
+    {
+      "t": "2026-09-28T17:07:01.617Z",
+      "api": {
+        "cores": 0.05,
+        "mb": 169
+      },
+      "stream": {
+        "cores": 0.49,
+        "mb": 139
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 129
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 122
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 132
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 64
+      },
+      "greencircuits-db-1": {
+        "cores": 0.03,
+        "mb": 1321
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 33
+      }
+    },
+    {
+      "t": "2026-09-28T17:07:14.731Z",
+      "api": {
+        "cores": 0.07,
+        "mb": 167
+      },
+      "stream": {
+        "cores": 0.51,
+        "mb": 137
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 131
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 128
+      },
+      "alerts-b": {
+        "cores": 0.02,
+        "mb": 126
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 64
+      },
+      "greencircuits-db-1": {
+        "cores": 0.15,
+        "mb": 1318
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 36
+      }
+    },
+    {
+      "t": "2026-09-28T17:07:27.858Z",
+      "api": {
+        "cores": 0.06,
+        "mb": 163
+      },
+      "stream": {
+        "cores": 0.52,
+        "mb": 139
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 131
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 135
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 131
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 64
+      },
+      "greencircuits-db-1": {
+        "cores": 0.06,
+        "mb": 1318
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 34
+      }
+    },
+    {
+      "t": "2026-09-28T17:07:41.003Z",
+      "api": {
+        "cores": 0.08,
+        "mb": 161
+      },
+      "stream": {
+        "cores": 0.54,
+        "mb": 140
+      },
+      "ingestor": {
+        "cores": 0.02,
+        "mb": 131
+      },
+      "alerts-a": {
+        "cores": 0.02,
+        "mb": 131
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 128
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 64
+      },
+      "greencircuits-db-1": {
+        "cores": 0.02,
+        "mb": 1319
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 34
+      }
+    },
+    {
+      "t": "2026-09-28T17:07:54.097Z",
+      "api": {
+        "cores": 0.07,
+        "mb": 162
+      },
+      "stream": {
+        "cores": 0.54,
+        "mb": 136
+      },
+      "ingestor": {
+        "cores": 0,
+        "mb": 132
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 119
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 128
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 64
+      },
+      "greencircuits-db-1": {
+        "cores": 0.06,
+        "mb": 1353
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 35
+      }
+    },
+    {
+      "t": "2026-09-28T17:08:07.185Z",
+      "api": {
+        "cores": 0.08,
+        "mb": 165
+      },
+      "stream": {
+        "cores": 0.53,
+        "mb": 138
+      },
+      "ingestor": {
+        "cores": 0.02,
+        "mb": 131
+      },
+      "alerts-a": {
+        "cores": 0.05,
+        "mb": 129
+      },
+      "alerts-b": {
+        "cores": 0.05,
+        "mb": 115
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 64
+      },
+      "greencircuits-db-1": {
+        "cores": 0.05,
+        "mb": 1319
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 31
+      }
+    },
+    {
+      "t": "2026-09-28T17:08:20.300Z",
+      "api": {
+        "cores": 0.05,
+        "mb": 166
+      },
+      "stream": {
+        "cores": 0.52,
+        "mb": 138
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 132
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 128
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 129
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 64
+      },
+      "greencircuits-db-1": {
+        "cores": 0.1,
+        "mb": 1320
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 31
+      }
+    },
+    {
+      "t": "2026-09-28T17:08:33.377Z",
+      "api": {
+        "cores": 0.07,
+        "mb": 162
+      },
+      "stream": {
+        "cores": 0.52,
+        "mb": 138
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 130
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 133
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 128
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 64
+      },
+      "greencircuits-db-1": {
+        "cores": 0.06,
+        "mb": 1321
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 30
+      }
+    },
+    {
+      "t": "2026-09-28T17:08:46.519Z",
+      "api": {
+        "cores": 0.07,
+        "mb": 166
+      },
+      "stream": {
+        "cores": 0.52,
+        "mb": 136
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 130
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 122
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 132
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 64
+      },
+      "greencircuits-db-1": {
+        "cores": 0.16,
+        "mb": 1341
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 29
+      }
+    },
+    {
+      "t": "2026-09-28T17:08:59.636Z",
+      "api": {
+        "cores": 0.07,
+        "mb": 167
+      },
+      "stream": {
+        "cores": 0.56,
+        "mb": 137
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 131
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 135
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 129
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 64
+      },
+      "greencircuits-db-1": {
+        "cores": 0.06,
+        "mb": 1325
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 29
+      }
+    },
+    {
+      "t": "2026-09-28T17:09:12.835Z",
+      "api": {
+        "cores": 0.06,
+        "mb": 168
+      },
+      "stream": {
+        "cores": 0.53,
+        "mb": 135
+      },
+      "ingestor": {
+        "cores": 0,
+        "mb": 130
+      },
+      "alerts-a": {
+        "cores": 0.05,
+        "mb": 127
+      },
+      "alerts-b": {
+        "cores": 0.05,
+        "mb": 130
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 64
+      },
+      "greencircuits-db-1": {
+        "cores": 0.07,
+        "mb": 1315
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 30
+      }
+    },
+    {
+      "t": "2026-09-28T17:09:25.972Z",
+      "api": {
+        "cores": 0.07,
+        "mb": 166
+      },
+      "stream": {
+        "cores": 0.54,
+        "mb": 135
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 132
+      },
+      "alerts-a": {
+        "cores": 0.05,
+        "mb": 132
+      },
+      "alerts-b": {
+        "cores": 0.05,
+        "mb": 124
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 64
+      },
+      "greencircuits-db-1": {
+        "cores": 0.06,
+        "mb": 1321
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 30
+      }
+    },
+    {
+      "t": "2026-09-28T17:09:39.251Z",
+      "api": {
+        "cores": 0.25,
+        "mb": 218
+      },
+      "stream": {
+        "cores": 0.54,
+        "mb": 136
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 131
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 128
+      },
+      "alerts-b": {
+        "cores": 0.05,
+        "mb": 128
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 64
+      },
+      "greencircuits-db-1": {
+        "cores": 0.38,
+        "mb": 1369
+      },
+      "gc-lt-valkey": {
+        "cores": 0.06,
+        "mb": 31
+      }
+    },
+    {
+      "t": "2026-09-28T17:09:52.427Z",
+      "api": {
+        "cores": 0.54,
+        "mb": 232
+      },
+      "stream": {
+        "cores": 0.63,
+        "mb": 136
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 130
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 119
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 132
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 64
+      },
+      "greencircuits-db-1": {
+        "cores": 0.25,
+        "mb": 1372
+      },
+      "gc-lt-valkey": {
+        "cores": 0.05,
+        "mb": 36
+      }
+    },
+    {
+      "t": "2026-09-28T17:10:05.786Z",
+      "api": {
+        "cores": 0.44,
+        "mb": 261
+      },
+      "stream": {
+        "cores": 0.53,
+        "mb": 138
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 130
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 131
+      },
+      "alerts-b": {
+        "cores": 0.05,
+        "mb": 129
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 64
+      },
+      "greencircuits-db-1": {
+        "cores": 0.23,
+        "mb": 1345
+      },
+      "gc-lt-valkey": {
+        "cores": 0.05,
+        "mb": 37
+      }
+    },
+    {
+      "t": "2026-09-28T17:10:17.904Z",
+      "api": {
+        "cores": 0.47,
+        "mb": 273
+      },
+      "stream": {
+        "cores": 0.57,
+        "mb": 131
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 129
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 108
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 108
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 40
+      },
+      "greencircuits-db-1": {
+        "cores": 0.16,
+        "mb": 1366
+      },
+      "gc-lt-valkey": {
+        "cores": 0.05,
+        "mb": 40
+      }
+    },
+    {
+      "t": "2026-09-28T17:10:31.157Z",
+      "api": {
+        "cores": 0.46,
+        "mb": 233
+      },
+      "stream": {
+        "cores": 0.57,
+        "mb": 136
+      },
+      "ingestor": {
+        "cores": 0,
+        "mb": 132
+      },
+      "alerts-a": {
+        "cores": 0.05,
+        "mb": 107
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 110
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 40
+      },
+      "greencircuits-db-1": {
+        "cores": 0.2,
+        "mb": 1328
+      },
+      "gc-lt-valkey": {
+        "cores": 0.05,
+        "mb": 40
+      }
+    },
+    {
+      "t": "2026-09-28T17:10:43.298Z",
+      "api": {
+        "cores": 0.17,
+        "mb": 94
+      },
+      "stream": {
+        "cores": 0.56,
+        "mb": 122
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 110
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 97
+      },
+      "alerts-b": {
+        "cores": 0.05,
+        "mb": 100
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 22
+      },
+      "greencircuits-db-1": {
+        "cores": 0.02,
+        "mb": 1319
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 38
+      }
+    },
+    {
+      "t": "2026-09-28T17:10:56.460Z",
+      "api": {
+        "cores": 0.08,
+        "mb": 119
+      },
+      "stream": {
+        "cores": 0.52,
+        "mb": 121
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 110
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 84
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 98
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 22
+      },
+      "greencircuits-db-1": {
+        "cores": 0.01,
+        "mb": 1305
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 38
+      }
+    },
+    {
+      "t": "2026-09-28T17:11:09.530Z",
+      "api": {
+        "cores": 0.07,
+        "mb": 124
+      },
+      "stream": {
+        "cores": 0.52,
+        "mb": 122
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 112
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 99
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 96
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 22
+      },
+      "greencircuits-db-1": {
+        "cores": 0.03,
+        "mb": 1312
+      },
+      "gc-lt-valkey": {
+        "cores": 0.01,
+        "mb": 39
+      }
+    },
+    {
+      "t": "2026-09-28T17:11:22.610Z",
+      "api": {
+        "cores": 0.06,
+        "mb": 128
+      },
+      "stream": {
+        "cores": 0.51,
+        "mb": 122
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 111
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 93
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 84
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 22
+      },
+      "greencircuits-db-1": {
+        "cores": 0.04,
+        "mb": 1315
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 37
+      }
+    },
+    {
+      "t": "2026-09-28T17:11:35.702Z",
+      "api": {
+        "cores": 0.08,
+        "mb": 122
+      },
+      "stream": {
+        "cores": 0.52,
+        "mb": 119
+      },
+      "ingestor": {
+        "cores": 0,
+        "mb": 112
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 97
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 99
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 22
+      },
+      "greencircuits-db-1": {
+        "cores": 0.06,
+        "mb": 1313
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 38
+      }
+    },
+    {
+      "t": "2026-09-28T17:11:48.743Z",
+      "api": {
+        "cores": 0.06,
+        "mb": 126
+      },
+      "stream": {
+        "cores": 0.51,
+        "mb": 119
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 112
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 85
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 97
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 22
+      },
+      "greencircuits-db-1": {
+        "cores": 0.05,
+        "mb": 1315
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 40
+      }
+    },
+    {
+      "t": "2026-09-28T17:12:01.806Z",
+      "api": {
+        "cores": 0.05,
+        "mb": 128
+      },
+      "stream": {
+        "cores": 0.52,
+        "mb": 121
+      },
+      "ingestor": {
+        "cores": 0.02,
+        "mb": 110
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 99
+      },
+      "alerts-b": {
+        "cores": 0.05,
+        "mb": 98
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 22
+      },
+      "greencircuits-db-1": {
+        "cores": 0.07,
+        "mb": 1319
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 37
+      }
+    },
+    {
+      "t": "2026-09-28T17:12:14.868Z",
+      "api": {
+        "cores": 0.05,
+        "mb": 130
+      },
+      "stream": {
+        "cores": 0.53,
+        "mb": 122
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 112
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 95
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 96
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 22
+      },
+      "greencircuits-db-1": {
+        "cores": 0.02,
+        "mb": 1318
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 38
+      }
+    },
+    {
+      "t": "2026-09-28T17:12:27.939Z",
+      "api": {
+        "cores": 0.07,
+        "mb": 134
+      },
+      "stream": {
+        "cores": 0.53,
+        "mb": 122
+      },
+      "ingestor": {
+        "cores": 0.02,
+        "mb": 110
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 99
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 102
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 22
+      },
+      "greencircuits-db-1": {
+        "cores": 0.02,
+        "mb": 1314
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 37
+      }
+    },
+    {
+      "t": "2026-09-28T17:12:41.002Z",
+      "api": {
+        "cores": 0.07,
+        "mb": 136
+      },
+      "stream": {
+        "cores": 0.53,
+        "mb": 121
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 113
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 92
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 92
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 22
+      },
+      "greencircuits-db-1": {
+        "cores": 0.03,
+        "mb": 1319
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 38
+      }
+    },
+    {
+      "t": "2026-09-28T17:12:54.071Z",
+      "api": {
+        "cores": 0.06,
+        "mb": 132
+      },
+      "stream": {
+        "cores": 0.56,
+        "mb": 118
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 111
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 86
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 99
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 22
+      },
+      "greencircuits-db-1": {
+        "cores": 0.02,
+        "mb": 1319
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 37
+      }
+    },
+    {
+      "t": "2026-09-28T17:13:07.139Z",
+      "api": {
+        "cores": 0.09,
+        "mb": 135
+      },
+      "stream": {
+        "cores": 0.99,
+        "mb": 130
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 111
+      },
+      "alerts-a": {
+        "cores": 0.02,
+        "mb": 95
+      },
+      "alerts-b": {
+        "cores": 0.02,
+        "mb": 98
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 22
+      },
+      "greencircuits-db-1": {
+        "cores": 0.01,
+        "mb": 1320
+      },
+      "gc-lt-valkey": {
+        "cores": 0.06,
+        "mb": 37
+      }
+    },
+    {
+      "t": "2026-09-28T17:13:20.227Z",
+      "api": {
+        "cores": 0.06,
+        "mb": 126
+      },
+      "stream": {
+        "cores": 1,
+        "mb": 129
+      },
+      "ingestor": {
+        "cores": 0,
+        "mb": 110
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 100
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 96
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 22
+      },
+      "greencircuits-db-1": {
+        "cores": 0.04,
+        "mb": 1321
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 48
+      }
+    },
+    {
+      "t": "2026-09-28T17:13:33.316Z",
+      "api": {
+        "cores": 0.07,
+        "mb": 134
+      },
+      "stream": {
+        "cores": 1,
+        "mb": 131
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 110
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 98
+      },
+      "alerts-b": {
+        "cores": 0.05,
+        "mb": 84
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 22
+      },
+      "greencircuits-db-1": {
+        "cores": 0.02,
+        "mb": 1322
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 63
+      }
+    },
+    {
+      "t": "2026-09-28T17:13:45.378Z",
+      "api": {
+        "cores": 0.06,
+        "mb": 129
+      },
+      "stream": {
+        "cores": 1.02,
+        "mb": 133
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 112
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 98
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 95
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 22
+      },
+      "greencircuits-db-1": {
+        "cores": 0.07,
+        "mb": 1318
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 36
+      }
+    },
+    {
+      "t": "2026-09-28T17:13:58.504Z",
+      "api": {
+        "cores": 0.07,
+        "mb": 133
+      },
+      "stream": {
+        "cores": 0.97,
+        "mb": 131
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 112
+      },
+      "alerts-a": {
+        "cores": 0.06,
+        "mb": 99
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 98
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 22
+      },
+      "greencircuits-db-1": {
+        "cores": 0.03,
+        "mb": 1323
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 36
+      }
+    },
+    {
+      "t": "2026-09-28T17:14:11.619Z",
+      "api": {
+        "cores": 0.06,
+        "mb": 129
+      },
+      "stream": {
+        "cores": 1,
+        "mb": 132
+      },
+      "ingestor": {
+        "cores": 0.02,
+        "mb": 112
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 99
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 100
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 22
+      },
+      "greencircuits-db-1": {
+        "cores": 0.08,
+        "mb": 1320
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 49
+      }
+    },
+    {
+      "t": "2026-09-28T17:14:24.701Z",
+      "api": {
+        "cores": 0.06,
+        "mb": 131
+      },
+      "stream": {
+        "cores": 1.01,
+        "mb": 133
+      },
+      "ingestor": {
+        "cores": 0,
+        "mb": 111
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 103
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 98
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 22
+      },
+      "greencircuits-db-1": {
+        "cores": 0.04,
+        "mb": 1324
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 67
+      }
+    },
+    {
+      "t": "2026-09-28T17:14:37.831Z",
+      "api": {
+        "cores": 0.06,
+        "mb": 137
+      },
+      "stream": {
+        "cores": 0.98,
+        "mb": 131
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 111
+      },
+      "alerts-a": {
+        "cores": 0.05,
+        "mb": 98
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 84
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 22
+      },
+      "greencircuits-db-1": {
+        "cores": 0.01,
+        "mb": 1324
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 33
+      }
+    },
+    {
+      "t": "2026-09-28T17:14:50.967Z",
+      "api": {
+        "cores": 0.07,
+        "mb": 132
+      },
+      "stream": {
+        "cores": 1.01,
+        "mb": 135
+      },
+      "ingestor": {
+        "cores": 0,
+        "mb": 111
+      },
+      "alerts-a": {
+        "cores": 0.05,
+        "mb": 100
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 96
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 22
+      },
+      "greencircuits-db-1": {
+        "cores": 0.06,
+        "mb": 1324
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 36
+      }
+    },
+    {
+      "t": "2026-09-28T17:15:04.095Z",
+      "api": {
+        "cores": 0.07,
+        "mb": 130
+      },
+      "stream": {
+        "cores": 1.01,
+        "mb": 133
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 112
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 100
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 97
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 22
+      },
+      "greencircuits-db-1": {
+        "cores": 0.05,
+        "mb": 1342
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 52
+      }
+    },
+    {
+      "t": "2026-09-28T17:15:17.275Z",
+      "api": {
+        "cores": 0.05,
+        "mb": 133
+      },
+      "stream": {
+        "cores": 1,
+        "mb": 133
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 111
+      },
+      "alerts-a": {
+        "cores": 0.02,
+        "mb": 98
+      },
+      "alerts-b": {
+        "cores": 0.02,
+        "mb": 84
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 22
+      },
+      "greencircuits-db-1": {
+        "cores": 0.03,
+        "mb": 1325
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 34
+      }
+    },
+    {
+      "t": "2026-09-28T17:15:30.441Z",
+      "api": {
+        "cores": 0.07,
+        "mb": 133
+      },
+      "stream": {
+        "cores": 0.98,
+        "mb": 136
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 112
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 99
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 103
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 22
+      },
+      "greencircuits-db-1": {
+        "cores": 0.04,
+        "mb": 1324
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 25
+      }
+    },
+    {
+      "t": "2026-09-28T17:15:43.532Z",
+      "api": {
+        "cores": 0.09,
+        "mb": 135
+      },
+      "stream": {
+        "cores": 1,
+        "mb": 131
+      },
+      "ingestor": {
+        "cores": 0.02,
+        "mb": 111
+      },
+      "alerts-a": {
+        "cores": 0.05,
+        "mb": 101
+      },
+      "alerts-b": {
+        "cores": 0.05,
+        "mb": 98
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 22
+      },
+      "greencircuits-db-1": {
+        "cores": 0.09,
+        "mb": 1325
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 42
+      }
+    },
+    {
+      "t": "2026-09-28T17:15:56.714Z",
+      "api": {
+        "cores": 0.1,
+        "mb": 135
+      },
+      "stream": {
+        "cores": 1.01,
+        "mb": 132
+      },
+      "ingestor": {
+        "cores": 0,
+        "mb": 112
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 97
+      },
+      "alerts-b": {
+        "cores": 0.05,
+        "mb": 86
+      },
+      "worker": {
+        "cores": 0.05,
+        "mb": 59
+      },
+      "greencircuits-db-1": {
+        "cores": 0.6,
+        "mb": 1383
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 61
+      }
+    },
+    {
+      "t": "2026-09-28T17:16:09.950Z",
+      "api": {
+        "cores": 0.09,
+        "mb": 135
+      },
+      "stream": {
+        "cores": 0.98,
+        "mb": 133
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 110
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 96
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 101
+      },
+      "worker": {
+        "cores": 0.44,
+        "mb": 200
+      },
+      "greencircuits-db-1": {
+        "cores": 0.05,
+        "mb": 1330
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 30
+      }
+    },
+    {
+      "t": "2026-09-28T17:16:23.142Z",
+      "api": {
+        "cores": 0.09,
+        "mb": 127
+      },
+      "stream": {
+        "cores": 1,
+        "mb": 136
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 111
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 98
+      },
+      "alerts-b": {
+        "cores": 0.05,
+        "mb": 96
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 200
+      },
+      "greencircuits-db-1": {
+        "cores": 0.08,
+        "mb": 1332
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 40
+      }
+    },
+    {
+      "t": "2026-09-28T17:16:36.292Z",
+      "api": {
+        "cores": 0.09,
+        "mb": 133
+      },
+      "stream": {
+        "cores": 1.01,
+        "mb": 134
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 110
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 95
+      },
+      "alerts-b": {
+        "cores": 0.06,
+        "mb": 97
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 200
+      },
+      "greencircuits-db-1": {
+        "cores": 0.08,
+        "mb": 1329
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 58
+      }
+    },
+    {
+      "t": "2026-09-28T17:16:48.412Z",
+      "api": {
+        "cores": 0.09,
+        "mb": 137
+      },
+      "stream": {
+        "cores": 1.01,
+        "mb": 135
+      },
+      "ingestor": {
+        "cores": 0.02,
+        "mb": 111
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 97
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 87
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 200
+      },
+      "greencircuits-db-1": {
+        "cores": 0.08,
+        "mb": 1354
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 28
+      }
+    },
+    {
+      "t": "2026-09-28T17:17:00.546Z",
+      "api": {
+        "cores": 0.07,
+        "mb": 133
+      },
+      "stream": {
+        "cores": 0.98,
+        "mb": 134
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 112
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 102
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 95
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 200
+      },
+      "greencircuits-db-1": {
+        "cores": 0.11,
+        "mb": 1333
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 30
+      }
+    },
+    {
+      "t": "2026-09-28T17:17:13.704Z",
+      "api": {
+        "cores": 0.08,
+        "mb": 132
+      },
+      "stream": {
+        "cores": 1,
+        "mb": 133
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 113
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 100
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 101
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 200
+      },
+      "greencircuits-db-1": {
+        "cores": 0.03,
+        "mb": 1328
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 48
+      }
+    },
+    {
+      "t": "2026-09-28T17:17:26.870Z",
+      "api": {
+        "cores": 0.08,
+        "mb": 131
+      },
+      "stream": {
+        "cores": 1.01,
+        "mb": 136
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 114
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 98
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 100
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 200
+      },
+      "greencircuits-db-1": {
+        "cores": 0.02,
+        "mb": 1332
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 56
+      }
+    },
+    {
+      "t": "2026-09-28T17:17:40.009Z",
+      "api": {
+        "cores": 0.08,
+        "mb": 130
+      },
+      "stream": {
+        "cores": 0.98,
+        "mb": 131
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 113
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 99
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 97
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 200
+      },
+      "greencircuits-db-1": {
+        "cores": 0.02,
+        "mb": 1332
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 31
+      }
+    },
+    {
+      "t": "2026-09-28T17:17:53.226Z",
+      "api": {
+        "cores": 0.07,
+        "mb": 134
+      },
+      "stream": {
+        "cores": 1,
+        "mb": 132
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 114
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 96
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 98
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 200
+      },
+      "greencircuits-db-1": {
+        "cores": 0.07,
+        "mb": 1332
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 39
+      }
+    },
+    {
+      "t": "2026-09-28T17:18:06.446Z",
+      "api": {
+        "cores": 0.08,
+        "mb": 138
+      },
+      "stream": {
+        "cores": 1,
+        "mb": 133
+      },
+      "ingestor": {
+        "cores": 0.02,
+        "mb": 113
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 95
+      },
+      "alerts-b": {
+        "cores": 0.05,
+        "mb": 99
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 200
+      },
+      "greencircuits-db-1": {
+        "cores": 0.05,
+        "mb": 1333
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 57
+      }
+    },
+    {
+      "t": "2026-09-28T17:18:18.654Z",
+      "api": {
+        "cores": 0.08,
+        "mb": 134
+      },
+      "stream": {
+        "cores": 1.01,
+        "mb": 136
+      },
+      "ingestor": {
+        "cores": 0.02,
+        "mb": 110
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 98
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 99
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 200
+      },
+      "greencircuits-db-1": {
+        "cores": 0.02,
+        "mb": 1334
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 35
+      }
+    },
+    {
+      "t": "2026-09-28T17:18:31.939Z",
+      "api": {
+        "cores": 0.08,
+        "mb": 139
+      },
+      "stream": {
+        "cores": 0.98,
+        "mb": 132
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 111
+      },
+      "alerts-a": {
+        "cores": 0.07,
+        "mb": 100
+      },
+      "alerts-b": {
+        "cores": 0.05,
+        "mb": 93
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 200
+      },
+      "greencircuits-db-1": {
+        "cores": 0.05,
+        "mb": 1334
+      },
+      "gc-lt-valkey": {
+        "cores": 0.01,
+        "mb": 32
+      }
+    },
+    {
+      "t": "2026-09-28T17:18:44.079Z",
+      "api": {
+        "cores": 0.56,
+        "mb": 135
+      },
+      "stream": {
+        "cores": 1,
+        "mb": 135
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 113
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 89
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 98
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 200
+      },
+      "greencircuits-db-1": {
+        "cores": 0.17,
+        "mb": 1385
+      },
+      "gc-lt-valkey": {
+        "cores": 0.06,
+        "mb": 55
+      }
+    },
+    {
+      "t": "2026-09-28T17:18:57.337Z",
+      "api": {
+        "cores": 0.63,
+        "mb": 141
+      },
+      "stream": {
+        "cores": 1.01,
+        "mb": 119
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 99
+      },
+      "alerts-a": {
+        "cores": 0.05,
+        "mb": 97
+      },
+      "alerts-b": {
+        "cores": 0.05,
+        "mb": 87
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 200
+      },
+      "greencircuits-db-1": {
+        "cores": 0.2,
+        "mb": 1351
+      },
+      "gc-lt-valkey": {
+        "cores": 0.05,
+        "mb": 46
+      }
+    },
+    {
+      "t": "2026-09-28T17:19:10.654Z",
+      "api": {
+        "cores": 0.59,
+        "mb": 142
+      },
+      "stream": {
+        "cores": 0.97,
+        "mb": 118
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 98
+      },
+      "alerts-a": {
+        "cores": 0.05,
+        "mb": 83
+      },
+      "alerts-b": {
+        "cores": 0.06,
+        "mb": 97
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 200
+      },
+      "greencircuits-db-1": {
+        "cores": 0.21,
+        "mb": 1355
+      },
+      "gc-lt-valkey": {
+        "cores": 0.05,
+        "mb": 40
+      }
+    },
+    {
+      "t": "2026-09-28T17:19:23.846Z",
+      "api": {
+        "cores": 0.63,
+        "mb": 133
+      },
+      "stream": {
+        "cores": 0.99,
+        "mb": 120
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 98
+      },
+      "alerts-a": {
+        "cores": 0.06,
+        "mb": 97
+      },
+      "alerts-b": {
+        "cores": 0.06,
+        "mb": 99
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 200
+      },
+      "greencircuits-db-1": {
+        "cores": 0.19,
+        "mb": 1341
+      },
+      "gc-lt-valkey": {
+        "cores": 0.06,
+        "mb": 59
+      }
+    },
+    {
+      "t": "2026-09-28T17:19:36.972Z",
+      "api": {
+        "cores": 0.59,
+        "mb": 140
+      },
+      "stream": {
+        "cores": 1,
+        "mb": 121
+      },
+      "ingestor": {
+        "cores": 0.02,
+        "mb": 96
+      },
+      "alerts-a": {
+        "cores": 0.05,
+        "mb": 99
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 98
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 200
+      },
+      "greencircuits-db-1": {
+        "cores": 0.07,
+        "mb": 1336
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 45
+      }
+    },
+    {
+      "t": "2026-09-28T17:19:50.242Z",
+      "api": {
+        "cores": 0.1,
+        "mb": 134
+      },
+      "stream": {
+        "cores": 1.02,
+        "mb": 121
+      },
+      "ingestor": {
+        "cores": 0.02,
+        "mb": 99
+      },
+      "alerts-a": {
+        "cores": 0.06,
+        "mb": 98
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 100
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 200
+      },
+      "greencircuits-db-1": {
+        "cores": 0.06,
+        "mb": 1289
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 39
+      }
+    },
+    {
+      "t": "2026-09-28T17:20:04.055Z",
+      "api": {
+        "cores": 0.08,
+        "mb": 129
+      },
+      "stream": {
+        "cores": 1.03,
+        "mb": 122
+      },
+      "ingestor": {
+        "cores": 0.02,
+        "mb": 98
+      },
+      "alerts-a": {
+        "cores": 0.05,
+        "mb": 97
+      },
+      "alerts-b": {
+        "cores": 0.05,
+        "mb": 101
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 200
+      },
+      "greencircuits-db-1": {
+        "cores": 0.02,
+        "mb": 1290
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 59
+      }
+    },
+    {
+      "t": "2026-09-28T17:20:18.164Z",
+      "api": {
+        "cores": 0.07,
+        "mb": 139
+      },
+      "stream": {
+        "cores": 0.93,
+        "mb": 120
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 98
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 97
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 93
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 200
+      },
+      "greencircuits-db-1": {
+        "cores": 0.03,
+        "mb": 1318
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 42
+      }
+    },
+    {
+      "t": "2026-09-28T17:20:31.360Z",
+      "api": {
+        "cores": 0.07,
+        "mb": 137
+      },
+      "stream": {
+        "cores": 0.97,
+        "mb": 120
+      },
+      "ingestor": {
+        "cores": 0.02,
+        "mb": 98
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 98
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 98
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 200
+      },
+      "greencircuits-db-1": {
+        "cores": 0.08,
+        "mb": 1320
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 37
+      }
+    },
+    {
+      "t": "2026-09-28T17:20:44.644Z",
+      "api": {
+        "cores": 0.1,
+        "mb": 134
+      },
+      "stream": {
+        "cores": 1.01,
+        "mb": 118
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 96
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 96
+      },
+      "alerts-b": {
+        "cores": 0.07,
+        "mb": 98
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 200
+      },
+      "greencircuits-db-1": {
+        "cores": 0.03,
+        "mb": 1318
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 58
+      }
+    },
+    {
+      "t": "2026-09-28T17:20:58.026Z",
+      "api": {
+        "cores": 0.09,
+        "mb": 134
+      },
+      "stream": {
+        "cores": 1.01,
+        "mb": 118
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 95
+      },
+      "alerts-a": {
+        "cores": 0.05,
+        "mb": 102
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 102
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 200
+      },
+      "greencircuits-db-1": {
+        "cores": 0.18,
+        "mb": 1326
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 40
+      }
+    },
+    {
+      "t": "2026-09-28T17:21:10.218Z",
+      "api": {
+        "cores": 0.08,
+        "mb": 141
+      },
+      "stream": {
+        "cores": 1,
+        "mb": 116
+      },
+      "ingestor": {
+        "cores": 0.02,
+        "mb": 96
+      },
+      "alerts-a": {
+        "cores": 0.05,
+        "mb": 97
+      },
+      "alerts-b": {
+        "cores": 0.06,
+        "mb": 96
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 200
+      },
+      "greencircuits-db-1": {
+        "cores": 0.02,
+        "mb": 1326
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 35
+      }
+    },
+    {
+      "t": "2026-09-28T17:21:23.399Z",
+      "api": {
+        "cores": 0.07,
+        "mb": 141
+      },
+      "stream": {
+        "cores": 1,
+        "mb": 117
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 97
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 89
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 101
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 200
+      },
+      "greencircuits-db-1": {
+        "cores": 0.09,
+        "mb": 1327
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 48
+      }
+    },
+    {
+      "t": "2026-09-28T17:21:35.555Z",
+      "api": {
+        "cores": 0.06,
+        "mb": 138
+      },
+      "stream": {
+        "cores": 1.01,
+        "mb": 116
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 97
+      },
+      "alerts-a": {
+        "cores": 0.05,
+        "mb": 98
+      },
+      "alerts-b": {
+        "cores": 0.02,
+        "mb": 96
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 200
+      },
+      "greencircuits-db-1": {
+        "cores": 0.02,
+        "mb": 1327
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 69
+      }
+    },
+    {
+      "t": "2026-09-28T17:21:48.786Z",
+      "api": {
+        "cores": 0.08,
+        "mb": 135
+      },
+      "stream": {
+        "cores": 0.96,
+        "mb": 119
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 95
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 97
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 102
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 200
+      },
+      "greencircuits-db-1": {
+        "cores": 0.03,
+        "mb": 1327
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 33
+      }
+    },
+    {
+      "t": "2026-09-28T17:22:01.980Z",
+      "api": {
+        "cores": 0.06,
+        "mb": 141
+      },
+      "stream": {
+        "cores": 1,
+        "mb": 118
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 97
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 97
+      },
+      "alerts-b": {
+        "cores": 0.05,
+        "mb": 100
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 107
+      },
+      "greencircuits-db-1": {
+        "cores": 0.04,
+        "mb": 1368
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 52
+      }
+    },
+    {
+      "t": "2026-09-28T17:22:15.288Z",
+      "api": {
+        "cores": 0.07,
+        "mb": 133
+      },
+      "stream": {
+        "cores": 1,
+        "mb": 116
+      },
+      "ingestor": {
+        "cores": 0,
+        "mb": 95
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 97
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 99
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 107
+      },
+      "greencircuits-db-1": {
+        "cores": 0.06,
+        "mb": 1323
+      },
+      "gc-lt-valkey": {
+        "cores": 0.01,
+        "mb": 45
+      }
+    },
+    {
+      "t": "2026-09-28T17:22:27.370Z",
+      "api": {
+        "cores": 0.09,
+        "mb": 135
+      },
+      "stream": {
+        "cores": 0.98,
+        "mb": 119
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 96
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 99
+      },
+      "alerts-b": {
+        "cores": 0.05,
+        "mb": 101
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 107
+      },
+      "greencircuits-db-1": {
+        "cores": 0.09,
+        "mb": 1326
+      },
+      "gc-lt-valkey": {
+        "cores": 0.01,
+        "mb": 32
+      }
+    },
+    {
+      "t": "2026-09-28T17:22:39.441Z",
+      "api": {
+        "cores": 0.06,
+        "mb": 133
+      },
+      "stream": {
+        "cores": 1.01,
+        "mb": 118
+      },
+      "ingestor": {
+        "cores": 0.02,
+        "mb": 96
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 99
+      },
+      "alerts-b": {
+        "cores": 0.05,
+        "mb": 97
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 107
+      },
+      "greencircuits-db-1": {
+        "cores": 0.03,
+        "mb": 1327
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 42
+      }
+    },
+    {
+      "t": "2026-09-28T17:22:52.523Z",
+      "api": {
+        "cores": 0.05,
+        "mb": 137
+      },
+      "stream": {
+        "cores": 1.01,
+        "mb": 118
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 98
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 96
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 101
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 107
+      },
+      "greencircuits-db-1": {
+        "cores": 0.05,
+        "mb": 1326
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 58
+      }
+    },
+    {
+      "t": "2026-09-28T17:23:04.601Z",
+      "api": {
+        "cores": 0.06,
+        "mb": 140
+      },
+      "stream": {
+        "cores": 1.02,
+        "mb": 119
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 97
+      },
+      "alerts-a": {
+        "cores": 0.02,
+        "mb": 97
+      },
+      "alerts-b": {
+        "cores": 0.02,
+        "mb": 84
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 107
+      },
+      "greencircuits-db-1": {
+        "cores": 0.03,
+        "mb": 1332
+      },
+      "gc-lt-valkey": {
+        "cores": 0.03,
+        "mb": 33
+      }
+    },
+    {
+      "t": "2026-09-28T17:23:17.751Z",
+      "api": {
+        "cores": 0.07,
+        "mb": 131
+      },
+      "stream": {
+        "cores": 1.01,
+        "mb": 120
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 97
+      },
+      "alerts-a": {
+        "cores": 0.02,
+        "mb": 98
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 100
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 85
+      },
+      "greencircuits-db-1": {
+        "cores": 0.04,
+        "mb": 1332
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 32
+      }
+    },
+    {
+      "t": "2026-09-28T17:23:30.124Z",
+      "api": {
+        "cores": 0.05,
+        "mb": 138
+      },
+      "stream": {
+        "cores": 0.29,
+        "mb": 123
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 97
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 88
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 96
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 85
+      },
+      "greencircuits-db-1": {
+        "cores": 0.15,
+        "mb": 1334
+      },
+      "gc-lt-valkey": {
+        "cores": 0.03,
+        "mb": 30
+      }
+    },
+    {
+      "t": "2026-09-28T17:23:42.166Z",
+      "api": {
+        "cores": 0.08,
+        "mb": 136
+      },
+      "stream": {
+        "cores": 0.03,
+        "mb": 123
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 97
+      },
+      "alerts-a": {
+        "cores": 0.02,
+        "mb": 97
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 96
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 85
+      },
+      "greencircuits-db-1": {
+        "cores": 0.09,
+        "mb": 1335
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 32
+      }
+    },
+    {
+      "t": "2026-09-28T17:23:55.184Z",
+      "api": {
+        "cores": 0.06,
+        "mb": 136
+      },
+      "stream": {
+        "cores": 0.03,
+        "mb": 122
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 96
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 102
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 100
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 85
+      },
+      "greencircuits-db-1": {
+        "cores": 0.1,
+        "mb": 1335
+      },
+      "gc-lt-valkey": {
+        "cores": 0.01,
+        "mb": 28
+      }
+    },
+    {
+      "t": "2026-09-28T17:24:08.269Z",
+      "api": {
+        "cores": 0.06,
+        "mb": 132
+      },
+      "stream": {
+        "cores": 0.04,
+        "mb": 125
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 98
+      },
+      "alerts-a": {
+        "cores": 0.05,
+        "mb": 99
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 90
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 85
+      },
+      "greencircuits-db-1": {
+        "cores": 0.05,
+        "mb": 1338
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 26
+      }
+    },
+    {
+      "t": "2026-09-28T17:24:21.278Z",
+      "api": {
+        "cores": 0.06,
+        "mb": 131
+      },
+      "stream": {
+        "cores": 0.05,
+        "mb": 122
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 96
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 103
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 101
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 85
+      },
+      "greencircuits-db-1": {
+        "cores": 0.04,
+        "mb": 1338
+      },
+      "gc-lt-valkey": {
+        "cores": 0.01,
+        "mb": 26
+      }
+    },
+    {
+      "t": "2026-09-28T17:24:34.286Z",
+      "api": {
+        "cores": 0.05,
+        "mb": 137
+      },
+      "stream": {
+        "cores": 0.03,
+        "mb": 106
+      },
+      "ingestor": {
+        "cores": 0,
+        "mb": 96
+      },
+      "alerts-a": {
+        "cores": 0.05,
+        "mb": 100
+      },
+      "alerts-b": {
+        "cores": 0.05,
+        "mb": 101
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 85
+      },
+      "greencircuits-db-1": {
+        "cores": 0.04,
+        "mb": 1338
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 27
+      }
+    },
+    {
+      "t": "2026-09-28T17:24:46.308Z",
+      "api": {
+        "cores": 0.07,
+        "mb": 135
+      },
+      "stream": {
+        "cores": 0.04,
+        "mb": 106
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 97
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 96
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 94
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 85
+      },
+      "greencircuits-db-1": {
+        "cores": 0.05,
+        "mb": 1338
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 28
+      }
+    },
+    {
+      "t": "2026-09-28T17:24:59.321Z",
+      "api": {
+        "cores": 0.05,
+        "mb": 135
+      },
+      "stream": {
+        "cores": 0.03,
+        "mb": 121
+      },
+      "ingestor": {
+        "cores": 0,
+        "mb": 95
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 100
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 98
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 85
+      },
+      "greencircuits-db-1": {
+        "cores": 0.06,
+        "mb": 1339
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 30
+      }
+    },
+    {
+      "t": "2026-09-28T17:25:11.327Z",
+      "api": {
+        "cores": 0.11,
+        "mb": 132
+      },
+      "stream": {
+        "cores": 0.03,
+        "mb": 125
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 95
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 100
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 95
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 85
+      },
+      "greencircuits-db-1": {
+        "cores": 0.11,
+        "mb": 1348
+      },
+      "gc-lt-valkey": {
+        "cores": 0.01,
+        "mb": 29
+      }
+    },
+    {
+      "t": "2026-09-28T17:25:24.339Z",
+      "api": {
+        "cores": 0.07,
+        "mb": 131
+      },
+      "stream": {
+        "cores": 0.03,
+        "mb": 129
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 96
+      },
+      "alerts-a": {
+        "cores": 0.05,
+        "mb": 99
+      },
+      "alerts-b": {
+        "cores": 0.05,
+        "mb": 96
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 85
+      },
+      "greencircuits-db-1": {
+        "cores": 0.08,
+        "mb": 1342
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 30
+      }
+    },
+    {
+      "t": "2026-09-28T17:25:37.359Z",
+      "api": {
+        "cores": 0.05,
+        "mb": 135
+      },
+      "stream": {
+        "cores": 0.04,
+        "mb": 125
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 97
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 97
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 100
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 85
+      },
+      "greencircuits-db-1": {
+        "cores": 0.09,
+        "mb": 1337
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 30
+      }
+    },
+    {
+      "t": "2026-09-28T17:25:50.370Z",
+      "api": {
+        "cores": 0.07,
+        "mb": 133
+      },
+      "stream": {
+        "cores": 0.03,
+        "mb": 105
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 97
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 97
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 96
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 49
+      },
+      "greencircuits-db-1": {
+        "cores": 0.02,
+        "mb": 1341
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 31
+      }
+    },
+    {
+      "t": "2026-09-28T17:26:03.396Z",
+      "api": {
+        "cores": 0.08,
+        "mb": 134
+      },
+      "stream": {
+        "cores": 0.03,
+        "mb": 117
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 95
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 96
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 83
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 49
+      },
+      "greencircuits-db-1": {
+        "cores": 0.02,
+        "mb": 1343
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 32
+      }
+    },
+    {
+      "t": "2026-09-28T17:26:16.415Z",
+      "api": {
+        "cores": 0.06,
+        "mb": 137
+      },
+      "stream": {
+        "cores": 0.04,
+        "mb": 122
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 97
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 103
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 98
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 49
+      },
+      "greencircuits-db-1": {
+        "cores": 0.13,
+        "mb": 1341
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 32
+      }
+    },
+    {
+      "t": "2026-09-28T17:26:29.424Z",
+      "api": {
+        "cores": 0.07,
+        "mb": 133
+      },
+      "stream": {
+        "cores": 0.05,
+        "mb": 125
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 95
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 91
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 97
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 49
+      },
+      "greencircuits-db-1": {
+        "cores": 0.07,
+        "mb": 1342
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 31
+      }
+    },
+    {
+      "t": "2026-09-28T17:26:42.430Z",
+      "api": {
+        "cores": 0.08,
+        "mb": 131
+      },
+      "stream": {
+        "cores": 0.04,
+        "mb": 121
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 97
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 97
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 96
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 49
+      },
+      "greencircuits-db-1": {
+        "cores": 0.12,
+        "mb": 1342
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 32
+      }
+    },
+    {
+      "t": "2026-09-28T17:26:55.425Z",
+      "api": {
+        "cores": 0.05,
+        "mb": 137
+      },
+      "stream": {
+        "cores": 0.04,
+        "mb": 125
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 96
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 103
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 101
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 49
+      },
+      "greencircuits-db-1": {
+        "cores": 0.04,
+        "mb": 1342
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 31
+      }
+    },
+    {
+      "t": "2026-09-28T17:27:08.445Z",
+      "api": {
+        "cores": 0.05,
+        "mb": 133
+      },
+      "stream": {
+        "cores": 0.04,
+        "mb": 106
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 96
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 97
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 102
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 49
+      },
+      "greencircuits-db-1": {
+        "cores": 0.13,
+        "mb": 1343
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 33
+      }
+    },
+    {
+      "t": "2026-09-28T17:27:21.469Z",
+      "api": {
+        "cores": 0.05,
+        "mb": 138
+      },
+      "stream": {
+        "cores": 0.03,
+        "mb": 126
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 96
+      },
+      "alerts-a": {
+        "cores": 0.02,
+        "mb": 101
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 98
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 49
+      },
+      "greencircuits-db-1": {
+        "cores": 0.09,
+        "mb": 1343
+      },
+      "gc-lt-valkey": {
+        "cores": 0.01,
+        "mb": 31
+      }
+    },
+    {
+      "t": "2026-09-28T17:27:34.492Z",
+      "api": {
+        "cores": 0.06,
+        "mb": 132
+      },
+      "stream": {
+        "cores": 0.02,
+        "mb": 123
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 95
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 98
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 96
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 49
+      },
+      "greencircuits-db-1": {
+        "cores": 0.22,
+        "mb": 1355
+      },
+      "gc-lt-valkey": {
+        "cores": 0.04,
+        "mb": 32
+      }
+    },
+    {
+      "t": "2026-09-28T17:27:46.508Z",
+      "api": {
+        "cores": 0.48,
+        "mb": 136
+      },
+      "stream": {
+        "cores": 0.04,
+        "mb": 123
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 96
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 100
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 99
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 49
+      },
+      "greencircuits-db-1": {
+        "cores": 0.2,
+        "mb": 1394
+      },
+      "gc-lt-valkey": {
+        "cores": 0.04,
+        "mb": 39
+      }
+    },
+    {
+      "t": "2026-09-28T17:27:59.536Z",
+      "api": {
+        "cores": 0.41,
+        "mb": 141
+      },
+      "stream": {
+        "cores": 0.03,
+        "mb": 126
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 96
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 86
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 96
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 49
+      },
+      "greencircuits-db-1": {
+        "cores": 0.22,
+        "mb": 1352
+      },
+      "gc-lt-valkey": {
+        "cores": 0.04,
+        "mb": 37
+      }
+    },
+    {
+      "t": "2026-09-28T17:28:11.540Z",
+      "api": {
+        "cores": 0.45,
+        "mb": 147
+      },
+      "stream": {
+        "cores": 0.04,
+        "mb": 127
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 96
+      },
+      "alerts-a": {
+        "cores": 0.06,
+        "mb": 95
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 101
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 49
+      },
+      "greencircuits-db-1": {
+        "cores": 0.15,
+        "mb": 1356
+      },
+      "gc-lt-valkey": {
+        "cores": 0.04,
+        "mb": 41
+      }
+    },
+    {
+      "t": "2026-09-28T17:28:24.565Z",
+      "api": {
+        "cores": 0.43,
+        "mb": 135
+      },
+      "stream": {
+        "cores": 0.04,
+        "mb": 121
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 95
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 99
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 95
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 49
+      },
+      "greencircuits-db-1": {
+        "cores": 0.15,
+        "mb": 1383
+      },
+      "gc-lt-valkey": {
+        "cores": 0.04,
+        "mb": 40
+      }
+    },
+    {
+      "t": "2026-09-28T17:28:37.606Z",
+      "api": {
+        "cores": 0.37,
+        "mb": 132
+      },
+      "stream": {
+        "cores": 0.03,
+        "mb": 127
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 97
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 98
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 96
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 49
+      },
+      "greencircuits-db-1": {
+        "cores": 0.07,
+        "mb": 1346
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 41
+      }
+    },
+    {
+      "t": "2026-09-28T17:28:50.627Z",
+      "api": {
+        "cores": 0.06,
+        "mb": 138
+      },
+      "stream": {
+        "cores": 0.04,
+        "mb": 124
+      },
+      "ingestor": {
+        "cores": 0,
+        "mb": 95
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 97
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 97
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 49
+      },
+      "greencircuits-db-1": {
+        "cores": 0.03,
+        "mb": 1341
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 39
+      }
+    },
+    {
+      "t": "2026-09-28T17:29:03.652Z",
+      "api": {
+        "cores": 0.08,
+        "mb": 140
+      },
+      "stream": {
+        "cores": 0.03,
+        "mb": 127
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 95
+      },
+      "alerts-a": {
+        "cores": 0.05,
+        "mb": 101
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 83
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 49
+      },
+      "greencircuits-db-1": {
+        "cores": 0.04,
+        "mb": 1328
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 39
+      }
+    },
+    {
+      "t": "2026-09-28T17:29:16.702Z",
+      "api": {
+        "cores": 0.12,
+        "mb": 136
+      },
+      "stream": {
+        "cores": 0.04,
+        "mb": 124
+      },
+      "ingestor": {
+        "cores": 0.02,
+        "mb": 97
+      },
+      "alerts-a": {
+        "cores": 0.05,
+        "mb": 98
+      },
+      "alerts-b": {
+        "cores": 0.05,
+        "mb": 98
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 49
+      },
+      "greencircuits-db-1": {
+        "cores": 0.05,
+        "mb": 1337
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 38
+      }
+    },
+    {
+      "t": "2026-09-28T17:29:29.712Z",
+      "api": {
+        "cores": 0.05,
+        "mb": 138
+      },
+      "stream": {
+        "cores": 0.04,
+        "mb": 120
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 95
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 95
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 98
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 49
+      },
+      "greencircuits-db-1": {
+        "cores": 0.06,
+        "mb": 1338
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 39
+      }
+    },
+    {
+      "t": "2026-09-28T17:29:42.694Z",
+      "api": {
+        "cores": 0.08,
+        "mb": 135
+      },
+      "stream": {
+        "cores": 0.05,
+        "mb": 121
+      },
+      "ingestor": {
+        "cores": 0.02,
+        "mb": 96
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 97
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 94
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 49
+      },
+      "greencircuits-db-1": {
+        "cores": 0.02,
+        "mb": 1340
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 37
+      }
+    },
+    {
+      "t": "2026-09-28T17:29:55.692Z",
+      "api": {
+        "cores": 0.07,
+        "mb": 134
+      },
+      "stream": {
+        "cores": 0.03,
+        "mb": 125
+      },
+      "ingestor": {
+        "cores": 0.02,
+        "mb": 98
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 96
+      },
+      "alerts-b": {
+        "cores": 0.02,
+        "mb": 98
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 49
+      },
+      "greencircuits-db-1": {
+        "cores": 0.04,
+        "mb": 1342
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 36
+      }
+    },
+    {
+      "t": "2026-09-28T17:30:08.681Z",
+      "api": {
+        "cores": 0.07,
+        "mb": 135
+      },
+      "stream": {
+        "cores": 0.04,
+        "mb": 121
+      },
+      "ingestor": {
+        "cores": 0.02,
+        "mb": 97
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 100
+      },
+      "alerts-b": {
+        "cores": 0.02,
+        "mb": 98
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 49
+      },
+      "greencircuits-db-1": {
+        "cores": 0.09,
+        "mb": 1341
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 37
+      }
+    },
+    {
+      "t": "2026-09-28T17:30:20.673Z",
+      "api": {
+        "cores": 0.06,
+        "mb": 133
+      },
+      "stream": {
+        "cores": 0.04,
+        "mb": 124
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 96
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 85
+      },
+      "alerts-b": {
+        "cores": 0.02,
+        "mb": 98
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 49
+      },
+      "greencircuits-db-1": {
+        "cores": 0.01,
+        "mb": 1341
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 34
+      }
+    },
+    {
+      "t": "2026-09-28T17:30:33.665Z",
+      "api": {
+        "cores": 0.07,
+        "mb": 138
+      },
+      "stream": {
+        "cores": 0.04,
+        "mb": 126
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 96
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 94
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 100
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 49
+      },
+      "greencircuits-db-1": {
+        "cores": 0.03,
+        "mb": 1341
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 31
+      }
+    },
+    {
+      "t": "2026-09-28T17:30:46.674Z",
+      "api": {
+        "cores": 0.08,
+        "mb": 135
+      },
+      "stream": {
+        "cores": 0.03,
+        "mb": 108
+      },
+      "ingestor": {
+        "cores": 0.02,
+        "mb": 97
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 97
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 97
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 49
+      },
+      "greencircuits-db-1": {
+        "cores": 0.07,
+        "mb": 1342
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 34
+      }
+    },
+    {
+      "t": "2026-09-28T17:30:59.674Z",
+      "api": {
+        "cores": 0.07,
+        "mb": 137
+      },
+      "stream": {
+        "cores": 0.03,
+        "mb": 120
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 96
+      },
+      "alerts-a": {
+        "cores": 0.05,
+        "mb": 97
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 95
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 44
+      },
+      "greencircuits-db-1": {
+        "cores": 0.04,
+        "mb": 1342
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 37
+      }
+    },
+    {
+      "t": "2026-09-28T17:31:11.670Z",
+      "api": {
+        "cores": 0.06,
+        "mb": 136
+      },
+      "stream": {
+        "cores": 0.05,
+        "mb": 108
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 96
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 97
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 86
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 44
+      },
+      "greencircuits-db-1": {
+        "cores": 0.05,
+        "mb": 1343
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 34
+      }
+    },
+    {
+      "t": "2026-09-28T17:31:24.660Z",
+      "api": {
+        "cores": 0.03,
+        "mb": 138
+      },
+      "stream": {
+        "cores": 0.04,
+        "mb": 125
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 95
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 100
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 94
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 44
+      },
+      "greencircuits-db-1": {
+        "cores": 0.03,
+        "mb": 1345
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 35
+      }
+    },
+    {
+      "t": "2026-09-28T17:31:36.664Z",
+      "api": {
+        "cores": 0.06,
+        "mb": 137
+      },
+      "stream": {
+        "cores": 0.03,
+        "mb": 123
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 96
+      },
+      "alerts-a": {
+        "cores": 0.05,
+        "mb": 85
+      },
+      "alerts-b": {
+        "cores": 0.05,
+        "mb": 95
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 44
+      },
+      "greencircuits-db-1": {
+        "cores": 0.05,
+        "mb": 1345
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 34
+      }
+    },
+    {
+      "t": "2026-09-28T17:31:49.659Z",
+      "api": {
+        "cores": 0.08,
+        "mb": 131
+      },
+      "stream": {
+        "cores": 0.04,
+        "mb": 127
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 95
+      },
+      "alerts-a": {
+        "cores": 0.02,
+        "mb": 99
+      },
+      "alerts-b": {
+        "cores": 0.02,
+        "mb": 100
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 44
+      },
+      "greencircuits-db-1": {
+        "cores": 0.01,
+        "mb": 1343
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 34
+      }
+    },
+    {
+      "t": "2026-09-28T17:32:02.652Z",
+      "api": {
+        "cores": 0.07,
+        "mb": 135
+      },
+      "stream": {
+        "cores": 0.04,
+        "mb": 123
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 97
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 97
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 99
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 44
+      },
+      "greencircuits-db-1": {
+        "cores": 0.07,
+        "mb": 1346
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 32
+      }
+    },
+    {
+      "t": "2026-09-28T17:32:14.643Z",
+      "api": {
+        "cores": 0.08,
+        "mb": 134
+      },
+      "stream": {
+        "cores": 0.04,
+        "mb": 123
+      },
+      "ingestor": {
+        "cores": 0.02,
+        "mb": 96
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 96
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 94
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 44
+      },
+      "greencircuits-db-1": {
+        "cores": 0.02,
+        "mb": 1343
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 34
+      }
+    },
+    {
+      "t": "2026-09-28T17:32:27.634Z",
+      "api": {
+        "cores": 0.07,
+        "mb": 134
+      },
+      "stream": {
+        "cores": 0.04,
+        "mb": 120
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 98
+      },
+      "alerts-a": {
+        "cores": 0.05,
+        "mb": 101
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 98
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 44
+      },
+      "greencircuits-db-1": {
+        "cores": 0.08,
+        "mb": 1339
+      },
+      "gc-lt-valkey": {
+        "cores": 0.02,
+        "mb": 34
+      }
+    },
+    {
+      "t": "2026-09-28T17:32:40.632Z",
+      "api": {
+        "cores": 0.03,
+        "mb": 140
+      },
+      "stream": {
+        "cores": 0.04,
+        "mb": 122
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 96
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 94
+      },
+      "alerts-b": {
+        "cores": 0.04,
+        "mb": 96
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 44
+      },
+      "greencircuits-db-1": {
+        "cores": 0,
+        "mb": 1338
+      },
+      "gc-lt-valkey": {
+        "cores": 0.01,
+        "mb": 34
+      }
+    },
+    {
+      "t": "2026-09-28T17:32:53.645Z",
+      "api": {
+        "cores": 0,
+        "mb": 140
+      },
+      "stream": {
+        "cores": 0.05,
+        "mb": 127
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 97
+      },
+      "alerts-a": {
+        "cores": 0.05,
+        "mb": 95
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 100
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 44
+      },
+      "greencircuits-db-1": {
+        "cores": 0,
+        "mb": 1294
+      },
+      "gc-lt-valkey": {
+        "cores": 0.01,
+        "mb": 28
+      }
+    },
+    {
+      "t": "2026-09-28T17:33:06.656Z",
+      "api": {
+        "cores": 0,
+        "mb": 140
+      },
+      "stream": {
+        "cores": 0.04,
+        "mb": 123
+      },
+      "ingestor": {
+        "cores": 0.02,
+        "mb": 97
+      },
+      "alerts-a": {
+        "cores": 0.05,
+        "mb": 98
+      },
+      "alerts-b": {
+        "cores": 0.05,
+        "mb": 97
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 44
+      },
+      "greencircuits-db-1": {
+        "cores": 0.02,
+        "mb": 1295
+      },
+      "gc-lt-valkey": {
+        "cores": 0.01,
+        "mb": 26
+      }
+    },
+    {
+      "t": "2026-09-28T17:33:19.661Z",
+      "api": {
+        "cores": 0,
+        "mb": 139
+      },
+      "stream": {
+        "cores": 0.03,
+        "mb": 126
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 95
+      },
+      "alerts-a": {
+        "cores": 0.04,
+        "mb": 96
+      },
+      "alerts-b": {
+        "cores": 0.02,
+        "mb": 99
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 44
+      },
+      "greencircuits-db-1": {
+        "cores": 0.01,
+        "mb": 1294
+      },
+      "gc-lt-valkey": {
+        "cores": 0.01,
+        "mb": 25
+      }
+    },
+    {
+      "t": "2026-09-28T17:33:32.676Z",
+      "api": {
+        "cores": 0,
+        "mb": 139
+      },
+      "stream": {
+        "cores": 0.04,
+        "mb": 122
+      },
+      "ingestor": {
+        "cores": 0.01,
+        "mb": 96
+      },
+      "alerts-a": {
+        "cores": 0.03,
+        "mb": 98
+      },
+      "alerts-b": {
+        "cores": 0.03,
+        "mb": 97
+      },
+      "worker": {
+        "cores": 0,
+        "mb": 44
+      },
+      "greencircuits-db-1": {
+        "cores": 0.01,
+        "mb": 1295
+      },
+      "gc-lt-valkey": {
+        "cores": 0,
+        "mb": 18
+      }
+    }
+  ]
+}

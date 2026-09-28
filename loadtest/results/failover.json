@@ -1,0 +1,11 @@
+{
+  "scenario": "failover",
+  "firstBootMs": 112,
+  "killedAt": "2026-09-28T17:50:30.960Z",
+  "restartDelayMs": 2357,
+  "silentMs": 14991,
+  "resumeAfterRestartMs": 12419,
+  "duplicateBars": 0,
+  "barsInLastHour": 53680,
+  "framesAfterRestartPerSecond": 3.8
+}

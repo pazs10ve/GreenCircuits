@@ -1,0 +1,22 @@
+{
+  "scenario": "alerts",
+  "engines": 2,
+  "alerts": 50000,
+  "control": 5000,
+  "triggered": 50000,
+  "stillActive": 0,
+  "triggers": 50000,
+  "alertsTriggeredTwiceOrMore": 0,
+  "triggerCountAboveOne": 0,
+  "notifications": 50000,
+  "deliveriesSent": 50000,
+  "controlFired": 0,
+  "firstFireMs": 246,
+  "lastFireMs": 106530,
+  "firedByEngine": [
+    19146,
+    30854
+  ],
+  "exactlyOnce": true,
+  "firesPerSecond": 469.4
+}
