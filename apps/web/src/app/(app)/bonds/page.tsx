@@ -1,10 +1,10 @@
 import type { Metadata } from "next"
 import { connection } from "next/server"
 import { ArrowDownUp, BadgeCheck, Timer } from "lucide-react"
-import type { CurvePoint } from "@greencircuits/market/reference"
 import { BondCalculator } from "@/components/bonds/bond-calculator"
 import type { BondRow } from "@/components/bonds/bond-math"
 import { BondScreener } from "@/components/bonds/bond-screener"
+import { spreadOver } from "@/components/bonds/curve"
 import { GoldBonds } from "@/components/bonds/gold-bonds"
 import { KeyYields } from "@/components/bonds/key-yields"
 import { Spreads } from "@/components/bonds/spreads"
@@ -16,16 +16,6 @@ import { getBondsData } from "@/lib/data/bonds"
 export const metadata: Metadata = {
   title: "Bonds",
   description: "The government yield curve, government, state and company bonds, gold bonds, and a calculator for price, yield and duration.",
-}
-
-/** The curve's yield at any term, straight between its points (flat beyond its ends). */
-function curveAt(curve: CurvePoint[], years: number): number {
-  if (years <= curve[0]!.tenor) return curve[0]!.today
-  for (let i = 1; i < curve.length; i++) {
-    const [a, b] = [curve[i - 1]!, curve[i]!]
-    if (years <= b.tenor) return a.today + ((b.today - a.today) * (years - a.tenor)) / (b.tenor - a.tenor)
-  }
-  return curve.at(-1)!.today
 }
 
 const longDate = (date: string) => new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`))
@@ -45,11 +35,7 @@ export default async function BondsPage() {
   // How steep the curve is: ten years over one, or its long end over its short where it doesn't reach a year.
   const [short, long] = curve.some((p) => p.tenor === 1) && ten.tenor === 10 ? [curve.find((p) => p.tenor === 1)!, ten] : [curve[0]!, curve.at(-1)!]
   const years = (t: number) => (t < 1 ? `${Math.round(t * 12)} months` : `${t} year${t === 1 ? "" : "s"}`)
-  // How much more than the government a kind of borrower pays, in basis points, over bonds with a yield today; null with too few.
-  const spreadOf = (rows: BondRow[]) => {
-    const priced = rows.filter((b) => b.ytm != null && b.fresh && b.yearsLeft >= curve[0]!.tenor * 0.8)
-    return priced.length >= 3 ? (priced.reduce((s, b) => s + (b.ytm! - curveAt(curve, b.yearsLeft)), 0) / priced.length) * 100 : null
-  }
+  const spreadOf = (rows: BondRow[]) => spreadOver(curve, rows)
   const corporate = bonds.filter((b) => b.type === "Corporate")
   const spreads = [
     { label: "States", bp: spreadOf(bonds.filter((b) => b.type === "SDL")) },

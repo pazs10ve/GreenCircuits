@@ -6,7 +6,7 @@ import { toast } from "sonner"
 import type { Instrument } from "@greencircuits/market/types"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import type { LiveChain } from "./chain-model"
+import { formatExpiry, type LiveChain } from "./chain-model"
 import {
   PRESETS,
   buildPreset,
@@ -49,6 +49,7 @@ export function StrategyBuilder({
   const atmIv = chain?.atmIv
   const anchor = centre ?? chain?.atm
   const firstExpiry = legs.length ? Math.min(...legs.map((l) => l.expiry)) : null
+  const oneExpiry = legs.length && legs.every((l) => l.expiry === legs[0]!.expiry) ? legs[0]!.expiry : null
 
   // Rounded so the axis only moves when the volatility regime does.
   const sd =
@@ -88,13 +89,15 @@ export function StrategyBuilder({
 
   return (
     <section className={cn("flex scroll-mt-20 flex-col rounded-card border border-rule bg-paper p-4 sm:p-5", className)} aria-labelledby="strategy-title">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
           <h2 id="strategy-title" className="text-sm leading-snug font-semibold">
             Build a strategy
           </h2>
           <p className="mt-0.5 text-[13px] text-ink-3">
-            {legs.length ? `${legs.length} ${legs.length === 1 ? "leg" : "legs"} in ${inst.symbol}, lots of ${lot}.` : "What it pays at expiry, and today."}
+            {legs.length
+              ? `${legs.length} ${legs.length === 1 ? "leg" : "legs"} in ${inst.symbol}, lots of ${lot}${oneExpiry != null ? `, expiring ${formatExpiry(new Date(oneExpiry))}` : ""}.`
+              : "What it pays at expiry, and today."}
           </p>
         </div>
         {legs.length > 0 && (
@@ -113,7 +116,7 @@ export function StrategyBuilder({
           </div>
         ) : (
           <>
-            <LegsList legs={legs} onChange={onLegsChange} />
+            <LegsList legs={legs} onChange={onLegsChange} showExpiry={oneExpiry == null} />
             <div>
               <div className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-2">
                 <span className="inline-flex items-center gap-1.5">

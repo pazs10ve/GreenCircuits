@@ -7,44 +7,17 @@ import { Move } from "@/components/parts/move"
 import { Tag } from "@/components/parts/tag"
 import type { IpoView } from "@/lib/data/ipos"
 import { cn } from "@/lib/utils"
+import { dayAfterVerb, dayWords, daysFrom, longDate, span, toMs, weekdays } from "./dates"
 
-const DAY = 86_400_000
-const toMs = (date: string) => Date.parse(`${date}T00:00:00Z`)
-const daysFrom = (today: string, date: string) => Math.round((toMs(date) - toMs(today)) / DAY)
-
-/** "today", "tomorrow", "on Wednesday" within a week, else "on 6 October". */
-export function dayWords(date: string, today: string): string {
-  const days = daysFrom(today, date)
-  if (days === 0) return "today"
-  if (days === 1) return "tomorrow"
-  if (days === -1) return "yesterday"
-  const format = days > 1 && days < 7 ? { weekday: "long" as const } : { day: "numeric" as const, month: "long" as const }
-  return `on ${new Intl.DateTimeFormat("en-IN", { ...format, timeZone: "UTC" }).format(toMs(date))}`
-}
-
-/** "tomorrow", "Wednesday", "6 October": the same without its "on", after a verb. */
-const dayAfterVerb = (date: string, today: string) => dayWords(date, today).replace(/^on /, "")
-
-const longDate = (date: string) => new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "long", timeZone: "UTC" }).format(toMs(date))
-const shortDate = (date: string) => new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", timeZone: "UTC" }).format(toMs(date))
-
-/** "24–26 Sept", or "30 Sept–2 Oct" across a month's end. */
-function span(from: string, to: string) {
-  return from.slice(0, 7) === to.slice(0, 7) ? `${Number(from.slice(8))}–${shortDate(to)}` : `${shortDate(from)}–${shortDate(to)}`
-}
 const rupees = (v: number) => `₹${formatNumber(v, v % 1 ? 2 : 0)}`
 const times = (v: number) => `${formatNumber(v, v >= 10 ? 1 : 2)}×`
 
 // ------------------------------------------------------------------ the next two weeks
 
-/** The next ten weekdays from today: the days an issue can open, close, allot or list. */
-function weekdays(today: string, n = 10): string[] {
-  const out: string[] = []
-  for (let t = toMs(today); out.length < n; t += DAY) {
-    const d = new Date(t)
-    if (d.getUTCDay() !== 0 && d.getUTCDay() !== 6) out.push(d.toISOString().slice(0, 10))
-  }
-  return out
+/** A lane of the calendar in words, for a screen reader: "bids open now, until tomorrow; allotted on Thursday; lists on 6 October". */
+function laneWords(ipo: IpoView, today: string) {
+  const bidding = ipo.status === "OPEN" ? `bids open now, until ${dayAfterVerb(ipo.close, today)}` : `bids from ${dayAfterVerb(ipo.open, today)} to ${dayAfterVerb(ipo.close, today)}`
+  return [bidding, ipo.allotment && `allotted ${dayWords(ipo.allotment, today)}`, ipo.listing && `lists ${dayWords(ipo.listing, today)}`].filter(Boolean).join("; ")
 }
 
 /**
@@ -76,7 +49,7 @@ export function IpoTimeline({ ipos, today }: { ipos: IpoView[]; today: string })
     <Section title="The next two weeks" description="Bidding runs from an issue's opening day to its close; shares are allotted a working day later and list about two days after that.">
       <div className="scrollbar-thin overflow-x-auto">
         <div className="min-w-[640px]">
-          <div className="grid grid-cols-[minmax(0,13rem)_minmax(0,1fr)] gap-4 pb-2.5">
+          <div className="grid grid-cols-[minmax(0,13rem)_minmax(0,1fr)] gap-4 pb-2.5" aria-hidden="true">
             <span />
             <div className="grid" style={grid}>
               {days.map((d) => (
@@ -90,7 +63,8 @@ export function IpoTimeline({ ipos, today }: { ipos: IpoView[]; today: string })
             {lanes.map(({ ipo, bidding, allot, list }) => (
               <li key={ipo.id} className="grid grid-cols-[minmax(0,13rem)_minmax(0,1fr)] items-center gap-4 border-t border-rule py-2">
                 <span className="truncate text-sm font-semibold">{ipo.name}</span>
-                <div className="grid h-7 items-center" style={grid}>
+                <span className="sr-only">{laneWords(ipo, today)}</span>
+                <div className="grid h-7 items-center" style={grid} aria-hidden="true">
                   {bidding && (
                     <span
                       className={cn(
@@ -179,7 +153,7 @@ function Subscription({ ipo }: { ipo: IpoView }) {
       </div>
       <ul className="space-y-2" aria-label="Times subscribed, by category">
         {rows.map((r) => (
-          <li key={r.label} className="grid grid-cols-[6.5rem_minmax(0,1fr)_3.25rem] items-center gap-2.5 text-[13px]">
+          <li key={r.label} className="grid grid-cols-[8rem_minmax(0,1fr)_3.25rem] items-center gap-2.5 text-[13px]">
             <span className={cn("truncate", r.label === "Overall" ? "font-semibold text-ink" : "text-ink-2")}>{r.label}</span>
             <span className="relative h-2 rounded-full bg-surface-2" aria-hidden="true">
               <span className={cn("absolute inset-y-0 left-0 rounded-full", r.label === "Overall" ? "bg-ink" : "bg-ink-3")} style={{ width: `${Math.min(1, r.times / max) * 100}%` }} />

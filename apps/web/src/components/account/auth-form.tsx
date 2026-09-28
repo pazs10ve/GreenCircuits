@@ -8,7 +8,7 @@ import { AccountError, safeNext, useAccountsAvailable, useSignIn, useSignUp, rel
 import { cn } from "@/lib/utils"
 
 const input =
-  "h-11 w-full rounded-md border border-rule bg-card px-3 text-[0.9375rem] outline-none transition-colors placeholder:text-ink-3 focus:border-ink-2 focus:ring-2 focus:ring-ring/25 aria-invalid:border-down"
+  "h-11 w-full rounded-control border border-rule-strong bg-paper px-3 text-[0.9375rem] outline-none transition-colors placeholder:text-ink-3 focus:border-ink-2 focus:ring-2 focus:ring-ring/25 aria-invalid:border-down"
 
 function Field({ label, hint, children }: { label: string; hint?: React.ReactNode; children: React.ReactNode }) {
   return (
@@ -37,7 +37,7 @@ export function AuthForm({ mode, next }: { mode: "signin" | "signup"; next?: str
 
   if (!available) {
     return (
-      <div className="rounded-lg border border-rule bg-card p-5 text-[0.9375rem] leading-relaxed text-ink-2">
+      <div className="text-sm leading-relaxed text-ink-2">
         <p>
           Accounts live on the backend, which is off in this demo. Everything you do here, from watchlists and alerts to your tests in the lab, is kept in this browser instead.
         </p>

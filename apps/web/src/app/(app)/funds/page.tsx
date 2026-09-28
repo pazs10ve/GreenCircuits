@@ -2,11 +2,15 @@ import type { Metadata } from "next"
 import { ETF_CATEGORIES, ETFS, TRUSTS, slugify } from "@greencircuits/market/catalog"
 import { FUND_CATEGORIES } from "@greencircuits/market/funds"
 import { PageHead } from "@/components/editorial/page-head"
+import { Section } from "@/components/editorial/section"
+import { CategoryTiles, FEATURED } from "@/components/funds/category-tiles"
 import { listedFundStatics } from "@/components/funds/data"
 import { FundsDirectory } from "@/components/funds/funds-directory"
+import { Leaders } from "@/components/funds/leaders"
+import { leaderOf } from "@/components/funds/returns"
 import { MutualFunds } from "@/components/funds/mutual-funds"
 import { SegmentedLinks } from "@/components/market/segmented-links"
-import { benchmarkReturns, getFundCategories, getSchemes } from "@/lib/data/funds"
+import { benchmarkReturns, getFundCategories, getSchemes, type SchemeRow } from "@/lib/data/funds"
 import { getUniverse } from "@/lib/data/universe"
 
 export const metadata: Metadata = {
@@ -41,8 +45,25 @@ export default async function FundsPage({ searchParams }: PageProps<"/funds">) {
     const wanted = one(params.category)
     const known = ORDER.filter((c) => categories.some((x) => x.category === c))
     const category = known.find((c) => slugify(c) === wanted) ?? (known.includes("Flexi cap") ? "Flexi cap" : known[0]!)
-    const [schemes, benchmark] = await Promise.all([getSchemes(category), benchmarkReturns(category)])
-    body = <MutualFunds categories={categories} category={category} schemes={schemes} benchmark={benchmark} real={source === "api"} />
+    const featured = FEATURED.filter((c) => categories.some((x) => x.category === c))
+    const [schemes, benchmark, ...others] = await Promise.all([getSchemes(category), benchmarkReturns(category), ...featured.map((c) => getSchemes(c))])
+    const leaders = featured.flatMap((c, i) => leaderOf(c, others[i] as SchemeRow[]) ?? [])
+    body = (
+      <>
+        <CategoryTiles categories={categories} selected={category} />
+        <MutualFunds categories={categories} category={category} schemes={schemes} benchmark={benchmark} real={source === "api"} />
+        {leaders.length > 1 && (
+          <Section
+            className="mt-5"
+            title="Leaders"
+            hint="the best fund in each main category"
+            description="Picked on the return a year over five years, or three where most of a category is younger. Past returns don't predict future ones."
+          >
+            <Leaders leaders={leaders} />
+          </Section>
+        )}
+      </>
+    )
   } else {
     const universe = await getUniverse()
     const holds = one(params.holds)

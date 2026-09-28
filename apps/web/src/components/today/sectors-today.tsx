@@ -18,7 +18,7 @@ export function SectorsToday() {
     [read],
   )
   return (
-    <ul className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+    <ul className="grid grid-cols-3 gap-1.5">
       {sectors.map((s) => {
         const { bg, fg } = heat(s.changePct, 2.2)
         return (

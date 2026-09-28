@@ -4,14 +4,16 @@ import { formatNumber } from "@greencircuits/market/format"
 import { dailyCandles, sparkline } from "@greencircuits/market/history"
 import { COMMODITY_GROUPS } from "@greencircuits/market/reference"
 import type { Instrument } from "@greencircuits/market/types"
-import { CommodityTiles } from "@/components/commodities/commodity-tiles"
-import { commodityName, unitWords } from "@/components/commodities/units"
+import { CommodityTiles, type Currency } from "@/components/commodities/commodity-tiles"
+import { GoldSilver } from "@/components/commodities/gold-silver"
+import { commodityName, inDollarTerms, unitWords } from "@/components/commodities/units"
 import { YearBars } from "@/components/commodities/year-bars"
 import { KeyStats } from "@/components/company/key-stats"
 import { PricePanel } from "@/components/company/price-panel"
 import { PageHead } from "@/components/editorial/page-head"
 import { Panel } from "@/components/editorial/panel"
 import { Section } from "@/components/editorial/section"
+import { SegmentedLinks } from "@/components/market/segmented-links"
 import { WatchButton } from "@/components/market/watch-button"
 import { Tag } from "@/components/parts/tag"
 import { getFeed } from "@/lib/data/market"
@@ -37,6 +39,8 @@ const DRIVERS: Record<string, string> = {
     "Smelting it takes a great deal of electricity, so power prices matter as much as demand from cars, packaging and building. China makes more than half the world's supply.",
 }
 
+const USDINR = 400
+
 function one(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value
 }
@@ -44,6 +48,7 @@ function one(value: string | string[] | undefined): string | undefined {
 export default async function CommoditiesPage({ searchParams }: PageProps<"/commodities">) {
   const params = await searchParams
   const inst = COMMODITIES.find((c) => c.slug === one(params.c)?.toLowerCase()) ?? COMMODITIES[0]!
+  const currency: Currency = one(params.in) === "usd" ? "usd" : "inr"
   const [universe, feed] = await Promise.all([getUniverse(), getFeed()])
   const real = feed.dataset === "real"
 
@@ -61,17 +66,48 @@ export default async function CommoditiesPage({ searchParams }: PageProps<"/comm
   const price = (id: number) => feed.quotes?.find((q) => q.id === id)?.ltp ?? getInstrument(id)?.prevClose ?? 0
   const yearAgo = (i: Instrument) => (universe ? (rows.get(i.id)?.yearAgo ?? null) : dailyCandles(i, 251)[0]!.close)
   const nifty = getInstrument(INDEX.NIFTY)!
+  // In dollars, each year is seen through the rupee's own year against the dollar.
+  const usdinr = getInstrument(USDINR)!
+  const fxThen = yearAgo(usdinr)
+  const inUsd = currency === "usd" && fxThen != null
   const year = [...COMMODITIES.map((c) => ({ inst: c, bench: false })), { inst: nifty, bench: true }].flatMap(({ inst: i, bench }) => {
     const then = yearAgo(i)
-    return then ? [{ id: i.id, name: bench ? i.name : commodityName(i), href: bench ? hrefOf(i) : `/commodities?c=${i.slug}`, pct: (price(i.id) / then - 1) * 100, bench }] : []
+    if (!then) return []
+    const pct = (price(i.id) / then - 1) * 100
+    return [
+      {
+        id: i.id,
+        name: bench ? i.name : commodityName(i),
+        href: bench ? hrefOf(i) : `/commodities?c=${i.slug}${currency === "usd" ? "&in=usd" : ""}`,
+        pct: inUsd ? inDollarTerms(pct, fxThen, price(USDINR)) : pct,
+        bench,
+      },
+    ]
   })
   const group = Object.entries(COMMODITY_GROUPS).find(([, symbols]) => symbols.includes(inst.symbol))?.[0]
   const lotUnit = inst.symbol === "GOLD" ? "kilogram" : inst.symbol === "CRUDEOIL" ? "barrels" : inst.symbol === "NATURALGAS" ? "mmBtu" : "kilograms"
 
   return (
     <div className="page pt-6 pb-10">
-      <PageHead title="Commodities" lede={real ? "COMEX and NYMEX futures in rupees, in MCX's units · change today" : "Simulated prices, quoted the way MCX quotes them · change today"} />
-      <CommodityTiles sparks={sparks} selected={inst.id} />
+      <PageHead
+        title="Commodities"
+        lede={[
+          real ? "COMEX and NYMEX futures" : "Simulated prices",
+          currency === "usd" ? "in dollars, by the unit quoted abroad" : "in rupees, in MCX's units",
+          "change today",
+        ].join(" · ")}
+        actions={
+          <SegmentedLinks
+            aria-label="Currency"
+            current={currency}
+            options={[
+              { value: "inr", label: "₹", href: `/commodities?c=${inst.slug}` },
+              { value: "usd", label: "$", href: `/commodities?c=${inst.slug}&in=usd` },
+            ]}
+          />
+        }
+      />
+      <CommodityTiles sparks={sparks} selected={inst.id} currency={currency} />
 
       <div className="mt-5 grid gap-5 lg:grid-cols-12">
         <Panel aria-label={`${inst.name} price`} className="lg:col-span-8">
@@ -80,6 +116,7 @@ export default async function CommoditiesPage({ searchParams }: PageProps<"/comm
               <h2 className="text-sm font-semibold">{commodityName(inst)}</h2>
               <Tag>{unitWords(inst)}</Tag>
               {group && <Tag>{group}</Tag>}
+              {currency === "usd" && <span className="text-xs text-ink-3">The chart stays in rupees</span>}
             </div>
             <WatchButton instrumentId={inst.id} />
           </div>
@@ -98,10 +135,16 @@ export default async function CommoditiesPage({ searchParams }: PageProps<"/comm
           </div>
         </Section>
         {year.length > 1 && (
-          <Section title="A year, against shares" description="Each one's change in price over the past year, in rupees, beside the Nifty 50's." className="lg:col-span-12">
+          <Section
+            title="A year, against shares"
+            hint={inUsd ? "in dollars" : undefined}
+            description={`Each one's change in price over the past year, in ${inUsd ? "dollars" : "rupees"}, beside the Nifty 50's.`}
+            className="lg:col-span-8"
+          >
             <YearBars rows={year} />
           </Section>
         )}
+        <GoldSilver className={year.length > 1 ? "lg:col-span-4" : "lg:col-span-12"} />
       </div>
       <p className="mt-6 text-xs text-ink-3">
         {real

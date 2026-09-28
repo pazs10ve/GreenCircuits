@@ -25,7 +25,7 @@ export function PresetPicker({ onPick, disabled }: { onPick: (key: PresetKey) =>
 }
 
 /** Editable list of legs: side, lots, strike and type, expiry, entry price. */
-export function LegsList({ legs, onChange }: { legs: StrategyLeg[]; onChange: (legs: StrategyLeg[]) => void }) {
+export function LegsList({ legs, onChange, showExpiry = true }: { legs: StrategyLeg[]; onChange: (legs: StrategyLeg[]) => void; showExpiry?: boolean }) {
   const update = (id: string, patch: Partial<StrategyLeg>) => onChange(legs.map((l) => (l.id === id ? { ...l, ...patch } : l)))
 
   return (
@@ -79,7 +79,7 @@ export function LegsList({ legs, onChange }: { legs: StrategyLeg[]; onChange: (l
               <span className="min-w-0 truncate text-xs">
                 <span className="num font-medium">{formatNumber(l.strike, 0)}</span>{" "}
                 <span className="font-medium">{l.type}</span>
-                <span className="num text-ink-3"> · {formatDateIST(l.expiry, "short")}</span>
+                {showExpiry && <span className="num text-ink-3"> · {formatDateIST(l.expiry, "short")}</span>}
               </span>
               <span className="num text-right text-xs">{formatPrice(l.entry)}</span>
               <Button

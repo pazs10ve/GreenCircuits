@@ -66,6 +66,8 @@ export function PayoffChart({
   const yMax = Math.max(Math.ceil(hi / yStep) * yStep, yMin + yStep)
   const plotW = Math.max(1, width - PAD.l - PAD.r)
   const plotH = height - PAD.t - PAD.b
+  // A label near either edge is anchored to it, so it isn't cut off by the card.
+  const anchorAt = (x: number) => (x > width - PAD.r - 24 ? "end" : x < PAD.l + 24 ? "start" : "middle")
   const X = (v: number) => PAD.l + ((v - xMin) / (xMax - xMin || 1)) * plotW
   const Y = (v: number) => PAD.t + ((yMax - v) / (yMax - yMin || 1)) * plotH
   const zeroY = Y(0)
@@ -143,13 +145,13 @@ export function PayoffChart({
             <g key={b}>
               <line x1={X(b)} x2={X(b)} y1={zeroY} y2={height - PAD.b} stroke="var(--primary)" strokeOpacity={0.5} />
               <circle cx={X(b)} cy={zeroY} r={3.5} fill="var(--card)" stroke="var(--primary)" strokeWidth={1.5} />
-              <text x={X(b)} y={height - 7} textAnchor="middle" className="num fill-ink text-[11px] font-medium">
+              <text x={X(b)} y={height - 7} textAnchor={anchorAt(X(b))} className="num fill-ink text-[11px] font-medium">
                 {formatNumber(b, 0)}
               </text>
             </g>
           ))}
           {xTicks.map((v) => (
-            <text key={v} x={X(v)} y={height - 7} textAnchor="middle" className="num fill-ink-3 text-[11px]">
+            <text key={v} x={X(v)} y={height - 7} textAnchor={anchorAt(X(v))} className="num fill-ink-3 text-[11px]">
               {formatNumber(v, 0)}
             </text>
           ))}

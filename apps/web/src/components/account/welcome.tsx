@@ -16,14 +16,16 @@ export function Welcome({ next }: { next?: string }) {
 
   return (
     <div>
-      <h1 className="font-serif text-[1.875rem] leading-[1.08] font-semibold tracking-[-0.02em] md:text-[2.5rem]">
+      <h1 className="font-serif text-[1.75rem] leading-[1.1] font-semibold tracking-[-0.02em] md:text-[1.875rem]">
         {me?.name ? `Welcome, ${me.name.split(" ")[0]}` : "Welcome"}
       </h1>
-      <p className="mt-3 mb-10 max-w-[36rem] text-[1.0625rem] leading-relaxed text-ink-2">
-        Your account is ready, with everything you&apos;d made in this browser. Tell us how you invest, and your feed will put what matters to you first. You can change this any time.
+      <p className="mt-1.5 mb-5 max-w-[40rem] text-[13px] leading-relaxed text-ink-3">
+        Your account is ready, with everything you&apos;d made in this browser. Say how you invest and the feed puts what matters to you first; you can change it any time.
       </p>
-      <FeedPreferencesFields value={prefs} onChange={setValue} />
-      <div className="mt-10 flex flex-wrap items-center gap-3">
+      <div className="rounded-card border border-rule bg-paper p-5">
+        <FeedPreferencesFields value={prefs} onChange={setValue} />
+      </div>
+      <div className="mt-5 flex flex-wrap items-center gap-3">
         <Button size="lg" disabled={update.isPending} onClick={async () => (await update.mutateAsync({ preferences: prefs }).catch(() => null)) && go()}>
           {update.isPending ? "Saving…" : "Continue"}
         </Button>

@@ -3,24 +3,32 @@
 import Link from "next/link"
 import { COMMODITIES } from "@greencircuits/market/catalog"
 import { COMMODITY_GROUPS } from "@greencircuits/market/reference"
+import { formatNumber } from "@greencircuits/market/format"
 import type { Instrument } from "@greencircuits/market/types"
 import { Price } from "@/components/market/price"
 import { Sparkline } from "@/components/market/sparkline"
 import { LiveMove } from "@/components/parts/live-move"
+import { Move } from "@/components/parts/move"
 import { withLive } from "@/components/stocks/derive"
 import { useQuote } from "@/lib/stream/hooks"
 import { useMarket } from "@/lib/stream/market-context"
 import { cn } from "@/lib/utils"
-import { commodityName, unitWords } from "./units"
+import { commodityName, inDollarTerms, inDollars, unitWords } from "./units"
 
 const ORDER = Object.values(COMMODITY_GROUPS).flat()
 
-function Tile({ inst, spark, selected }: { inst: Instrument; spark: number[]; selected: boolean }) {
+export type Currency = "inr" | "usd"
+
+const USDINR = 400
+
+function Tile({ inst, spark, selected, currency }: { inst: Instrument; spark: number[]; selected: boolean; currency: Currency }) {
   const q = useQuote(inst.id)
+  const fx = useQuote(USDINR)
   const { dataset } = useMarket()
+  const dollars = currency === "usd" && q ? inDollars(inst, q.ltp, fx?.ltp) : null
   return (
     <Link
-      href={`/commodities?c=${inst.slug}`}
+      href={`/commodities?c=${inst.slug}${currency === "usd" ? "&in=usd" : ""}`}
       scroll={false}
       aria-current={selected ? "true" : undefined}
       className={cn(
@@ -30,13 +38,26 @@ function Tile({ inst, spark, selected }: { inst: Instrument; spark: number[]; se
     >
       <span className="flex min-w-0 items-center justify-between gap-2">
         <span className={cn("truncate text-xs", selected ? "font-semibold text-ink" : "text-ink-3 group-hover:text-ink-2")}>{commodityName(inst)}</span>
-        <LiveMove id={inst.id} />
+        {/* In dollars, the day's move is seen through the rupee's move too. */}
+        {dollars && q && fx ? <Move value={inDollarTerms(q.changePct, fx.prevClose, fx.ltp)} /> : <LiveMove id={inst.id} />}
       </span>
-      <span className="figure text-[1.375rem] leading-none">
-        <span className="mr-0.5 text-[0.6em] text-ink-3">₹</span>
-        <Price value={q?.ltp} tick={inst.tick} />
-      </span>
-      <span className="-mt-1 truncate text-[11px] text-ink-3">{unitWords(inst).replace("₹ per ", "per ")}</span>
+      {dollars ? (
+        <>
+          <span className="figure text-[1.375rem] leading-none">
+            <span className="mr-0.5 text-[0.6em] text-ink-3">$</span>
+            {formatNumber(dollars.value, dollars.value >= 1000 ? 0 : 2)}
+          </span>
+          <span className="-mt-1 truncate text-[11px] text-ink-3">{dollars.per}</span>
+        </>
+      ) : (
+        <>
+          <span className="figure text-[1.375rem] leading-none">
+            <span className="mr-0.5 text-[0.6em] text-ink-3">₹</span>
+            <Price value={q?.ltp} tick={inst.tick} />
+          </span>
+          <span className="-mt-1 truncate text-[11px] text-ink-3">{unitWords(inst).replace("₹ per ", "per ")}</span>
+        </>
+      )}
       {/* Stretched to the tile's width: the line's shape matters, not its scale. */}
       <Sparkline data={withLive(spark, q?.ltp, dataset === "real")} width={160} height={26} className="mt-auto h-[26px] w-full" />
     </Link>
@@ -44,12 +65,12 @@ function Tile({ inst, spark, selected }: { inst: Instrument; spark: number[]; se
 }
 
 /** Every commodity as a tile with its live price and its last month as a line; the tiles pick which one fills the page below. */
-export function CommodityTiles({ sparks, selected }: { sparks: Record<number, number[]>; selected: number }) {
+export function CommodityTiles({ sparks, selected, currency = "inr" }: { sparks: Record<number, number[]>; selected: number; currency?: Currency }) {
   const shown = [...COMMODITIES].filter((c) => sparks[c.id]).sort((a, b) => ORDER.indexOf(a.symbol) - ORDER.indexOf(b.symbol))
   return (
     <nav aria-label="Commodities" className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7 lg:gap-4">
       {shown.map((inst) => (
-        <Tile key={inst.id} inst={inst} spark={sparks[inst.id]!} selected={inst.id === selected} />
+        <Tile key={inst.id} inst={inst} spark={sparks[inst.id]!} selected={inst.id === selected} currency={currency} />
       ))}
     </nav>
   )

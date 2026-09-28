@@ -2,11 +2,11 @@ import { formatNumber } from "@greencircuits/market/format"
 import type { SchemeRow } from "@/lib/data/funds"
 import { cn } from "@/lib/utils"
 import { median, type Period } from "./returns"
+import { swarm } from "./swarm"
 
 const pct = (v: number) => `${formatNumber(v, 1)}%`
 
-/** Lanes a dot may take, nearest the middle first, and how far apart they sit. */
-const LANES = [0, -1, 1, -2, 2, -3, 3]
+/** How far apart the lanes sit. */
 const PITCH = 8
 /** How close two dots in a lane may come, as a share of the width. */
 const GAP = 0.009
@@ -40,15 +40,13 @@ export function CategoryStrip({ schemes, period, index }: { schemes: SchemeRow[]
   const pad = (hi - lo || 1) * 0.03
   const X = (v: number) => (v - (lo - pad)) / (hi - lo + 2 * pad)
 
-  // A light beeswarm: each dot takes the first lane with room, so a crowd spreads up and down instead of piling up.
-  const last = new Map<number, number>()
-  const placed = dots.map((d) => {
-    const x = X(d.v)
-    const lane = LANES.find((l) => (last.get(l) ?? -1) < x - GAP) ?? LANES.reduce((a, b) => (last.get(a)! <= last.get(b)! ? a : b))
-    last.set(lane, x)
-    return { ...d, x, lane }
-  })
-  const swarm = (Math.max(...placed.map((p) => Math.abs(p.lane))) * 2 + 1) * PITCH + 10
+  const lanes = swarm(
+    dots.map((d) => X(d.v)),
+    GAP,
+  )
+  const placed = dots.map((d, i) => ({ ...d, x: X(d.v), lane: lanes[i]! }))
+  // The band the dots sit in: as tall as the lanes they took.
+  const band = (Math.max(...placed.map((p) => Math.abs(p.lane))) * 2 + 1) * PITCH + 10
   const beat = bench != null ? dots.filter((d) => d.v > bench).length : null
   const at = (v: number) => ({ left: `${X(v) * 100}%` })
 
@@ -56,13 +54,13 @@ export function CategoryStrip({ schemes, period, index }: { schemes: SchemeRow[]
     <figure>
       <div
         className="relative"
-        style={{ height: HEAD + swarm }}
+        style={{ height: HEAD + band }}
         role="img"
         aria-label={`${dots.length} funds, ${period.per.toLowerCase()}: the typical one ${pct(typical)}${bench != null ? `, the ${index!.name} ${pct(bench)}, and ${beat} funds beat it` : ""}`}
       >
         {bench != null && <span className="absolute bottom-0 w-[1.5px] -translate-x-1/2 bg-bench" style={{ ...at(bench), top: 12 }} />}
         <span className="absolute bottom-0 w-[1.5px] -translate-x-1/2 bg-ink" style={{ ...at(typical), top: 29 }} />
-        <div className="absolute inset-x-0 bottom-0" style={{ height: swarm }}>
+        <div className="absolute inset-x-0 bottom-0" style={{ height: band }}>
           {placed.map((p) => (
             <span
               key={p.code}
@@ -71,7 +69,7 @@ export function CategoryStrip({ schemes, period, index }: { schemes: SchemeRow[]
                 "absolute size-[7px] -translate-x-1/2 -translate-y-1/2 rounded-full",
                 bench == null ? "bg-ink-3/60" : p.v > bench ? "bg-ink" : "bg-rule-strong",
               )}
-              style={{ left: `${p.x * 100}%`, top: swarm / 2 + p.lane * PITCH }}
+              style={{ left: `${p.x * 100}%`, top: band / 2 + p.lane * PITCH }}
             />
           ))}
         </div>

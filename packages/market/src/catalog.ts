@@ -51,7 +51,7 @@ const indexRows: Omit<Instrument, "slug">[] = [
   { id: INDEX.NIFTYIT, symbol: "NIFTY IT", name: "Nifty IT", exchange: "NSE", kind: "INDEX", prevClose: level(INDEX.NIFTYIT, 36542.35), vol: 0.2, beta: 0.8, tick: 0.05, avgVolume: 0 },
   { id: INDEX.MIDCAP, symbol: "NIFTY MIDCAP 100", name: "Nifty Midcap 100", exchange: "NSE", kind: "INDEX", prevClose: level(INDEX.MIDCAP, 57418.9), vol: 0.17, beta: 1.15, tick: 0.05, avgVolume: 0 },
   { id: INDEX.FINNIFTY, symbol: "FIN NIFTY", name: "Nifty Financial Services", exchange: "NSE", kind: "INDEX", prevClose: level(INDEX.FINNIFTY, 26482.75), vol: 0.14, beta: 1.05, tick: 0.05, avgVolume: 0, lot: 60, isFo: true },
-  { id: INDEX.VIX, symbol: "INDIA VIX", name: "India VIX", exchange: "NSE", kind: "INDEX", prevClose: level(INDEX.VIX, 11.92), vol: 0.75, beta: -4, tick: 0.0025, avgVolume: 0 },
+  { id: INDEX.VIX, symbol: "INDIA VIX", name: "India VIX", exchange: "NSE", kind: "INDEX", prevClose: level(INDEX.VIX, 11.92), vol: 0.75, beta: -4, tick: 0.01, avgVolume: 0 },
   { id: INDEX.NEXT50, symbol: "NIFTY NEXT 50", name: "Nifty Next 50", exchange: "NSE", kind: "INDEX", prevClose: level(INDEX.NEXT50, 68500), vol: 0.17, beta: 1.1, tick: 0.05, avgVolume: 0 },
   { id: INDEX.NIFTY500, symbol: "NIFTY 500", name: "Nifty 500", exchange: "NSE", kind: "INDEX", prevClose: level(INDEX.NIFTY500, 22800), vol: 0.14, beta: 1.02, tick: 0.05, avgVolume: 0 },
   { id: INDEX.MIDCAP150, symbol: "NIFTY MIDCAP 150", name: "Nifty Midcap 150", exchange: "NSE", kind: "INDEX", prevClose: level(INDEX.MIDCAP150, 22000), vol: 0.17, beta: 1.15, tick: 0.05, avgVolume: 0 },

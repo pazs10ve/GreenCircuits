@@ -49,7 +49,7 @@ export function InstrumentHeader({
         <div className="mt-2 flex items-center gap-3.5">
           <Monogram text={letters} size={48} />
           <div className="min-w-0">
-            <h1 className="truncate font-serif text-[1.75rem] leading-[1.1] font-semibold tracking-[-0.02em] md:text-[1.875rem]">{inst.name}</h1>
+            <h1 className="line-clamp-2 font-serif text-[1.625rem] leading-[1.1] font-semibold tracking-[-0.02em] text-balance sm:line-clamp-1 sm:text-[1.75rem] md:text-[1.875rem]">{inst.name}</h1>
             <div className="mt-1.5 flex flex-wrap gap-1.5">{tags}</div>
           </div>
         </div>

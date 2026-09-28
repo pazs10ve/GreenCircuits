@@ -28,7 +28,7 @@ export function MutualFunds({
   const period = [PERIODS[2], PERIODS[1], PERIODS[0]].find((p) => returnsOf(schemes, p.key).length >= Math.max(3, schemes.length / 2)) ?? PERIODS[0]
 
   return (
-    <div className="mt-6 grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[15rem_minmax(0,1fr)]">
+    <div className="mt-5 grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[15rem_minmax(0,1fr)]">
       <nav
         aria-label="Fund categories"
         className="scrollbar-thin min-w-0 rounded-card border border-rule bg-paper p-2 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:self-start lg:overflow-y-auto"

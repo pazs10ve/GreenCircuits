@@ -14,7 +14,7 @@ import { usePreferences } from "@/lib/stores/preferences"
 import { FeedPreferencesFields } from "./feed-preferences"
 
 const input =
-  "h-10 w-full max-w-sm rounded-md border border-rule bg-card px-3 text-[0.9375rem] outline-none transition-colors focus:border-ink-2 focus:ring-2 focus:ring-ring/25"
+  "h-10 w-full max-w-sm rounded-control border border-rule-strong bg-paper px-3 text-[0.9375rem] outline-none transition-colors focus:border-ink-2 focus:ring-2 focus:ring-ring/25"
 
 const since = (iso: string) => new Intl.DateTimeFormat("en-IN", { month: "long", year: "numeric", timeZone: "Asia/Kolkata" }).format(new Date(iso))
 

@@ -19,9 +19,10 @@ export function StrategySummary({ m, isIndex }: { m: StrategyMetrics; isIndex: b
   const credit = m.netPremium >= 0
   const rate = Math.round(shortMarginRate(isIndex) * 100)
   const be = m.breakevens.map((b) => formatNumber(b, isIndex ? 0 : 1)).join(" · ")
-  const rows: { label: React.ReactNode; value: string; tone?: "up" | "down"; title?: string }[] = [
+  const rows: { label: React.ReactNode; value: string; tone?: "up" | "down"; title?: string; wide?: boolean }[] = [
+    // Two breakevens need the whole line.
+    { label: m.breakevens.length === 1 ? "Breakeven" : "Breakevens", value: be || "None", wide: m.breakevens.length > 1 },
     { label: credit ? "Net credit" : "Net debit", value: formatINR(Math.abs(m.netPremium), 0), title: credit ? "Premium received" : "Premium paid" },
-    { label: m.breakevens.length === 1 ? "Breakeven" : "Breakevens", value: be || "None" },
     { label: "Reward / risk", value: m.rewardRisk == null ? "–" : formatNumber(m.rewardRisk, 2) },
     { label: "Chance of profit", value: m.pop == null ? "–" : `${formatNumber(m.pop * 100, 0)}%`, title: "Lognormal, at the at-the-money volatility" },
     {
@@ -64,9 +65,9 @@ export function StrategySummary({ m, isIndex }: { m: StrategyMetrics; isIndex: b
           tone={Number.isFinite(m.maxLoss) ? toneOf(Math.round(m.maxLoss)) : "down"}
         />
       </dl>
-      <dl className="grid grid-cols-2 gap-x-4 rounded-panel bg-panel px-3 py-0.5">
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-0.5 rounded-panel bg-panel px-3 py-2">
         {rows.map((r, i) => (
-          <div key={i} className="flex min-w-0 items-baseline justify-between gap-2 border-b border-rule py-2 [&:nth-last-child(-n+2)]:border-b-0" title={r.title}>
+          <div key={i} className={cn("flex min-w-0 items-baseline justify-between gap-2 py-1", r.wide && "col-span-2")} title={r.title}>
             <dt className="truncate text-xs text-ink-3">{r.label}</dt>
             <dd className={cn("num text-[13px] font-semibold whitespace-nowrap", r.tone === "up" && "text-up", r.tone === "down" && "text-down")}>{r.value}</dd>
           </div>

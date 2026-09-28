@@ -10,6 +10,7 @@ import { useMarket } from "@/lib/stream/market-context"
 import { Figure } from "@/components/editorial/figures"
 import { RangeMarker } from "@/components/parts/range-marker"
 import { ShareBar } from "@/components/parts/share-bar"
+import { usualDailyMove } from "./year-stats"
 
 /** The figures that don't move with the price, worked out on the server. */
 export interface StaticStats {
@@ -43,15 +44,11 @@ export function KeyStats({ id, stats }: { id: number; stats: StaticStats }) {
     const bars = mode === "live" ? daily.data : dailyCandles(inst, 250)
     if (!bars?.length) return null
     const extremes = bars.flatMap((b) => [b.high, b.low])
-    // How far it usually moves in a day: the spread of the year's daily changes.
-    const changes = bars.slice(1).map((b, i) => Math.log(b.close / bars[i]!.close))
-    const mean = changes.reduce((s, c) => s + c, 0) / Math.max(1, changes.length)
-    const spread = Math.sqrt(changes.reduce((s, c) => s + (c - mean) ** 2, 0) / Math.max(1, changes.length - 1))
     return {
       high: Math.max(...extremes, q?.high ?? 0),
       low: Math.min(...extremes, q?.low ?? Infinity),
       first: bars[0]!.close,
-      usual: changes.length >= 20 ? spread * 100 : null,
+      usual: usualDailyMove(bars.map((b) => b.close)),
       full: bars.length >= 240,
     }
   }, [mode, daily.data, inst, q?.high, q?.low])

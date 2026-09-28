@@ -28,3 +28,20 @@ export function ordinal(n: number) {
   if (tens >= 11 && tens <= 13) return `${n}th`
   return `${n}${["th", "st", "nd", "rd"][n % 10] ?? "th"}`
 }
+
+export interface Leader {
+  category: string
+  scheme: SchemeRow
+  /** The span the leader was picked on: five years where most of the category has them, else three. */
+  key: "y5" | "y3"
+  /** The typical fund's return over that span. */
+  typical: number | null
+}
+
+/** The fund with the best return in a category over the longest span most of it has lived through; null with too few. */
+export function leaderOf(category: string, schemes: SchemeRow[]): Leader | null {
+  const key = returnsOf(schemes, "y5").length >= Math.max(3, schemes.length / 2) ? "y5" : "y3"
+  const ranked = schemes.filter((s) => s[key] != null).sort((a, b) => b[key]! - a[key]!)
+  if (ranked.length < 3) return null
+  return { category, scheme: ranked[0]!, key, typical: median(returnsOf(schemes, key)) }
+}
