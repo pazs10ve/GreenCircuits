@@ -16,23 +16,19 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
-import { getInstrument } from "@greencircuits/market/catalog"
+import { getInstrument, hrefOf } from "@greencircuits/market/catalog"
 import { formatNumber, formatPct } from "@greencircuits/market/format"
 import type { Quote } from "@greencircuits/market/types"
 import { useQuoteReader, useSession } from "@/lib/stream/hooks"
 import { useWatchlists, type Watchlist } from "@/lib/stores/watchlists"
+import { heat } from "@/components/parts/heat"
+import { HeatScale } from "@/components/parts/heat-scale"
+import { Move } from "@/components/parts/move"
 import { cn } from "@/lib/utils"
 import { DeleteListDialog, ListNameDialog } from "./list-dialogs"
 import { WatchlistTable } from "./watchlist-table"
 
 /** A tile's colour: green or red, stronger the bigger the day's move (3% is full strength). */
-function heatColor(pct: number | undefined): string {
-  if (pct == null) return "var(--surface)"
-  const x = Math.max(-1, Math.min(1, pct / 3))
-  const strength = Math.round(12 + Math.abs(x) * 50)
-  return `color-mix(in oklch, ${x >= 0 ? "var(--up)" : "var(--down)"} ${strength}%, var(--paper))`
-}
-
 function avgChange(list: Watchlist, read: (id: number) => Quote | undefined): number | undefined {
   const qs = list.ids.map((id) => read(id)).filter((q) => q != null)
   if (qs.length === 0) return undefined
@@ -79,11 +75,10 @@ export function WatchlistsView() {
 
   const when = closed ?? "today"
   const lede = !active
-    ? "No watchlists yet. Make one to follow companies, indices, commodities and currencies side by side."
+    ? "No watchlists yet"
     : !summary
-      ? `${active.name} is empty. Add companies, indices, commodities or currencies to follow them here.`
-      : `${active.name}: ${summary.adv} of ${summary.rows.length} ${closed ? "closed" : "are"} higher ${when}, ${formatNumber(Math.abs(summary.avg), 1)}% ${summary.avg >= 0 ? "up" : "down"} on average. ` +
-        `${summary.best.inst.name} did best, ${formatPct(summary.best.q!.changePct)}, and ${summary.worst.inst.name} worst, ${formatPct(summary.worst.q!.changePct)}.`
+      ? `${lists.length} ${lists.length === 1 ? "list" : "lists"} · ${active.name} is empty`
+      : `${active.name}: ${summary.adv} of ${summary.rows.length} ${closed ? "closed" : "are"} higher ${when}, ${formatNumber(Math.abs(summary.avg), 1)}% ${summary.avg >= 0 ? "up" : "down"} on average`
 
   return (
     <>
@@ -101,7 +96,7 @@ export function WatchlistsView() {
       />
 
       {/* Small screens: the lists as a row of tabs. */}
-      <div className="no-scrollbar -mx-5 mt-8 overflow-x-auto px-5 lg:hidden">
+      <div className="no-scrollbar -mx-(--gutter) mt-5 overflow-x-auto px-(--gutter) lg:hidden">
         <ul className="flex min-w-max gap-5 border-b border-rule">
           {lists.map((l) => (
             <li key={l.id}>
@@ -121,10 +116,10 @@ export function WatchlistsView() {
         </ul>
       </div>
 
-      <div className="mt-8 grid grid-cols-[minmax(0,1fr)] gap-x-12 gap-y-10 lg:mt-12 lg:grid-cols-[15rem_minmax(0,1fr)]">
-        <nav aria-label="Your lists" className="hidden self-start lg:block">
-          <h2 className="border-b border-ink pb-2 text-sm font-semibold">Your lists</h2>
-          <ul className="divide-y divide-rule border-b border-rule">
+      <div className="mt-5 grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[16rem_minmax(0,1fr)]">
+        <nav aria-label="Your lists" className="hidden self-start rounded-card border border-rule bg-paper p-2 lg:block">
+          <h2 className="px-2 pt-1.5 pb-2 text-sm font-semibold">Your lists</h2>
+          <ul className="space-y-0.5">
             {lists.map((l) => {
               const avg = avgChange(l, read)
               const selected = l.id === active?.id
@@ -134,15 +129,15 @@ export function WatchlistsView() {
                     type="button"
                     onClick={() => setActive(l.id)}
                     aria-current={selected ? "true" : undefined}
-                    className={cn("flex w-full flex-col py-3 pr-9 text-left", selected && "-mx-2 w-[calc(100%+1rem)] bg-surface px-2 pr-11")}
+                    className={cn("flex w-full items-center gap-2 rounded-panel py-2.5 pr-10 pl-2 text-left transition-colors hover:bg-panel", selected && "bg-panel")}
                   >
-                    <span className={cn("truncate text-[0.9375rem] group-hover:underline group-hover:decoration-1 group-hover:underline-offset-4", selected ? "font-semibold" : "font-medium")}>
-                      {l.name}
+                    <span className="min-w-0 flex-1">
+                      <span className={cn("block truncate text-sm", selected ? "font-semibold" : "font-medium")}>{l.name}</span>
+                      <span className="num block text-xs text-ink-3">
+                        {l.ids.length} {l.ids.length === 1 ? "name" : "names"}
+                      </span>
                     </span>
-                    <span className="num text-sm text-ink-3">
-                      {l.ids.length} {l.ids.length === 1 ? "name" : "names"}
-                      {avg != null && <span className={cn("ml-1.5", avg > 0 ? "text-up" : avg < 0 ? "text-down" : "")}>{formatPct(avg)}</span>}
-                    </span>
+                    {avg != null && <Move value={avg} />}
                   </button>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -150,7 +145,7 @@ export function WatchlistsView() {
                         variant="ghost"
                         size="icon-sm"
                         aria-label={`Options for ${l.name}`}
-                        className="absolute top-1/2 right-0 -translate-y-1/2 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
+                        className="absolute top-1/2 right-1 -translate-y-1/2 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
                       >
                         <MoreHorizontal />
                       </Button>
@@ -171,7 +166,7 @@ export function WatchlistsView() {
           </ul>
         </nav>
 
-        <div className="min-w-0 space-y-14">
+        <div className="min-w-0 space-y-5">
           {!active ? (
             <Empty className="border-y border-rule py-16">
               <EmptyHeader>
@@ -189,6 +184,26 @@ export function WatchlistsView() {
             </Empty>
           ) : (
             <>
+              {summary && summary.rows.length > 1 && (
+                <Section title="Today" description="Each tile is coloured by the day's move: the deeper the colour, the bigger the move." action={<HeatScale />}>
+                  <div className="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-1.5">
+                    {summary.rows.map(({ inst, q }) => {
+                      const { bg, fg } = heat(q!.changePct, 2.5)
+                      return (
+                        <Link
+                          key={inst.id}
+                          href={hrefOf(inst)}
+                          className="flex h-[3.75rem] flex-col justify-center rounded-panel px-3 transition-[filter] hover:brightness-95"
+                          style={{ background: bg, color: fg }}
+                        >
+                          <span className="truncate text-[13px] font-semibold">{inst.name}</span>
+                          <span className="num text-[13px]">{formatPct(q!.changePct, 1)}</span>
+                        </Link>
+                      )
+                    })}
+                  </div>
+                </Section>
+              )}
               <Section
                 title={active.name}
                 description={`${active.ids.length} ${active.ids.length === 1 ? "name" : "names"}, with live prices.`}
@@ -213,23 +228,6 @@ export function WatchlistsView() {
                   <WatchlistTable list={active} />
                 )}
               </Section>
-              {summary && summary.rows.length > 1 && (
-                <Section title="At a glance" description="Each tile is coloured by the day's move: the deeper the colour, the bigger the move.">
-                  <div className="grid grid-cols-[repeat(auto-fill,minmax(128px,1fr))] gap-1.5">
-                    {summary.rows.map(({ inst, q }) => (
-                      <Link
-                        key={inst.id}
-                        href={inst.kind === "COMMODITY" ? `/commodities?c=${inst.slug}` : `/stocks/${inst.slug}`}
-                        className="flex h-[4.5rem] flex-col justify-center rounded-[3px] px-3 transition-[background-color] duration-700 hover:ring-1 hover:ring-ink/40"
-                        style={{ backgroundColor: heatColor(q!.changePct) }}
-                      >
-                        <span className="truncate text-sm font-medium">{inst.name}</span>
-                        <span className="num text-[13px] opacity-80">{formatPct(q!.changePct)}</span>
-                      </Link>
-                    ))}
-                  </div>
-                </Section>
-              )}
             </>
           )}
         </div>

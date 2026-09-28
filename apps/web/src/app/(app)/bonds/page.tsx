@@ -1,80 +1,129 @@
 import type { Metadata } from "next"
 import { connection } from "next/server"
-import { formatNumber } from "@greencircuits/market/format"
-import { getBonds, gsecYield, yieldCurve } from "@greencircuits/market/reference"
+import { ArrowDownUp, BadgeCheck, Timer } from "lucide-react"
+import type { CurvePoint } from "@greencircuits/market/reference"
 import { BondCalculator } from "@/components/bonds/bond-calculator"
 import type { BondRow } from "@/components/bonds/bond-math"
 import { BondScreener } from "@/components/bonds/bond-screener"
+import { GoldBonds } from "@/components/bonds/gold-bonds"
+import { KeyYields } from "@/components/bonds/key-yields"
+import { Spreads } from "@/components/bonds/spreads"
 import { YieldCurveChart } from "@/components/bonds/yield-curve"
 import { PageHead } from "@/components/editorial/page-head"
 import { Section } from "@/components/editorial/section"
-import { SectionNav } from "@/components/shell/section-nav"
+import { getBondsData } from "@/lib/data/bonds"
 
 export const metadata: Metadata = {
   title: "Bonds",
-  description: "The government yield curve, government, state and company bonds, and a calculator for price, yield and duration.",
+  description: "The government yield curve, government, state and company bonds, gold bonds, and a calculator for price, yield and duration.",
 }
 
-const YEAR = 365.25 * 86_400_000
-
-/** "0.06 points less than a month ago", or "unchanged from a month ago". */
-function against(now: number, then: number, when: string): string {
-  const d = now - then
-  if (Math.abs(d) < 0.005) return `unchanged from ${when}`
-  return `${formatNumber(Math.abs(d), 2)} points ${d > 0 ? "more" : "less"} than ${when}`
+/** The curve's yield at any term, straight between its points (flat beyond its ends). */
+function curveAt(curve: CurvePoint[], years: number): number {
+  if (years <= curve[0]!.tenor) return curve[0]!.today
+  for (let i = 1; i < curve.length; i++) {
+    const [a, b] = [curve[i - 1]!, curve[i]!]
+    if (years <= b.tenor) return a.today + ((b.today - a.today) * (years - a.tenor)) / (b.tenor - a.tenor)
+  }
+  return curve.at(-1)!.today
 }
+
+const longDate = (date: string) => new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`))
+
+const READING = [
+  { icon: ArrowDownUp, title: "Price and yield move apart", text: "A bond's interest is fixed, so when new bonds pay more, old ones get cheaper: prices fall as yields rise." },
+  { icon: BadgeCheck, title: "Ratings price the risk", text: "The government's yield is the floor. States pay a little more, and companies more again, the lower their rating." },
+  { icon: Timer, title: "Duration measures the swing", text: "A duration of seven means about 7% off the price for each point yields rise. The longer the bond, the bigger the swing." },
+]
 
 export default async function BondsPage() {
   // Yields and years to maturity are worked out for the day of the request.
   await connection()
   const now = new Date()
-  const bonds: BondRow[] = getBonds(now).map((b) => ({ ...b, yearsLeft: Math.max(0, (b.maturity.getTime() - now.getTime()) / YEAR) }))
-  const curve = yieldCurve()
+  const { bonds, curve, real, asOf } = await getBondsData(now)
   const ten = curve.find((p) => p.tenor === 10) ?? curve.at(-1)!
-  const spreadOf = (rows: BondRow[]) => rows.reduce((s, b) => s + (b.ytm - gsecYield(b.yearsLeft)), 0) / Math.max(1, rows.length)
-  const aaa = spreadOf(bonds.filter((b) => b.rating === "AAA"))
-  const states = spreadOf(bonds.filter((b) => b.type === "SDL"))
-
-  const lede =
-    `The government pays ${formatNumber(ten.today, 2)}% a year to borrow for ten years, ${against(ten.today, ten.monthAgo, "a month ago")} and ` +
-    `${against(ten.today, ten.yearAgo, "a year ago")}. States pay about ${formatNumber(states, 2)} points more, and top-rated companies about ${formatNumber(aaa, 2)} points more.`
+  // How steep the curve is: ten years over one, or its long end over its short where it doesn't reach a year.
+  const [short, long] = curve.some((p) => p.tenor === 1) && ten.tenor === 10 ? [curve.find((p) => p.tenor === 1)!, ten] : [curve[0]!, curve.at(-1)!]
+  const years = (t: number) => (t < 1 ? `${Math.round(t * 12)} months` : `${t} year${t === 1 ? "" : "s"}`)
+  // How much more than the government a kind of borrower pays, in basis points, over bonds with a yield today; null with too few.
+  const spreadOf = (rows: BondRow[]) => {
+    const priced = rows.filter((b) => b.ytm != null && b.fresh && b.yearsLeft >= curve[0]!.tenor * 0.8)
+    return priced.length >= 3 ? (priced.reduce((s, b) => s + (b.ytm! - curveAt(curve, b.yearsLeft)), 0) / priced.length) * 100 : null
+  }
+  const corporate = bonds.filter((b) => b.type === "Corporate")
+  const spreads = [
+    { label: "States", bp: spreadOf(bonds.filter((b) => b.type === "SDL")) },
+    { label: "Public sector", bp: spreadOf(bonds.filter((b) => b.type === "PSU")) },
+    { label: "AAA companies", bp: spreadOf(corporate.filter((b) => b.rating === "AAA")) },
+    { label: "AA companies", bp: spreadOf(corporate.filter((b) => /^AA[+-]?$/.test(b.rating))) },
+    { label: "A and below", bp: spreadOf(corporate.filter((b) => /^(A[+-]?|BBB[+-]?|BB[+-]?|B|C|D)$/.test(b.rating))) },
+  ].flatMap((r) => (r.bp == null ? [] : [{ label: r.label, bp: r.bp }]))
+  const history = curve.some((p) => p.monthAgo != null)
+  const lede = ["Yields in % a year", history ? "changes against a month ago" : null, real ? `NSE trades on ${longDate(asOf!)}` : "sample data"].filter(Boolean).join(" · ")
+  const gold = bonds.filter((b) => b.type === "SGB")
 
   return (
-    <div className="mx-auto max-w-[1200px] px-5 pt-6 pb-20">
-      <SectionNav section="explore" />
-      <PageHead title="Bonds" serif lede={lede} />
-      <p className="mt-3 text-sm text-ink-3">Sample data: real issuer names with made-up terms, priced off a model yield curve.</p>
+    <div className="page pt-6 pb-10">
+      <PageHead title="Bonds" lede={lede} />
+      <KeyYields points={curve} className="mt-5" />
 
-      <div className="mt-14 space-y-16">
+      <div className="mt-5 grid gap-5 lg:grid-cols-12">
         <Section
+          className="lg:col-span-8"
           title="The government's yield curve"
-          description="What it pays to borrow for three months to forty years: today, a month ago and a year ago. Move along the curve to read it."
+          description={
+            real
+              ? `What it pays to borrow for ${curve[0]!.tenor} to ${curve.at(-1)!.tenor} years, fitted to today's trades in its bonds${ten.monthAgo != null ? ", beside the curve a month and a year ago" : ""}. Move along the curve to read it.`
+              : "What it pays to borrow for three months to forty years: today, a month ago and a year ago. Move along the curve to read it."
+          }
         >
           <YieldCurveChart points={curve} />
         </Section>
-
-        <Section title="Bonds" description="Government, state, public-sector and company bonds, each priced at today's yield for its term and rating.">
-          <BondScreener bonds={bonds} />
+        <Section
+          className="lg:col-span-4"
+          title="Extra yield over the government"
+          description="What each kind of borrower pays over the government's curve at the same term, on average over its bonds with a yield today. A basis point (bp) is a hundredth of a percentage point."
+        >
+          <Spreads rows={spreads} slope={long.tenor > short.tenor ? { label: `${years(long.tenor)} over ${years(short.tenor)}`, bp: (long.today - short.today) * 100 } : null} />
         </Section>
 
-        <Section id="calculator" title="Price a bond" description="Work out a price from a yield, or a yield from a price, and how much it moves when rates do.">
+        <Section
+          className="lg:col-span-12"
+          title="Bonds"
+          description={
+            real
+              ? "Government, state and company bonds and Treasury bills listed on the NSE. Many trade only now and then, so a yield is shown only for a bond that traded today."
+              : "Sample data: real issuer names with made-up terms, each priced at today's yield for its term and rating."
+          }
+        >
+          <BondScreener bonds={bonds.filter((b) => b.type !== "SGB")} real={real} />
+        </Section>
+
+        {gold.length > 0 && (
+          <Section
+            className="lg:col-span-12"
+            title="Sovereign gold bonds"
+            description="The government pays 2.5% a year on what a bond cost at issue, and repays the price of a gram of gold when it matures. Held to maturity, the gain is tax-free."
+          >
+            <GoldBonds bonds={gold} real={real} />
+          </Section>
+        )}
+
+        <Section id="calculator" className="lg:col-span-12" title="Price a bond" description="Work out a price from a yield, or a yield from a price, and how much it moves when rates do.">
           <BondCalculator />
         </Section>
 
-        <Section title="Reading bonds">
-          <div className="grid max-w-5xl gap-x-12 gap-y-6 text-[0.9375rem] leading-relaxed text-ink-2 md:grid-cols-3">
-            <p>
-              <span className="font-semibold text-ink">Price and yield move apart.</span> A bond&apos;s interest is fixed when it&apos;s issued. When new bonds pay more, old
-              ones have to get cheaper to keep up, so prices fall as yields rise.
-            </p>
-            <p>
-              <span className="font-semibold text-ink">Ratings price the risk.</span> The government can always pay in rupees, so its yield is the floor. States pay a
-              little more, and companies more again, the lower their rating.
-            </p>
-            <p>
-              <span className="font-semibold text-ink">Duration measures the swing.</span> A bond with a duration of seven moves about 7% in price for each point yields
-              move. The longer the bond, the bigger the swing.
-            </p>
+        <Section className="lg:col-span-12" title="Reading bonds">
+          <div className="grid gap-3 md:grid-cols-3">
+            {READING.map((r) => (
+              <div key={r.title} className="rounded-panel bg-panel p-4">
+                <p className="flex items-center gap-2 text-sm font-semibold">
+                  <r.icon className="size-4 text-ink-3" aria-hidden="true" />
+                  {r.title}
+                </p>
+                <p className="mt-1.5 text-[13px] leading-relaxed text-ink-2">{r.text}</p>
+              </div>
+            ))}
           </div>
         </Section>
       </div>

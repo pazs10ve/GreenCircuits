@@ -1,21 +1,25 @@
 "use client"
 
 import Link from "next/link"
-import { useMemo, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { BellRing, Plus, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { DataTable } from "@/components/data/data-table"
 import { AlertDialogButton } from "@/components/market/alert-dialog"
 import { InstrumentPicker } from "@/components/market/instrument-picker"
-import { LiveChange, LivePrice } from "@/components/market/price"
+import { LivePrice } from "@/components/market/price"
+import { LiveMove } from "@/components/parts/live-move"
+import { Monogram } from "@/components/parts/monogram"
+import { RangeMarker } from "@/components/parts/range-marker"
+import { Tag } from "@/components/parts/tag"
 import { Segmented } from "@/components/market/segmented"
 import { Figure, Figures } from "@/components/editorial/figures"
 import { PageHead } from "@/components/editorial/page-head"
 import { Section } from "@/components/editorial/section"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
-import { getInstrument } from "@greencircuits/market/catalog"
+import { getInstrument, hrefOf } from "@greencircuits/market/catalog"
 import type { Instrument, Quote } from "@greencircuits/market/types"
 import { formatDateIST, formatNumber, formatPct, formatPrice, formatTimeIST } from "@greencircuits/market/format"
 import { useQuoteReader } from "@/lib/stream/hooks"
@@ -70,7 +74,104 @@ function waitingFor(a: Alert, inst: Instrument): string {
   }
 }
 
-const WORDS = ["No", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve"]
+/**
+ * How far a price alert is from going off, on a small track: the marker is the
+ * price now, the tick the level the alert waits for. The same part as a
+ * company's 52-week range.
+ */
+function Track({ r, className = "hidden w-24 sm:block" }: { r: Row; className?: string }) {
+  if (!r.q || isPercent(r.alert.condition)) return null
+  const lo = Math.min(r.q.ltp, r.alert.value) * 0.985
+  const hi = Math.max(r.q.ltp, r.alert.value) * 1.015
+  const at = (v: number) => (v - lo) / Math.max(hi - lo, 1e-9)
+  const near = r.distance != null && r.distance < 1
+  return <RangeMarker className={className} value={at(r.q.ltp)} mark={at(r.alert.value)} markerClassName={near ? "bg-attn" : undefined} />
+}
+
+function NameCell({ r }: { r: Row }) {
+  return (
+    <Link href={hrefOf(r.inst)} className="group flex min-w-44 items-center gap-2.5 leading-snug">
+      <Monogram text={r.inst.kind === "EQUITY" ? r.inst.symbol : r.inst.name} size={28} />
+      <span className="min-w-0">
+        <span className="block max-w-52 truncate font-semibold text-ink decoration-rule-strong group-hover:underline group-hover:underline-offset-4">{r.inst.name}</span>
+        <span className="block max-w-52 truncate text-xs text-ink-3">{r.inst.symbol}</span>
+      </span>
+    </Link>
+  )
+}
+
+/** The condition, with the note, where it tells you and when it was set in a line under it. */
+function WhenCell({ r }: { r: Row }) {
+  const detail = [r.alert.note, `tells you ${r.alert.channels.map((c) => CHANNEL[c]).join(", ")}${r.alert.repeat ? ", once a day" : ""}`, `set ${formatDateIST(r.alert.createdAt, "short")}`]
+    .filter(Boolean)
+    .join(" · ")
+  return (
+    <span className="block min-w-44">
+      <span className="block">
+        {CONDITION_LABEL[r.alert.condition]} <span className="num font-medium">{level(r.alert, r.inst)}</span>
+      </span>
+      <span className="block max-w-64 truncate text-xs text-ink-3 first-letter:uppercase" title={detail}>
+        {detail}
+      </span>
+    </span>
+  )
+}
+
+function NowCell({ r }: { r: Row }) {
+  return isPercent(r.alert.condition) ? <LiveMove id={r.inst.id} /> : <LivePrice id={r.inst.id} />
+}
+
+/** How far the market is from the alert: a track and the distance, "There now", or where it went off. */
+function HowFar({ r, track }: { r: Row; track?: string }) {
+  if (r.alert.status === "TRIGGERED") return <span className="num text-[13px] text-ink-3">went off at ₹{formatPrice(r.alert.triggeredPrice, r.inst.tick)}</span>
+  if (r.distance == null) return <span className="text-ink-3">–</span>
+  if (r.distance <= 0) return <Tag tone="attn">There now</Tag>
+  const near = r.distance < 1
+  return (
+    <span className="inline-flex items-center justify-end gap-3">
+      <Track r={r} className={track} />
+      <span className={cn("num w-14 text-right", near ? "font-semibold text-attn" : "text-ink-2")}>
+        {isPercent(r.alert.condition) ? `${formatNumber(r.distance, 2)} pts` : `${formatNumber(r.distance, 1)}%`}
+      </span>
+    </span>
+  )
+}
+
+function StatusCell({ r, onToggle }: { r: Row; onToggle: (a: Alert, on: boolean) => void }) {
+  if (r.alert.status === "TRIGGERED") {
+    return (
+      <Tag tone="attn" icon={BellRing}>
+        Went off {r.alert.triggeredAt && formatDateIST(r.alert.triggeredAt, "short")}
+      </Tag>
+    )
+  }
+  return (
+    <span className="inline-flex items-center gap-2">
+      <Switch
+        size="sm"
+        checked={r.alert.status === "ACTIVE"}
+        onCheckedChange={(on) => onToggle(r.alert, on)}
+        aria-label={`${r.alert.status === "ACTIVE" ? "Pause" : "Resume"} alert on ${r.inst.symbol}`}
+      />
+      <span className="text-[13px] text-ink-3">{r.alert.status === "ACTIVE" ? "Watching" : "Paused"}</span>
+    </span>
+  )
+}
+
+function Actions({ r, onRearm, onDelete }: { r: Row; onRearm: (a: Alert) => void; onDelete: (r: Row) => void }) {
+  return (
+    <span className="inline-flex gap-0.5">
+      {r.alert.status === "TRIGGERED" && (
+        <Button variant="ghost" size="sm" onClick={() => onRearm(r.alert)}>
+          Re-arm
+        </Button>
+      )}
+      <Button variant="ghost" size="icon-sm" aria-label={`Delete alert on ${r.inst.symbol}`} onClick={() => onDelete(r)}>
+        <Trash2 />
+      </Button>
+    </span>
+  )
+}
 
 export function AlertsView() {
   const { mode } = useMarket()
@@ -108,140 +209,39 @@ export function AlertsView() {
     [alerts],
   )
 
+  const toggle = useCallback((a: Alert, on: boolean) => update(a.id, { status: on ? "ACTIVE" : "PAUSED" }), [update])
+  const rearm = useCallback((a: Alert) => update(a.id, { status: "ACTIVE", triggeredAt: undefined, triggeredPrice: undefined }), [update])
+  const drop = useCallback(
+    (r: Row) => {
+      const before = useAlerts.getState().alerts
+      remove(r.alert.id)
+      toast(`Deleted alert on ${r.inst.symbol}`, { action: { label: "Undo", onClick: () => useAlerts.setState({ alerts: before }) } })
+    },
+    [remove],
+  )
+
   const columns = useMemo<ColumnDef<Row>[]>(
     () => [
-      {
-        id: "instrument",
-        header: "Name",
-        accessorFn: (r) => r.inst.name,
-        meta: { sticky: true },
-        cell: ({ row: { original: r } }) => (
-          <Link href={r.inst.kind === "COMMODITY" ? `/commodities?c=${r.inst.slug}` : `/stocks/${r.inst.slug}`} className="group block min-w-40 leading-snug">
-            <span className="block max-w-52 truncate font-medium text-ink group-hover:underline group-hover:decoration-1 group-hover:underline-offset-4">{r.inst.name}</span>
-            <span className="block max-w-52 truncate text-[13px] text-ink-3">{r.inst.symbol}</span>
-          </Link>
-        ),
-      },
-      {
-        id: "condition",
-        header: "When",
-        accessorFn: (r) => r.alert.condition,
-        cell: ({ row: { original: r } }) => (
-          <span className="block min-w-44">
-            <span className="block">
-              {CONDITION_LABEL[r.alert.condition]} <span className="num font-medium">{level(r.alert, r.inst)}</span>
-            </span>
-            {r.alert.note && <span className="block max-w-56 truncate text-[13px] text-ink-3">{r.alert.note}</span>}
-          </span>
-        ),
-      },
-      {
-        id: "now",
-        header: "Now",
-        accessorFn: (r) => r.q?.changePct ?? 0,
-        meta: { align: "right" },
-        cell: ({ row: { original: r } }) =>
-          isPercent(r.alert.condition) ? <LiveChange id={r.inst.id} showAbsolute={false} /> : <LivePrice id={r.inst.id} />,
-      },
+      { id: "instrument", header: "Name", accessorFn: (r) => r.inst.name, meta: { sticky: true }, cell: ({ row: { original: r } }) => <NameCell r={r} /> },
+      { id: "condition", header: "When", accessorFn: (r) => r.alert.condition, cell: ({ row: { original: r } }) => <WhenCell r={r} /> },
+      { id: "now", header: "Now", accessorFn: (r) => r.q?.changePct ?? 0, meta: { align: "right" }, cell: ({ row: { original: r } }) => <NowCell r={r} /> },
       {
         id: "distance",
         header: "How far",
         accessorFn: (r) => (r.distance == null ? Number.POSITIVE_INFINITY : r.distance),
         meta: { align: "right" },
-        cell: ({ row: { original: r } }) => {
-          if (r.alert.status === "TRIGGERED")
-            return (
-              <span className="num text-[13px] text-ink-3">
-                went off at ₹{formatPrice(r.alert.triggeredPrice, r.inst.tick)}
-              </span>
-            )
-          if (r.distance == null) return <span className="text-ink-3">–</span>
-          if (r.distance <= 0) return <span className="font-medium text-accent-ink">There now</span>
-          const near = r.distance < 1
-          return (
-            <span className={cn("inline-flex items-center gap-2", near && "font-medium text-accent-ink")}>
-              <span className="relative hidden h-1 w-12 rounded-full bg-surface-2 sm:inline-block" aria-hidden="true">
-                <span
-                  className={cn("absolute inset-y-0 left-0 rounded-full", near ? "bg-accent-ink" : "bg-ink-3")}
-                  style={{ width: `${Math.max(4, 100 - Math.min(100, r.distance * 20))}%` }}
-                />
-              </span>
-              {isPercent(r.alert.condition) ? `${formatNumber(r.distance, 2)} pts` : `${formatNumber(r.distance, 2)}%`}
-            </span>
-          )
-        },
+        cell: ({ row: { original: r } }) => <HowFar r={r} />,
       },
-      {
-        id: "channels",
-        header: "Tells you",
-        enableSorting: false,
-        cell: ({ row: { original: r } }) => (
-          <span className="text-ink-2">
-            {r.alert.channels.map((c) => CHANNEL[c]).join(", ")}
-            {r.alert.repeat && <span className="text-ink-3">, once a day</span>}
-          </span>
-        ),
-      },
-      {
-        id: "status",
-        header: "Status",
-        accessorFn: (r) => r.alert.status,
-        cell: ({ row: { original: r } }) =>
-          r.alert.status === "TRIGGERED" ? (
-            <span className="inline-flex items-center gap-1.5 text-[13px]">
-              <BellRing className="size-3.5 text-accent-ink" aria-hidden="true" />
-              Went off {r.alert.triggeredAt && formatDateIST(r.alert.triggeredAt, "short")}
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-2">
-              <Switch
-                size="sm"
-                checked={r.alert.status === "ACTIVE"}
-                onCheckedChange={(on) => update(r.alert.id, { status: on ? "ACTIVE" : "PAUSED" })}
-                aria-label={`${r.alert.status === "ACTIVE" ? "Pause" : "Resume"} alert on ${r.inst.symbol}`}
-              />
-              <span className="text-[13px] text-ink-3">{r.alert.status === "ACTIVE" ? "Watching" : "Paused"}</span>
-            </span>
-          ),
-      },
-      {
-        id: "created",
-        header: "Set",
-        accessorFn: (r) => r.alert.createdAt.getTime(),
-        meta: { align: "right" },
-        cell: ({ row: { original: r } }) => <span className="text-ink-3">{formatDateIST(r.alert.createdAt, "short")}</span>,
-      },
+      { id: "status", header: "Status", accessorFn: (r) => r.alert.status, cell: ({ row: { original: r } }) => <StatusCell r={r} onToggle={toggle} /> },
       {
         id: "actions",
         header: () => <span className="sr-only">Actions</span>,
         enableSorting: false,
         meta: { align: "right" },
-        cell: ({ row: { original: r } }) => (
-          <span className="inline-flex gap-0.5">
-            {r.alert.status === "TRIGGERED" && (
-              <Button variant="ghost" size="sm" onClick={() => update(r.alert.id, { status: "ACTIVE", triggeredAt: undefined, triggeredPrice: undefined })}>
-                Re-arm
-              </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label={`Delete alert on ${r.inst.symbol}`}
-              onClick={() => {
-                const before = useAlerts.getState().alerts
-                remove(r.alert.id)
-                toast(`Deleted alert on ${r.inst.symbol}`, {
-                  action: { label: "Undo", onClick: () => useAlerts.setState({ alerts: before }) },
-                })
-              }}
-            >
-              <Trash2 />
-            </Button>
-          </span>
-        ),
+        cell: ({ row: { original: r } }) => <Actions r={r} onRearm={rearm} onDelete={drop} />,
       },
     ],
-    [update, remove],
+    [toggle, rearm, drop],
   )
 
   const watching = rows.length && filter === "ALL" ? rows.filter((r) => r.alert.status === "ACTIVE" && r.distance != null) : []
@@ -250,16 +250,16 @@ export function AlertsView() {
   const lastInst = last && getInstrument(last.instrumentId)
   const lede =
     alerts.length === 0
-      ? "No alerts yet. Pick a company, index or commodity, and a price or a day's move to watch for."
+      ? "No alerts yet: pick a company, index or commodity, and a price or a day's move to watch for"
       : [
-          `${WORDS[counts.active] ?? counts.active} ${counts.active === 1 ? "alert is" : "alerts are"} watching the market.`,
+          `${counts.active} watching`,
           nearest && nearest.distance! > 0
-            ? `The nearest is waiting for ${nearest.inst.name} ${waitingFor(nearest.alert, nearest.inst)}, ${isPercent(nearest.alert.condition) ? `${formatNumber(nearest.distance!, 2)} points` : `${formatNumber(nearest.distance!, 1)}%`} away.`
+            ? `nearest: ${nearest.inst.name}, ${isPercent(nearest.alert.condition) ? `${formatNumber(nearest.distance!, 2)} points` : `${formatNumber(nearest.distance!, 1)}%`} away`
             : "",
-          last && lastInst ? `The last to go off was ${lastInst.name}, ${waitingFor(last, lastInst)}.` : "",
+          last && lastInst ? `last went off: ${lastInst.name}` : "",
         ]
           .filter(Boolean)
-          .join(" ")
+          .join(" · ")
 
   return (
     <div>
@@ -278,14 +278,14 @@ export function AlertsView() {
         }
       />
 
-      <Figures className="mt-10 lg:grid-cols-4">
-        <Figure label="Watching" value={String(counts.active)} hint="checked on every price" />
-        <Figure label="Went off" value={String(counts.triggered)} hint="waiting to be re-armed" />
-        <Figure label="Paused" value={String(counts.paused)} hint="not checked" />
-        <Figure label="Allowed" value={`${alerts.length} of 100`} hint="alerts per person" />
+      <Figures className="mt-5 lg:grid-cols-4">
+        <Figure label="Watching" value={String(counts.active)} hint="Checked on every price" />
+        <Figure label="Went off" value={String(counts.triggered)} hint="Waiting to be re-armed" delta={counts.triggered > 0 ? <Tag tone="attn">New</Tag> : undefined} />
+        <Figure label="Paused" value={String(counts.paused)} hint="Not checked" />
+        <Figure label="Allowed" value={`${alerts.length} of 100`} hint="Alerts per person" />
       </Figures>
 
-      <div className="mt-16 grid grid-cols-[minmax(0,1fr)] gap-x-12 gap-y-16 xl:grid-cols-[minmax(0,1fr)_18rem]">
+      <div className="mt-5 grid grid-cols-[minmax(0,1fr)] gap-5 xl:grid-cols-[minmax(0,1fr)_18rem]">
         <Section
           title="Your alerts"
           action={
@@ -302,63 +302,92 @@ export function AlertsView() {
             />
           }
         >
-          <DataTable
-            columns={columns}
-            data={rows}
-            getRowId={(r) => r.alert.id}
-            empty={filter === "ALL" ? "No alerts yet. Use New alert to set one." : "No alerts here."}
-          />
+          <div className="hidden md:block">
+            <DataTable
+              columns={columns}
+              data={rows}
+              getRowId={(r) => r.alert.id}
+              empty={filter === "ALL" ? "No alerts yet. Use New alert to set one." : "No alerts here."}
+            />
+          </div>
+          {/* On a phone, each alert as a small card: the table's columns would run off the side. */}
+          <ul className="-my-1 divide-y divide-rule md:hidden">
+            {rows.length === 0 && <li className="py-8 text-center text-sm text-ink-2">{filter === "ALL" ? "No alerts yet. Use New alert to set one." : "No alerts here."}</li>}
+            {rows.map((r) => (
+              <li key={r.alert.id} className="space-y-2 py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <NameCell r={r} />
+                  <StatusCell r={r} onToggle={toggle} />
+                </div>
+                <div className="pl-[38px]">
+                  <WhenCell r={r} />
+                </div>
+                <div className="flex items-center justify-between gap-3 pl-[38px]">
+                  <HowFar r={r} track="w-24" />
+                  <span className="flex items-center gap-1">
+                    <NowCell r={r} />
+                    <Actions r={r} onRearm={rearm} onDelete={drop} />
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
         </Section>
 
-        <div className="space-y-14">
+        <div className="space-y-5">
           <Section title="Recently went off">
             {recent.length === 0 ? (
               <p className="text-sm text-ink-2">Nothing has gone off yet.</p>
             ) : (
-              <ul className="divide-y divide-rule border-b border-rule">
-                {recent.map((a) => {
+              <ol className="relative ml-1.5 border-l-2 border-rule">
+                {recent.map((a, i) => {
                   const inst = getInstrument(a.instrumentId)!
                   return (
-                    <li key={a.id} className="py-3">
-                      <p className="text-[0.9375rem] leading-snug">
-                        <span className="font-medium">{inst.name}</span>, {waitingFor(a, inst)}
+                    <li key={a.id} className="relative pb-4 pl-5 last:pb-0">
+                      <span
+                        className={cn("absolute top-1 -left-[7px] size-3 rounded-full border-2 border-paper", i === 0 ? "bg-attn" : "bg-rule-strong")}
+                        aria-hidden="true"
+                      />
+                      <p className="text-sm leading-snug">
+                        <span className="font-semibold">{inst.name}</span>, {waitingFor(a, inst)}
                       </p>
-                      <p className="num mt-0.5 text-sm text-ink-3">
-                        at ₹{formatPrice(a.triggeredPrice, inst.tick)}, {formatDateIST(a.triggeredAt!, "short")} {formatTimeIST(a.triggeredAt!)} IST
+                      <p className="num mt-0.5 text-xs text-ink-3">
+                        ₹{formatPrice(a.triggeredPrice, inst.tick)} · {formatDateIST(a.triggeredAt!, "short")}, {formatTimeIST(a.triggeredAt!)}
                       </p>
                     </li>
                   )
                 })}
-              </ul>
+              </ol>
             )}
           </Section>
-          <Section title="How they reach you">
-            <dl className="divide-y divide-rule border-b border-rule text-sm">
-              <div className="flex items-baseline justify-between gap-3 py-3">
+          <Section
+            title="How they reach you"
+            description={
+              mode === "live"
+                ? "The alert engine checks alerts on the server against every price, and each one fires exactly once. A sound can go with them: turn it on in your account."
+                : "In the demo, this browser checks your alerts against the simulated prices. A sound can go with them: turn it on in your account."
+            }
+          >
+            <dl className="-my-2 divide-y divide-rule text-sm">
+              <div className="flex items-center justify-between gap-3 py-2.5">
                 <dt>
                   <span className="block font-medium">In the app</span>
-                  <span className="block text-ink-3">A note on whatever page you&apos;re on</span>
+                  <span className="block text-xs text-ink-3">A note on whatever page you&apos;re on</span>
                 </dt>
-                <dd className="text-up">On</dd>
+                <dd>
+                  <Tag tone="up">On</Tag>
+                </dd>
               </div>
-              <div className="flex items-baseline justify-between gap-3 py-3">
+              <div className="flex items-center justify-between gap-3 py-2.5">
                 <dt>
                   <span className="block font-medium">Email and Telegram</span>
-                  <span className="block text-ink-3">Planned; not built yet</span>
+                  <span className="block text-xs text-ink-3">Planned, not built yet</span>
                 </dt>
-                <dd className="text-ink-3">Off</dd>
+                <dd>
+                  <Tag>Off</Tag>
+                </dd>
               </div>
             </dl>
-            <p className="mt-3 text-sm leading-relaxed text-ink-3">
-              {mode === "live"
-                ? "The alert engine checks alerts on the server against every price, and each one fires exactly once."
-                : "In the demo, this browser checks your alerts against the simulated prices."}{" "}
-              A sound can go with them: turn it on in{" "}
-              <Link href="/account" className="link">
-                your account
-              </Link>
-              .
-            </p>
           </Section>
         </div>
       </div>

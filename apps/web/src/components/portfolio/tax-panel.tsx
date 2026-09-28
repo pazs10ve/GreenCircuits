@@ -1,4 +1,7 @@
 import { formatINR } from "@greencircuits/market/format"
+import { Figure } from "@/components/editorial/figures"
+import { RangeMarker } from "@/components/parts/range-marker"
+import { Tag } from "@/components/parts/tag"
 
 /** Sample realised gains for the current financial year, with Indian equity tax rules (from 23 July 2024). */
 const REALISED = { stcg: 18420, ltcg: 164300 }
@@ -6,45 +9,49 @@ const LTCG_EXEMPTION = 125000
 const STCG_RATE = 0.2
 const LTCG_RATE = 0.125
 
-/** Tax on this year's gains, and the losses in the portfolio that could offset them. */
+/** How much of the year's tax-free long-term gain is used, the tax on the rest, and the losses in the portfolio that could offset it. */
 export function TaxPanel({ rows }: { rows: { name: string; pnl: number }[] }) {
   const stcgTax = REALISED.stcg * STCG_RATE
   const ltcgTaxable = Math.max(0, REALISED.ltcg - LTCG_EXEMPTION)
   const ltcgTax = ltcgTaxable * LTCG_RATE
   const losers = rows.filter((r) => r.pnl < 0).sort((a, b) => a.pnl - b.pnl)
   const harvestable = losers.reduce((s, r) => s - r.pnl, 0)
+  const room = LTCG_EXEMPTION - REALISED.ltcg
 
   return (
     <div>
-      <dl className="grid gap-x-10 gap-y-8 md:grid-cols-3">
-        <div className="border-t border-rule pt-3">
-          <dt className="text-[13px] text-ink-3">Short-term gains, held a year or less</dt>
-          <dd className="figure mt-1.5 text-[1.625rem] leading-none">{formatINR(REALISED.stcg, 0)}</dd>
-          <dd className="num mt-2 text-sm text-ink-2">
-            Taxed at 20%: <span className="text-ink">{formatINR(stcgTax, 0)}</span>
-          </dd>
-        </div>
-        <div className="border-t border-rule pt-3">
-          <dt className="text-[13px] text-ink-3">Long-term gains, held over a year</dt>
-          <dd className="figure mt-1.5 text-[1.625rem] leading-none">{formatINR(REALISED.ltcg, 0)}</dd>
-          <dd className="num mt-2 text-sm text-ink-2">
-            The first ₹1.25 lakh is free, the rest at 12.5%: <span className="text-ink">{formatINR(ltcgTax, 0)}</span>
-          </dd>
-        </div>
-        <div className="border-t border-rule pt-3">
-          <dt className="text-[13px] text-ink-3">Losses you could book</dt>
-          <dd className="figure mt-1.5 text-[1.625rem] leading-none text-down">{formatINR(harvestable, 0)}</dd>
-          <dd className="mt-2 text-sm leading-relaxed text-ink-2">
-            {losers.length > 0
-              ? `In ${losers.map((l) => l.name).join(", ")}. Booked losses offset gains, and short-term losses can offset either kind.`
-              : "No holding is below what it cost."}
-          </dd>
-        </div>
-      </dl>
-      <p className="mt-6 text-sm leading-relaxed text-ink-3">
-        The gains are sample figures; the losses come from the holdings above. An illustration, not tax advice: it leaves out surcharge and the 4% cess,
-        grandfathering for shares bought before 1 February 2018, and intraday or F&amp;O income, which is taxed as business income.
+      <p className="mb-2.5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-xs text-ink-3">
+        <span>Tax-free long-term gain used this year</span>
+        <span className="num font-semibold text-ink">
+          {formatINR(Math.min(REALISED.ltcg, LTCG_EXEMPTION), 0)} of {formatINR(LTCG_EXEMPTION, 0)}
+        </span>
       </p>
+      <RangeMarker
+        value={Math.min(1, REALISED.ltcg / LTCG_EXEMPTION)}
+        left="₹0"
+        right="₹1.25 lakh"
+        zones={[{ from: 0, to: Math.min(1, REALISED.ltcg / LTCG_EXEMPTION), className: "bg-ink" }]}
+        label={`${formatINR(REALISED.ltcg, 0)} of long-term gains against the ${formatINR(LTCG_EXEMPTION, 0)} that is tax-free`}
+      />
+      <div className="mt-4">
+        {room > 0 ? (
+          <Tag tone="up">{formatINR(room, 0)} more can be taken tax-free</Tag>
+        ) : (
+          <Tag tone="attn">{formatINR(-room, 0)} over the tax-free limit</Tag>
+        )}
+      </div>
+      <dl className="mt-4 grid gap-2 sm:grid-cols-3">
+        <Figure variant="panel" size="sm" label="Short-term gains" value={formatINR(REALISED.stcg, 0)} hint={`${formatINR(stcgTax, 0)} tax at 20%`} />
+        <Figure variant="panel" size="sm" label="Long-term gains" value={formatINR(REALISED.ltcg, 0)} hint={`${formatINR(ltcgTax, 0)} tax at 12.5% over ₹1.25 lakh`} />
+        <Figure
+          variant="panel"
+          size="sm"
+          label="Losses you could book"
+          value={formatINR(harvestable, 0)}
+          tone={harvestable > 0 ? "down" : undefined}
+          hint={losers.length > 0 ? `In ${losers.map((l) => l.name).join(", ")}` : "No holding is below its cost"}
+        />
+      </dl>
     </div>
   )
 }

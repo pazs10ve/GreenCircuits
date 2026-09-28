@@ -1,4 +1,3 @@
-import { SECTORS } from "@greencircuits/market/catalog"
 import { FIELDS, resolveField, type FieldDef, type LiveRow } from "./fields"
 
 /**
@@ -10,7 +9,7 @@ import { FIELDS, resolveField, type FieldDef, type LiveRow } from "./fields"
  * - logic: AND, OR, NOT and parentheses, case-insensitive (&&, || and ! work too)
  * - arithmetic: + − * / and unary minus: price > sma_200 * 1.05
  * - numbers: 15, 0.5, 1e5, 1,00,000 or 100_000; a trailing % is allowed (roe > 15%)
- * - text: "IT" or 'IT', for the sector field
+ * - text: "IT" or 'IT', for the sector and size fields
  *
  * A hand-written tokenizer and recursive-descent parser build a small AST that
  * is type-checked and then evaluated per row. There is no eval or Function.
@@ -270,10 +269,13 @@ function suggestKeyword(word: string): "AND" | "OR" | "NOT" | undefined {
   return best[1] <= 1 && w.length >= 2 ? best[0] : undefined
 }
 
-function suggestSector(input: string): string | undefined {
+/** Text fields and the values each takes, for spotting a value typed without quotes. */
+const TEXT_VALUES = FIELDS.flatMap((field) => (field.values ?? []).map((value) => ({ field, value })))
+
+function suggestValue(input: string, values: readonly string[]): string | undefined {
   const q = input.toLowerCase()
   let best: { s: string; d: number } | undefined
-  for (const s of SECTORS) {
+  for (const s of values) {
     const name = s.toLowerCase()
     // "Finance" should find "Financials": compare against the name's prefix too.
     const prefix = q.length >= 4 && distance(q, name.slice(0, q.length)) <= 1
@@ -422,14 +424,16 @@ class Parser {
       case "ident": {
         this.next()
         const field = resolveField(t.text)
-        const sector = field ? undefined : SECTORS.find((x) => x.toLowerCase() === t.text.toLowerCase())
-        if (sector)
-          fail(src, t.start, t.end, `‘${t.text}’ looks like a sector name`, `Put it in quotes: sector = "${sector}".`, {
-            start: t.start,
-            end: t.end,
-            text: `"${sector}"`,
-            label: "Add quotes",
-          })
+        const known = field ? undefined : TEXT_VALUES.find((x) => x.value.toLowerCase() === t.text.toLowerCase())
+        if (known)
+          fail(
+            src,
+            t.start,
+            t.end,
+            `‘${t.text}’ looks like a ${known.field.label.toLowerCase()}`,
+            `Put it in quotes: ${known.field.name} = "${known.value}".`,
+            { start: t.start, end: t.end, text: `"${known.value}"`, label: "Add quotes" },
+          )
         if (!field) {
           const guess = suggestField(t.text)
           fail(
@@ -572,16 +576,19 @@ function check(src: string, node: Node): ValueType {
         if (ta === "text") {
           if (op !== "=" && op !== "!=")
             fail(src, at, at + op.length, `Text can only be compared with = or !=`, `For example: sector != "Financials".`)
+          // A quoted value has to be one the field on the other side takes.
+          const field = a.kind === "field" ? a.field : b.kind === "field" ? b.field : undefined
+          const values = field?.values
           for (const side of [a, b]) {
-            if (side.kind !== "string") continue
-            if (SECTORS.some((s) => s.toLowerCase() === side.value.toLowerCase())) continue
-            const guess = suggestSector(side.value)
+            if (side.kind !== "string" || !field || !values) continue
+            if (values.some((s) => s.toLowerCase() === side.value.toLowerCase())) continue
+            const guess = suggestValue(side.value, values)
             fail(
               src,
               side.start,
               side.end,
-              `Unknown sector ‘${side.value}’`,
-              guess ? `Did you mean ‘${guess}’?` : `Sectors: ${SECTORS.join(", ")}.`,
+              `Unknown ${field.label.toLowerCase()} ‘${side.value}’`,
+              guess ? `Did you mean ‘${guess}’?` : `${field.label}s: ${values.join(", ")}.`,
               guess ? { start: side.start, end: side.end, text: `"${guess}"`, label: `Use ${guess}` } : undefined,
             )
           }

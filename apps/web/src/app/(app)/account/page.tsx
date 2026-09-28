@@ -5,7 +5,7 @@ export const metadata: Metadata = { title: "Your account", robots: { index: fals
 
 export default function AccountPage() {
   return (
-    <div className="mx-auto max-w-[1200px] px-5 pt-8 pb-20 md:pt-12">
+    <div className="page pt-6 pb-10">
       <AccountView />
     </div>
   )

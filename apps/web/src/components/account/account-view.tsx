@@ -22,23 +22,25 @@ function Header({ me, live }: { me: PublicUser | undefined; live: boolean }) {
   if (live && me && !me.anonymous) {
     return (
       <header>
-        <h1 className="font-serif text-[2.375rem] leading-[1.05] font-semibold tracking-[-0.02em] md:text-[3rem]">Your account</h1>
-        <p className="mt-2 text-sm text-ink-2">
+        <h1 className="font-serif text-[1.75rem] leading-[1.1] font-semibold tracking-[-0.02em] md:text-[1.875rem]">Your account</h1>
+        <p className="mt-1.5 text-[13px] text-ink-3">
           {me.email} · with GreenCircuits since {since(me.createdAt)}
         </p>
       </header>
     )
   }
   return (
-    <header className="max-w-[40rem]">
-      <h1 className="font-serif text-[2.375rem] leading-[1.05] font-semibold tracking-[-0.02em] md:text-[3rem]">{live ? "Your data" : "Your settings"}</h1>
-      <p className="mt-4 text-[1.0625rem] leading-relaxed text-ink-2">
-        {live
-          ? "You haven't signed up, so what you make is kept in an anonymous account tied to this browser. Create an account to keep it on every device; everything here comes with you."
-          : "Accounts need the backend, which is off in this demo, so your watchlists, alerts, holdings, tests and settings are kept in this browser."}
-      </p>
+    <header className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
+      <div className="min-w-0 max-w-[44rem]">
+        <h1 className="font-serif text-[1.75rem] leading-[1.1] font-semibold tracking-[-0.02em] md:text-[1.875rem]">{live ? "Your data" : "Your settings"}</h1>
+        <p className="mt-1.5 text-[13px] leading-relaxed text-ink-3">
+          {live
+            ? "Kept in this browser until you create an account; then it's on every device, and everything here comes with you."
+            : "Accounts need the backend, which is off in this demo, so your watchlists, alerts, holdings, tests and settings are kept in this browser."}
+        </p>
+      </div>
       {live && (
-        <div className="mt-6 flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button asChild>
             <Link href="/signup?next=/account">Create an account</Link>
           </Button>
@@ -262,7 +264,7 @@ export function AccountView() {
   return (
     <div>
       <Header me={me} live={live} />
-      <div className="mt-14 space-y-20">
+      <div className="mt-5 space-y-5">
         <FeedSection />
         {account && <ProfileSection me={account} />}
         {account && <PasswordSection email={account.email} />}

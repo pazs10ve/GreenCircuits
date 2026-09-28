@@ -6,6 +6,7 @@ interface Line {
   points: { t: number; v: number }[]
   color: string
   width?: number
+  dashed?: boolean
 }
 
 const W = 600
@@ -21,12 +22,15 @@ export function MiniLines({
   className,
   ariaLabel,
   format,
+  labels = true,
 }: {
   lines: Line[]
   height?: number
   className?: string
   ariaLabel: string
   format?: (v: number) => string
+  /** Names at the lines' ends; off when the figures are shown elsewhere. */
+  labels?: boolean
 }) {
   const all = lines.flatMap((l) => l.points)
   if (all.length < 2) return null
@@ -47,10 +51,10 @@ export function MiniLines({
   for (let i = 1; i < ends.length; i++) if (ends[i]!.top - ends[i - 1]!.top < minGap) ends[i]!.top = ends[i - 1]!.top + minGap
 
   return (
-    <div className={cn("grid grid-cols-[minmax(0,1fr)_auto] gap-3", className)}>
+    <div className={cn("grid gap-3", labels ? "grid-cols-[minmax(0,1fr)_auto]" : "grid-cols-1", className)}>
       <svg viewBox={`0 0 ${W} ${height}`} preserveAspectRatio="none" className="w-full" style={{ height }} role="img" aria-label={ariaLabel}>
         {[0.25, 0.5, 0.75].map((f) => (
-          <line key={f} x1={0} x2={W} y1={height * f} y2={height * f} style={{ stroke: "var(--rule)" }} strokeWidth={1} vectorEffect="non-scaling-stroke" />
+          <line key={f} x1={0} x2={W} y1={height * f} y2={height * f} style={{ stroke: "var(--rule-strong)" }} strokeWidth={1} strokeDasharray="1 5" vectorEffect="non-scaling-stroke" />
         ))}
         <line x1={0} x2={W} y1={height - 0.5} y2={height - 0.5} style={{ stroke: "var(--ink-3)" }} strokeWidth={1} opacity={0.5} vectorEffect="non-scaling-stroke" />
         {lines.map((l) => (
@@ -60,19 +64,23 @@ export function MiniLines({
             fill="none"
             strokeWidth={l.width ?? 1.75}
             strokeLinejoin="round"
+            strokeLinecap="round"
+            strokeDasharray={l.dashed ? "4 3" : undefined}
             vectorEffect="non-scaling-stroke"
             style={{ stroke: l.color }}
           />
         ))}
       </svg>
-      <div className="relative w-[5.5rem]" style={{ height }} aria-hidden="true">
-        {ends.map(({ l, top }) => (
-          <span key={l.id} className="absolute left-0 -translate-y-1/2 text-xs leading-tight font-medium" style={{ top: `${top}%`, color: l.color }}>
-            {l.label}
-            {format && <span className="num block font-normal text-ink-3">{format(l.points.at(-1)!.v)}</span>}
-          </span>
-        ))}
-      </div>
+      {labels && (
+        <div className="relative w-[5.5rem]" style={{ height }} aria-hidden="true">
+          {ends.map(({ l, top }) => (
+            <span key={l.id} className="absolute left-0 -translate-y-1/2 text-xs leading-tight font-medium" style={{ top: `${top}%`, color: l.color }}>
+              {l.label}
+              {format && <span className="num block font-normal text-ink-3">{format(l.points.at(-1)!.v)}</span>}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

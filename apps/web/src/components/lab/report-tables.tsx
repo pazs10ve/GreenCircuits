@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { heat } from "@/components/parts/heat"
 import type { RunInfo, RunResult, RunTrade } from "@greencircuits/contracts/lab"
 import { getInstrument } from "@greencircuits/market/catalog"
 import { formatNumber, formatPrice } from "@greencircuits/market/format"
@@ -17,7 +18,7 @@ export function NumbersTable({ run, result }: { run: RunInfo; result: RunResult 
   return (
     <table className="w-full max-w-3xl text-[0.9375rem]">
       <thead>
-        <tr className="border-b border-ink text-left">
+        <tr className="border-b border-rule-strong text-left">
           <th scope="col" className="pb-2 font-normal">
             <span className="sr-only">Measure</span>
           </th>
@@ -68,7 +69,7 @@ export function HeldOutTable({ result, labels }: { result: RunResult; labels: [s
   return (
     <table className="w-full max-w-xl text-[0.9375rem]">
       <thead>
-        <tr className="border-b border-ink text-left">
+        <tr className="border-b border-rule-strong text-left">
           <th scope="col" className="pb-2 text-sm font-normal text-ink-3">
             Return a year
           </th>
@@ -104,10 +105,8 @@ export function HeldOutTable({ result, labels }: { result: RunResult; labels: [s
   )
 }
 
-function shade(r: number): string {
-  const strength = Math.min(1, Math.abs(r) / 0.08) * 38
-  return `color-mix(in oklch, var(${r >= 0 ? "--up" : "--down"}) ${strength.toFixed(0)}%, var(--paper))`
-}
+/** A month's colours: the site's heat scale, full at an 8% month. */
+const shade = (r: number) => heat(r * 100, 8)
 
 /** Monthly returns, a year to a row, coloured by size. */
 export function MonthlyGrid({ monthly }: { monthly: Record<string, number> }) {
@@ -137,7 +136,7 @@ export function MonthlyGrid({ monthly }: { monthly: Record<string, number> }) {
                 {row.year}
               </th>
               {row.months.map((r, i) => (
-                <td key={i} className="num h-8 rounded-sm text-center" style={r == null ? undefined : { background: shade(r) }}>
+                <td key={i} className="num h-8 rounded-[4px] text-center font-medium" style={r == null ? undefined : { background: shade(r).bg, color: shade(r).fg }}>
                   {r == null ? "" : formatNumber(r * 100, 1)}
                 </td>
               ))}
@@ -162,7 +161,7 @@ export function TradesTable({ trades }: { trades: RunTrade[] }) {
       <div className="overflow-x-auto">
         <table className="w-full min-w-[44rem] text-[0.875rem]">
           <thead>
-            <tr className="border-b border-ink text-left text-xs text-ink-3">
+            <tr className="border-b border-rule-strong text-left text-xs text-ink-3">
               <th scope="col" className="pb-2 font-normal">
                 <span className="sr-only">Instrument</span>
               </th>

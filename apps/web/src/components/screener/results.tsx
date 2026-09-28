@@ -18,13 +18,16 @@ import {
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { Skeleton } from "@/components/ui/skeleton"
 import { DataTable } from "@/components/data/data-table"
-import { DayChange, LivePrice } from "@/components/market/price"
+import { LivePrice } from "@/components/market/price"
+import { Monogram } from "@/components/parts/monogram"
+import { Move } from "@/components/parts/move"
 import { formatCrore, formatNumber, formatPct } from "@greencircuits/market/format"
 import { useQuote, useQuoteReader } from "@/lib/stream/hooks"
 import { useMarket } from "@/lib/stream/market-context"
 import { cn } from "@/lib/utils"
 import { FIELD_GROUPS, FIELDS, getField, type FieldDef, type LiveRow } from "./fields"
 import { PRESETS } from "./presets"
+import { ScreenScatter } from "./scatter"
 import { stockHref, toLiveRows, useScreener } from "./screener-context"
 
 function formatValue(f: FieldDef, v: number | string | null): string {
@@ -44,7 +47,7 @@ function formatValue(f: FieldDef, v: number | string | null): string {
 
 function LiveChangeCell({ id }: { id: number }) {
   const q = useQuote(id)
-  return <DayChange pct={q?.changePct} />
+  return <Move value={q?.changePct} />
 }
 
 function columnFor(f: FieldDef): ColumnDef<LiveRow> {
@@ -79,11 +82,14 @@ const NAME_COLUMN: ColumnDef<LiveRow> = {
   accessorFn: (r) => r.name,
   meta: { sticky: true, className: "min-w-44 max-w-60" },
   cell: ({ row }) => (
-    <span className="block min-w-0 leading-snug">
-      <Link href={stockHref(row.original.id)} className="block truncate font-medium text-ink hover:underline hover:decoration-1 hover:underline-offset-4">
-        {row.original.name}
-      </Link>
-      <span className="block truncate text-[13px] text-ink-3">{row.original.symbol}</span>
+    <span className="flex min-w-0 items-center gap-2.5 leading-snug">
+      <Monogram text={row.original.symbol} size={28} />
+      <span className="min-w-0">
+        <Link href={stockHref(row.original.id)} className="block truncate font-semibold text-ink decoration-rule-strong hover:underline hover:underline-offset-4">
+          {row.original.name}
+        </Link>
+        <span className="block truncate text-xs text-ink-3">{row.original.symbol}</span>
+      </span>
     </span>
   ),
 }
@@ -103,7 +109,7 @@ export function ScreenResults({ className }: { className?: string }) {
   const sorting = columns.includes("market_cap") ? [{ id: "market_cap", desc: true }] : []
 
   return (
-    <section className={className} aria-live="polite">
+    <section className={cn("rounded-card border border-rule bg-paper p-4 sm:p-5", className)} aria-live="polite">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
         <div className="min-w-0">
           <h2 className="font-serif text-[1.375rem] leading-tight font-semibold tracking-[-0.01em]">
@@ -119,10 +125,8 @@ export function ScreenResults({ className }: { className?: string }) {
               </>
             )}
           </h2>
-          <p className="mt-1 text-sm text-ink-2">
-            {applied.empty
-              ? "No conditions yet. Write a query, or start from a ready-made screen."
-              : `Filtering on ${applied.fields.map((f) => f.label).join(", ")}${applied.usesLive ? ", with live prices" : ""}.`}
+          <p className="mt-1 text-[13px] text-ink-3">
+            {applied.empty ? "No conditions yet: write a query, or start from a ready-made screen" : `On ${applied.fields.map((f) => f.label).join(", ")}${applied.usesLive ? ", with live prices" : ""}`}
           </p>
         </div>
         <DropdownMenu>
@@ -163,7 +167,13 @@ export function ScreenResults({ className }: { className?: string }) {
           ))}
         </div>
       ) : (
-        <DataTable
+        <>
+          {!applied.empty && data.length > 0 && (
+            <div className="mb-5 rounded-panel bg-panel p-3 pt-4">
+              <ScreenScatter all={toLiveRows(rows, read)} matches={data} />
+            </div>
+          )}
+          <DataTable
           key={tableKey}
           columns={tableColumns}
           data={data}
@@ -171,6 +181,7 @@ export function ScreenResults({ className }: { className?: string }) {
           getRowHref={(r) => stockHref(r.id)}
           initialSorting={sorting}
           maxHeight="min(75vh, 820px)"
+          noun="companies"
           empty={
             <Empty className="py-6">
               <EmptyHeader>
@@ -188,9 +199,10 @@ export function ScreenResults({ className }: { className?: string }) {
               </EmptyHeader>
             </Empty>
           }
-        />
+          />
+        </>
       )}
-      <p className="mt-3 text-sm text-ink-3">
+      <p className="mt-3 text-xs text-ink-3">
         {dataset === "real"
           ? "Fundamentals come from company results at the last close; price and change follow the price feed."
           : "Fundamentals are sample data at yesterday’s close; price and change come from the simulated feed."}{" "}

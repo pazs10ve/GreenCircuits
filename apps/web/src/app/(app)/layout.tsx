@@ -1,8 +1,9 @@
 import { connection } from "next/server"
+import { toWire } from "@greencircuits/contracts"
 import { AlertWatcher } from "@/components/shell/alert-watcher"
 import { Masthead } from "@/components/shell/masthead"
 import { MobileTabs } from "@/components/shell/mobile-tabs"
-import { SiteFooter } from "@/components/shell/site-footer"
+import { SectionBar } from "@/components/shell/section-bar"
 import { StoreHydration } from "@/lib/stores/hydration"
 import { STREAM_URL } from "@/lib/data/api"
 import { getFeed } from "@/lib/data/market"
@@ -20,7 +21,8 @@ export default async function SiteLayout({ children }: LayoutProps<"/">) {
     <StreamProvider
       mode={feed.quotes ? "live" : "demo"}
       seed={seed}
-      snapshot={feed.quotes ?? undefined}
+      // The wire format: a third of the size, and every page carries it.
+      snapshot={feed.quotes?.map(toWire)}
       streamUrl={STREAM_URL}
       source={feed.source}
       dataset={feed.dataset}
@@ -30,8 +32,10 @@ export default async function SiteLayout({ children }: LayoutProps<"/">) {
       <AlertWatcher />
       <div className="flex min-h-svh flex-col">
         <Masthead />
-        <main className="flex-1 pb-20 md:pb-0">{children}</main>
-        <SiteFooter dataset={feed.dataset} />
+        <SectionBar />
+        <main className="flex-1">{children}</main>
+        {/* Room under the page for the tab bar that phones keep at the bottom of the screen. */}
+        <div className="h-16 shrink-0 md:hidden" aria-hidden="true" />
         <MobileTabs />
       </div>
     </StreamProvider>

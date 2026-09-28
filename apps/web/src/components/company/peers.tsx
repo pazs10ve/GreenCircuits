@@ -1,10 +1,13 @@
 "use client"
 
 import Link from "next/link"
-import { LiveChange, LivePrice } from "@/components/market/price"
+import { LivePrice } from "@/components/market/price"
 import { formatCrore, formatNumber, formatPct } from "@greencircuits/market/format"
 import { useMarket } from "@/lib/stream/market-context"
 import { cn } from "@/lib/utils"
+import { LiveMove } from "@/components/parts/live-move"
+import { Monogram } from "@/components/parts/monogram"
+import { Move } from "@/components/parts/move"
 
 export interface PeerRow {
   id: number
@@ -24,7 +27,7 @@ export function Peers({ rows, currentId }: { rows: PeerRow[]; currentId: number 
     <div className="scrollbar-thin overflow-x-auto">
       <table className="w-full min-w-[720px] text-sm">
         <thead>
-          <tr className="border-b border-ink text-xs text-ink-3">
+          <tr className="border-b border-rule text-xs text-ink-3">
             <th scope="col" className="pb-2 text-left font-normal">
               Company
             </th>
@@ -55,33 +58,38 @@ export function Peers({ rows, currentId }: { rows: PeerRow[]; currentId: number 
           {rows.map((r) => {
             const current = r.id === currentId
             return (
-              <tr key={r.id} className={cn("border-b border-rule", current && "bg-surface/70")}>
-                <th scope="row" className="py-3 pr-4 text-left font-normal">
-                  {current ? (
-                    <span className="font-semibold">{r.name}</span>
-                  ) : (
-                    <Link href={`/stocks/${r.slug}`} className="hover:underline">
-                      {r.name}
-                    </Link>
-                  )}
+              <tr key={r.id} className={cn("border-b border-rule last:border-0", current && "bg-panel")}>
+                <th scope="row" className="py-2.5 pr-4 pl-2 text-left font-normal">
+                  <span className="flex items-center gap-2.5">
+                    <Monogram text={r.slug} size={28} />
+                    {current ? (
+                      <span className="font-semibold">{r.name}</span>
+                    ) : (
+                      <Link href={`/stocks/${r.slug}`} className="font-medium decoration-rule-strong underline-offset-4 hover:underline">
+                        {r.name}
+                      </Link>
+                    )}
+                  </span>
                 </th>
-                <td className="py-3 text-right">
+                <td className="py-2.5 text-right">
                   <LivePrice id={r.id} />
                 </td>
-                <td className="py-3 text-right">
-                  <LiveChange id={r.id} showAbsolute={false} />
+                <td className="py-2.5 text-right">
+                  <LiveMove id={r.id} />
                 </td>
-                <td className="num py-3 text-right">{formatCrore(r.mcapCr)}</td>
-                <td className="num py-3 text-right">{formatNumber(r.pe, 1)}</td>
-                <td className="num py-3 text-right">{formatNumber(r.roe, 0)}%</td>
-                <td className="num py-3 text-right">{formatPct(r.growth, 0)}</td>
-                <td className={cn("num py-3 text-right", r.return1y >= 0 ? "text-up" : "text-down")}>{formatPct(r.return1y, 0)}</td>
+                <td className="num py-2.5 text-right">{formatCrore(r.mcapCr)}</td>
+                <td className="num py-2.5 text-right">{formatNumber(r.pe, 1)}</td>
+                <td className="num py-2.5 text-right">{formatNumber(r.roe, 0)}%</td>
+                <td className="num py-2.5 text-right">{formatPct(r.growth, 0)}</td>
+                <td className="py-2.5 pr-2 text-right">
+                  <Move value={r.return1y} digits={0} />
+                </td>
               </tr>
             )
           })}
         </tbody>
       </table>
-      <p className="mt-2 text-xs text-ink-3">Profit growth is the three-year annual rate.{dataset === "real" ? "" : " Sample figures."}</p>
+      <p className="mt-3 text-xs text-ink-3">Profit growth is the three-year annual rate.{dataset === "real" ? "" : " Sample figures."}</p>
     </div>
   )
 }

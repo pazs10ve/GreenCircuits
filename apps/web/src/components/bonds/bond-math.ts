@@ -7,8 +7,21 @@ import { bondPrice, type Bond } from "@greencircuits/market/reference"
  * discount formula: price = 100 / (1 + yield × days / 365).
  */
 
-/** A bond row as the page passes it to client components: years left computed once, on the server. */
-export type BondRow = Bond & { yearsLeft: number }
+/**
+ * A bond as the page passes it to client components: years left computed once,
+ * on the server. Real bonds that didn't trade today have no fresh yield.
+ */
+export type BondRow = Omit<Bond, "price" | "ytm"> & {
+  id: string
+  /** Per ₹100 of face value (a gold bond's per gram); null without a price. */
+  price: number | null
+  ytm: number | null
+  yearsLeft: number
+  /** Whether the price is from today's trading; a price that isn't may be weeks old. */
+  fresh: boolean
+  /** Gold bonds: what a gram cost at issue. */
+  issuePrice?: number
+}
 
 export const FREQUENCY_LABEL: Record<number, string> = {
   0: "Discount",

@@ -65,9 +65,10 @@ export function useChartPalette(): ChartPalette | null {
   const { resolvedTheme } = useTheme()
   const [p, setP] = useState<ChartPalette | null>(null)
   useEffect(() => {
-    // Wait a frame so the theme class has been applied to <html>.
-    const id = requestAnimationFrame(() => setP(palette()))
-    return () => cancelAnimationFrame(id)
+    // After this render, so the theme class has been applied to <html>. A timer rather than an animation
+    // frame: frames don't run in a background tab, and a chart opened in one should be ready when it's shown.
+    const id = setTimeout(() => setP(palette()), 0)
+    return () => clearTimeout(id)
   }, [resolvedTheme])
   return p
 }

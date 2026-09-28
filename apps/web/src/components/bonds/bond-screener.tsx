@@ -5,9 +5,13 @@ import type { ColumnDef } from "@tanstack/react-table"
 import { Calculator, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group"
+import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 import { DataTable } from "@/components/data/data-table"
 import { Segmented } from "@/components/market/segmented"
+import { Meter } from "@/components/parts/meter"
+import { Tag } from "@/components/parts/tag"
 import type { BondType } from "@greencircuits/market/reference"
 import { formatDateIST, formatNumber } from "@greencircuits/market/format"
 import { FREQUENCY_LABEL, type BondRow } from "./bond-math"
@@ -15,8 +19,9 @@ import { useBondCalc } from "./calc-store"
 
 const TYPES: BondType[] = ["G-Sec", "SDL", "T-Bill", "SGB", "PSU", "Corporate"]
 
-const RATING_ORDER: Record<string, number> = { SOV: 0, AAA: 1, "AA+": 2, AA: 3 }
-const RATINGS = ["SOV", "AAA", "AA+", "AA"]
+/** Ratings best first: sovereign, then the agencies' scale. */
+const SCALE = ["SOV", "AAA", "AA+", "AA", "AA-", "A+", "A", "A-", "BBB+", "BBB", "BBB-", "BB+", "BB", "BB-", "B", "C", "D"]
+const RATING_ORDER: Record<string, number> = Object.fromEntries(SCALE.map((r, i) => [r, i]))
 
 function yearsLeftLabel(years: number): string {
   return years < 1 ? `${Math.round(years * 365)} days` : `${formatNumber(years, 1)} yrs`
@@ -31,28 +36,36 @@ const TYPE_NAME: Record<BondType, string> = {
   Corporate: "Company",
 }
 
-/** Government, state, PSU and corporate bonds with type, rating and text filters. */
-export function BondScreener({ bonds, className }: { bonds: BondRow[]; className?: string }) {
+/**
+ * Government, state, PSU and company bonds with type, rating and text filters.
+ * With real data most bonds don't trade on a given day, so the list starts at
+ * those that did.
+ */
+export function BondScreener({ bonds, real = false, className }: { bonds: BondRow[]; real?: boolean; className?: string }) {
   const [type, setType] = useState<"All" | BondType>("All")
   const [rating, setRating] = useState("all")
   const [search, setSearch] = useState("")
+  const [tradedOnly, setTradedOnly] = useState(real)
   const load = useBondCalc((s) => s.load)
+  const types = useMemo(() => TYPES.filter((t) => bonds.some((b) => b.type === t)), [bonds])
+  const ratings = useMemo(() => [...new Set(bonds.map((b) => b.rating))].sort((a, b) => (RATING_ORDER[a] ?? 99) - (RATING_ORDER[b] ?? 99) || a.localeCompare(b)), [bonds])
 
+  const pool = useMemo(() => (tradedOnly ? bonds.filter((b) => b.fresh) : bonds), [bonds, tradedOnly])
   const counts = useMemo(() => {
-    const m = new Map<string, number>([["All", bonds.length]])
-    for (const b of bonds) m.set(b.type, (m.get(b.type) ?? 0) + 1)
+    const m = new Map<string, number>([["All", pool.length]])
+    for (const b of pool) m.set(b.type, (m.get(b.type) ?? 0) + 1)
     return m
-  }, [bonds])
+  }, [pool])
 
   const rows = useMemo(() => {
     const q = search.trim().toLowerCase()
-    return bonds.filter(
+    return pool.filter(
       (b) =>
         (type === "All" || b.type === type) &&
         (rating === "all" || b.rating === rating) &&
         (!q || [b.name, b.issuer, b.isin, b.agency].some((s) => s.toLowerCase().includes(q))),
     )
-  }, [bonds, type, rating, search])
+  }, [pool, type, rating, search])
 
   const columns = useMemo<ColumnDef<BondRow>[]>(
     () => [
@@ -63,16 +76,10 @@ export function BondScreener({ bonds, className }: { bonds: BondRow[]; className
         meta: { sticky: true, className: "min-w-44" },
         cell: ({ row }) => (
           <span className="block leading-snug">
-            <span className="block font-medium text-ink">{row.original.name}</span>
-            <span className="block font-mono text-xs text-ink-3">{row.original.isin}</span>
+            <span className="block font-semibold text-ink">{row.original.name}</span>
+            <span className="block font-mono text-[11px] text-ink-3">{row.original.isin}</span>
           </span>
         ),
-      },
-      {
-        id: "issuer",
-        header: "Issuer",
-        accessorFn: (b) => b.issuer,
-        cell: ({ row }) => <span className="block max-w-56 truncate text-ink-2">{row.original.issuer}</span>,
       },
       {
         id: "type",
@@ -97,38 +104,49 @@ export function BondScreener({ bonds, className }: { bonds: BondRow[]; className
       },
       {
         id: "maturity",
-        header: "Maturity",
+        header: "Years left",
         accessorFn: (b) => b.maturity.getTime(),
         meta: { align: "right" },
         cell: ({ row }) => (
-          <span className="block leading-snug">
-            <span className="block">{formatDateIST(row.original.maturity)}</span>
-            <span className="block text-[13px] text-ink-3">{yearsLeftLabel(row.original.yearsLeft)}</span>
+          <span className="flex items-center justify-end gap-2.5" title={formatDateIST(row.original.maturity)}>
+            <Meter value={row.original.yearsLeft / 40} height={5} className="w-14" barClassName="bg-ink-3" />
+            <span className="w-16 text-right">{yearsLeftLabel(row.original.yearsLeft)}</span>
           </span>
         ),
       },
       {
         id: "price",
         header: "Price",
-        accessorFn: (b) => b.price,
+        accessorFn: (b) => b.price ?? undefined,
+        sortUndefined: "last",
         meta: { align: "right" },
-        cell: ({ row }) => `₹${formatNumber(row.original.price, 2)}`,
+        cell: ({ row }) => {
+          const { price, fresh } = row.original
+          if (price == null) return <span className="text-ink-3">–</span>
+          return (
+            <span className={fresh ? undefined : "text-ink-3"} title={fresh ? undefined : "Last traded before today"}>
+              ₹{formatNumber(price, 2)}
+            </span>
+          )
+        },
       },
       {
         id: "ytm",
         header: "Yield",
-        accessorFn: (b) => b.ytm,
+        accessorFn: (b) => b.ytm ?? undefined,
+        sortUndefined: "last",
         meta: { align: "right" },
-        cell: ({ row }) => <span className="font-medium">{formatNumber(row.original.ytm, 2)}%</span>,
+        cell: ({ row }) =>
+          row.original.ytm == null ? <span className="text-ink-3">–</span> : <span className="font-semibold">{formatNumber(row.original.ytm, 2)}%</span>,
       },
       {
         id: "rating",
         header: "Rating",
         accessorFn: (b) => RATING_ORDER[b.rating] ?? 9,
         cell: ({ row }) => (
-          <span className="whitespace-nowrap">
-            <span className="font-medium">{row.original.rating}</span>
-            <span className="text-ink-3">{row.original.rating === "SOV" ? " · sovereign" : ` · ${row.original.agency}`}</span>
+          <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+            <Tag>{row.original.rating === "SOV" ? "Sovereign" : row.original.rating}</Tag>
+            {row.original.rating !== "SOV" && <span className="text-xs text-ink-3">{row.original.agency}</span>}
           </span>
         ),
       },
@@ -169,13 +187,13 @@ export function BondScreener({ bonds, className }: { bonds: BondRow[]; className
   return (
     <div className={className}>
       <div className="mb-5 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-        <div className="no-scrollbar -mx-5 overflow-x-auto px-5 xl:mx-0 xl:px-0">
+        <div className="no-scrollbar -mx-(--gutter) overflow-x-auto px-(--gutter) xl:mx-0 xl:px-0">
           <Segmented
             value={type}
             onChange={setType}
             aria-label="Kind of bond"
             className="w-max"
-            options={(["All", ...TYPES] as const).map((t) => ({
+            options={(["All", ...types] as const).map((t) => ({
               value: t,
               label: (
                 <>
@@ -185,14 +203,22 @@ export function BondScreener({ bonds, className }: { bonds: BondRow[]; className
             }))}
           />
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {real && (
+            <div className="mr-2 flex items-center gap-2">
+              <Switch id="bonds-traded" checked={tradedOnly} onCheckedChange={setTradedOnly} />
+              <Label htmlFor="bonds-traded" className="text-[13px] font-normal text-ink-2">
+                Traded today
+              </Label>
+            </div>
+          )}
           <Select value={rating} onValueChange={setRating}>
             <SelectTrigger className="h-9 w-36 shrink-0 bg-card" aria-label="Rating">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Every rating</SelectItem>
-              {RATINGS.map((r) => (
+              {ratings.map((r) => (
                 <SelectItem key={r} value={r}>
                   {r === "SOV" ? "Sovereign" : r}
                 </SelectItem>
@@ -210,7 +236,8 @@ export function BondScreener({ bonds, className }: { bonds: BondRow[]; className
       <DataTable
         columns={columns}
         data={rows}
-        getRowId={(b) => b.isin}
+        getRowId={(b) => b.id}
+        noun="bonds"
         maxHeight="min(75vh, 760px)"
         empty={
           <span className="inline-flex flex-col items-center gap-2">
@@ -222,6 +249,7 @@ export function BondScreener({ bonds, className }: { bonds: BondRow[]; className
                 setType("All")
                 setRating("all")
                 setSearch("")
+                setTradedOnly(false)
               }}
             >
               Clear the filters
@@ -229,9 +257,12 @@ export function BondScreener({ bonds, className }: { bonds: BondRow[]; className
           </span>
         }
       />
-      <p className="mt-3 text-sm leading-relaxed text-ink-3">
-        {filtered ? `${rows.length} of ${bonds.length} bonds. ` : ""}Prices are per ₹100 of face value. Gold bonds are priced in grams of gold on the exchange, so their price
-        and yield here are only illustrative. The calculator button prices a bond at any yield.
+      <p className="mt-3 text-xs leading-relaxed text-ink-3">
+        {filtered || tradedOnly ? `${rows.length} of ${bonds.length} bonds. ` : ""}Prices are per ₹100 of face value.{" "}
+        {real
+          ? "The government's bonds are taken to mature in the middle of their year, as the NSE's list gives only the year, and yields are worked out from the last price without accrued interest."
+          : "Each is priced off a model yield curve, at a spread for its rating."}{" "}
+        The calculator button prices a bond at any yield.
       </p>
     </div>
   )

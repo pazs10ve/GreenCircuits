@@ -7,7 +7,9 @@ import { ArrowDown, ArrowUp, BellPlus, MoreHorizontal, Trash2 } from "lucide-rea
 import { toast } from "sonner"
 import { DataTable } from "@/components/data/data-table"
 import { AlertDialogButton } from "@/components/market/alert-dialog"
-import { LiveChange, LivePrice } from "@/components/market/price"
+import { LivePrice } from "@/components/market/price"
+import { LiveMove } from "@/components/parts/live-move"
+import { Monogram } from "@/components/parts/monogram"
 import { Sparkline } from "@/components/market/sparkline"
 import { withLive } from "@/components/stocks/derive"
 import { Button } from "@/components/ui/button"
@@ -18,7 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { getInstrument } from "@greencircuits/market/catalog"
+import { getInstrument, hrefOf } from "@greencircuits/market/catalog"
 import { sparkline } from "@greencircuits/market/history"
 import { useUniverse } from "@/lib/data/client"
 import { useMarket } from "@/lib/stream/market-context"
@@ -40,8 +42,11 @@ function DayRange({ q }: { q: Quote | undefined }) {
   const pos = ((q.ltp - q.low) / span) * 100
   return (
     <span className="inline-flex w-24 flex-col gap-1" title="The day's low to high">
-      <span className="relative h-1 rounded-full bg-surface-2">
-        <span className="absolute top-1/2 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-paper bg-ink" style={{ left: `${pos}%` }} />
+      <span className="relative h-1.5 rounded-full bg-surface-2">
+        <span
+          className="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-[2.5px] border-paper bg-ink shadow-[0_0_0_1px_var(--rule-strong)]"
+          style={{ left: `${pos}%` }}
+        />
       </span>
     </span>
   )
@@ -74,10 +79,13 @@ export function WatchlistTable({ list }: { list: Watchlist }) {
         accessorFn: (r) => r.inst.name,
         meta: { sticky: true },
         cell: ({ row: { original: r } }) => (
-          <Link href={r.inst.kind === "COMMODITY" ? `/commodities?c=${r.inst.slug}` : `/stocks/${r.inst.slug}`} className="group block min-w-44 leading-snug">
-            <span className="block max-w-60 truncate font-medium text-ink group-hover:underline group-hover:decoration-1 group-hover:underline-offset-4">{r.inst.name}</span>
-            <span className="block max-w-60 truncate text-[13px] text-ink-3">
-              {r.inst.symbol} · {r.inst.exchange}
+          <Link href={hrefOf(r.inst)} className="group flex min-w-48 items-center gap-2.5 leading-snug">
+            <Monogram text={r.inst.kind === "EQUITY" ? r.inst.symbol : r.inst.name} size={28} />
+            <span className="min-w-0">
+              <span className="block max-w-60 truncate font-semibold text-ink decoration-rule-strong group-hover:underline group-hover:underline-offset-4">{r.inst.name}</span>
+              <span className="block max-w-60 truncate text-xs text-ink-3">
+                {r.inst.symbol} · {r.inst.exchange}
+              </span>
             </span>
           </Link>
         ),
@@ -94,7 +102,7 @@ export function WatchlistTable({ list }: { list: Watchlist }) {
         header: "Day",
         accessorFn: (r) => r.q?.changePct ?? 0,
         meta: { align: "right" },
-        cell: ({ row: { original: r } }) => <LiveChange id={r.inst.id} />,
+        cell: ({ row: { original: r } }) => <LiveMove id={r.inst.id} />,
       },
       {
         id: "range",

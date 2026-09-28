@@ -49,9 +49,9 @@ export function ScreenerActions() {
       <Button variant="outline" onClick={exportCsv}>
         <Download /> Export CSV
       </Button>
-      <Button asChild>
+      <Button asChild variant="brand">
         <Link href={`/lab/new?screen=${encodeURIComponent(applied.source.trim())}`}>
-          <FlaskConical /> Backtest this screen
+          <FlaskConical /> Test a rule on these
         </Link>
       </Button>
     </>

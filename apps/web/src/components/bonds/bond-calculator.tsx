@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Segmented } from "@/components/market/segmented"
 import { Figure, Figures } from "@/components/editorial/figures"
+import { Move } from "@/components/parts/move"
 import { formatNumber, formatPct } from "@greencircuits/market/format"
 import { cn } from "@/lib/utils"
 import { FREQUENCY_LABEL, YIELD_CAP, YIELD_FLOOR, bondMetrics, rateShocks, yieldFromPrice } from "./bond-math"
@@ -59,7 +60,7 @@ export function BondCalculator({ className }: { className?: string }) {
   }
 
   return (
-    <div className={cn("grid gap-x-14 gap-y-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]", className)}>
+    <div className={cn("grid gap-x-10 gap-y-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]", className)}>
       <div>
         <Segmented
           value={calc.solve}
@@ -131,31 +132,33 @@ export function BondCalculator({ className }: { className?: string }) {
           </p>
         )}
 
-        <Figures className="mt-8 sm:grid-cols-2 lg:grid-cols-4">
-          <Figure label="Macaulay duration" value={m ? `${formatNumber(m.macaulay, 2)} yrs` : "–"} hint="when the money comes back, on average" />
-          <Figure label="Modified duration" value={m ? formatNumber(m.modified, 2) : "–"} hint="% price move per point of yield" />
-          <Figure label="PV01" value={m ? `₹${formatNumber(m.pv01, 4)}` : "–"} hint={m ? `₹${formatNumber(m.pv01 * 1e5, 0)} per ₹1 crore of face` : undefined} />
+        <Figures className="mt-6 gap-2.5 sm:grid-cols-2 lg:grid-cols-4 lg:gap-2.5">
+          <Figure variant="panel" size="sm" label="Macaulay duration" value={m ? `${formatNumber(m.macaulay, 2)} yrs` : "–"} hint="when the money comes back, on average" />
+          <Figure variant="panel" size="sm" label="Modified duration" value={m ? formatNumber(m.modified, 2) : "–"} hint="% price move per point of yield" />
+          <Figure variant="panel" size="sm" label="PV01" value={m ? `₹${formatNumber(m.pv01, 4)}` : "–"} hint={m ? `₹${formatNumber(m.pv01 * 1e5, 0)} per ₹1 crore of face` : undefined} />
           <Figure
+            variant="panel"
+            size="sm"
             label="Current yield"
             value={m ? (m.currentYield == null ? "None" : `${formatNumber(m.currentYield, 2)}%`) : "–"}
             hint={m ? `convexity ${formatNumber(m.convexity, 1)}` : undefined}
           />
         </Figures>
 
-        <table className="mt-10 w-full text-sm">
+        <table className="mt-7 w-full text-sm">
           <caption className="mb-2 text-left text-sm font-semibold">If yields move a quarter of a point</caption>
           <thead>
-            <tr className="border-b border-ink text-xs text-ink-3">
-              <th scope="col" className="pb-2 text-left font-normal">
+            <tr className="border-b border-rule text-xs text-ink-3">
+              <th scope="col" className="pb-2 text-left font-medium">
                 Yield
               </th>
-              <th scope="col" className="pb-2 text-right font-normal">
+              <th scope="col" className="pb-2 text-right font-medium">
                 Price
               </th>
-              <th scope="col" className="pb-2 text-right font-normal">
+              <th scope="col" className="pb-2 text-right font-medium">
                 Change
               </th>
-              <th scope="col" className="pb-2 text-right font-normal">
+              <th scope="col" className="pb-2 text-right font-medium">
                 Duration&apos;s guess
               </th>
             </tr>
@@ -178,13 +181,15 @@ export function BondCalculator({ className }: { className?: string }) {
                   </span>
                 </th>
                 <td className="py-2.5 text-right">₹{formatNumber(s.price, 2)}</td>
-                <td className={cn("py-2.5 text-right", s.changePct >= 0 ? "text-up" : "text-down")}>{formatPct(s.changePct)}</td>
+                <td className="py-2.5 text-right">
+                  <Move value={s.changePct} />
+                </td>
                 <td className="py-2.5 text-right text-ink-3">{formatPct(s.durationPct)}</td>
               </tr>
             ))}
           </tbody>
         </table>
-        <p className="mt-3 text-sm leading-relaxed text-ink-3">
+        <p className="mt-3 text-xs leading-relaxed text-ink-3">
           The gap between the full repricing and duration&apos;s guess is convexity. Prices assume whole interest periods and no accrued interest; bills use the simple
           discount formula on a 365-day year.
         </p>

@@ -1,46 +1,69 @@
 import type { Metadata } from "next"
+import { INDEX, getInstrument } from "@greencircuits/market/catalog"
+import { formatCompact } from "@greencircuits/market/format"
 import { PageHead } from "@/components/editorial/page-head"
 import { Section } from "@/components/editorial/section"
 import { FO_UNDERLYINGS } from "@/components/fo/chain-model"
+import { IndexUnderlyings } from "@/components/fo/index-underlyings"
 import { UnderlyingsTable } from "@/components/fo/underlyings-table"
-import { SectionNav } from "@/components/shell/section-nav"
+import { ShareBar } from "@/components/parts/share-bar"
+import { getFeed } from "@/lib/data/market"
 
 export const metadata: Metadata = {
   title: "Futures and options",
   description: "Option chains for Indian indices and stocks, with open interest, Greeks and a strategy builder.",
 }
 
-export default function FoPage() {
+export default async function FoPage() {
   const indices = FO_UNDERLYINGS.filter((i) => i.kind === "INDEX").length
   const stocks = FO_UNDERLYINGS.length - indices
+  const feed = await getFeed()
+  const nifty = getInstrument(INDEX.NIFTY)!
+  const niftyLot = (feed.quotes?.find((q) => q.id === nifty.id)?.ltp ?? nifty.prevClose) * (nifty.lot ?? 1)
 
   return (
-    <div className="mx-auto max-w-[1200px] px-5 pt-6 pb-20">
-      <SectionNav section="explore" />
-      <PageHead
-        title="Futures and options"
-        lede={`Option chains for ${indices} indices and ${stocks} stocks: every strike's price, open interest and Greeks, and a builder that shows what a strategy pays at expiry. Pick an underlying to open its chain.`}
-      />
+    <div className="page pt-6 pb-10">
+      <PageHead title="Futures and options" lede={`${indices} indices and ${stocks} stocks · modelled option prices, sample open interest`} />
+      <IndexUnderlyings />
 
-      <div className="mt-12 space-y-16">
-        <Section title="Underlyings" description="Weekly options on the Nifty 50 and the Sensex; monthly options on everything else.">
+      <div className="mt-5 grid gap-5 lg:grid-cols-12">
+        <Section className="lg:col-span-8" title="Stocks" description="Monthly options, expiring on the last Tuesday of the month. Pick one to open its chain.">
           <UnderlyingsTable />
         </Section>
-
-        <Section title="Before you trade">
-          <div className="grid max-w-5xl gap-x-12 gap-y-6 text-[0.9375rem] leading-relaxed text-ink-2 md:grid-cols-3">
-            <p>
-              <span className="font-semibold text-ink">Most traders lose.</span> SEBI found that 93% of individuals trading equity F&amp;O lost money in the three
-              years to March 2024, about ₹2 lakh each on average once costs are counted.
-            </p>
-            <p>
-              <span className="font-semibold text-ink">Lots, not shares.</span> Contracts come in lots worth several lakh rupees. Selling an option can lose many
-              times the premium it brings in, which is why brokers ask for a large margin.
-            </p>
-            <p>
-              <span className="font-semibold text-ink">Modelled prices.</span> The chains here are priced with Black-76, from the underlying and India VIX or a
-              volatility smile; they aren&apos;t traded quotes, and open interest is sample data.
-            </p>
+        <Section className="lg:col-span-4" title="Before you trade" size="rail">
+          <div className="space-y-3">
+            <div className="rounded-panel bg-panel p-3.5">
+              <p className="flex items-baseline gap-2">
+                <span className="figure text-[1.625rem] leading-none">93%</span>
+                <span className="text-xs text-ink-3">lost money</span>
+              </p>
+              <ShareBar
+                className="mt-3"
+                parts={[
+                  { value: 93, className: "bg-ink" },
+                  { value: 7, className: "bg-rule-strong" },
+                ]}
+                label="93 in 100 lost money"
+              />
+              <p className="mt-2.5 text-[13px] leading-relaxed text-ink-2">
+                Of individuals trading equity F&amp;O in the three years to March 2024, by SEBI&apos;s count: about ₹2 lakh each, once costs are counted.
+              </p>
+            </div>
+            <div className="rounded-panel bg-panel p-3.5">
+              <p className="flex items-baseline gap-2">
+                <span className="figure text-[1.625rem] leading-none">₹{formatCompact(niftyLot, 1)}</span>
+                <span className="text-xs text-ink-3">one Nifty lot</span>
+              </p>
+              <p className="mt-2.5 text-[13px] leading-relaxed text-ink-2">
+                Contracts come in lots, not shares. Selling an option can lose many times the premium it brings in, so brokers ask for a large margin.
+              </p>
+            </div>
+            <div className="rounded-panel bg-panel p-3.5">
+              <p className="text-sm font-semibold">Modelled, not traded</p>
+              <p className="mt-1.5 text-[13px] leading-relaxed text-ink-2">
+                Chains here are priced with Black-76 from the underlying and India VIX or a volatility smile. Open interest is sample data.
+              </p>
+            </div>
           </div>
         </Section>
       </div>

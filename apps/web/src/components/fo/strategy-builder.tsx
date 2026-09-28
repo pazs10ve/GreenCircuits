@@ -87,13 +87,13 @@ export function StrategyBuilder({
   }
 
   return (
-    <section className={cn("scroll-mt-20 border-t border-ink pt-4", className)} aria-labelledby="strategy-title">
+    <section className={cn("flex scroll-mt-20 flex-col rounded-card border border-rule bg-paper p-4 sm:p-5", className)} aria-labelledby="strategy-title">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 id="strategy-title" className="font-serif text-[1.375rem] leading-tight font-semibold tracking-[-0.01em]">
+          <h2 id="strategy-title" className="text-sm leading-snug font-semibold">
             Build a strategy
           </h2>
-          <p className="mt-1 text-sm text-ink-2">
+          <p className="mt-0.5 text-[13px] text-ink-3">
             {legs.length ? `${legs.length} ${legs.length === 1 ? "leg" : "legs"} in ${inst.symbol}, lots of ${lot}.` : "What it pays at expiry, and today."}
           </p>
         </div>
@@ -103,10 +103,10 @@ export function StrategyBuilder({
           </Button>
         )}
       </div>
-      <div className="mt-5 flex flex-col gap-6">
+      <div className="mt-4 flex flex-1 flex-col gap-5">
         <PresetPicker onPick={loadPreset} disabled={!chain} />
         {legs.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 border-y border-rule px-4 py-10 text-center">
+          <div className="flex flex-1 flex-col items-center justify-center gap-2 rounded-panel bg-panel px-4 py-10 text-center">
             <MousePointerClick className="size-5 text-ink-3" aria-hidden="true" />
             <p className="text-sm font-medium">No legs yet</p>
             <p className="max-w-64 text-sm text-ink-2">Click a price in the chain to buy it, shift-click to sell, or start from a strategy above.</p>
@@ -115,7 +115,7 @@ export function StrategyBuilder({
           <>
             <LegsList legs={legs} onChange={onLegsChange} />
             <div>
-              <div className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-ink-3">
+              <div className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-2">
                 <span className="inline-flex items-center gap-1.5">
                   <svg width="18" height="6" aria-hidden="true">
                     <line x1="0" x2="18" y1="3" y2="3" stroke="var(--up)" strokeWidth="2" />

@@ -1,6 +1,8 @@
 import Link from "next/link"
+import { hrefOf } from "@greencircuits/market/catalog"
 import type { Instrument } from "@greencircuits/market/types"
 import { formatNumber, formatPrice } from "@greencircuits/market/format"
+import { Monogram } from "@/components/parts/monogram"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import { boundDecimals } from "./derive"
@@ -9,17 +11,20 @@ import { boundDecimals } from "./derive"
 export function InstrumentCell({ inst, current = false, className }: { inst: Instrument; current?: boolean; className?: string }) {
   const body = (
     <>
-      <span className="truncate font-medium text-ink">
-        <span className="group-hover/link:underline group-hover/link:decoration-1 group-hover/link:underline-offset-4">{inst.name}</span>
-        {current && <span className="ml-1.5 text-xs font-normal text-ink-3">this stock</span>}
+      <Monogram text={inst.symbol} size={28} />
+      <span className="flex min-w-0 flex-col leading-snug">
+        <span className="truncate font-semibold text-ink">
+          <span className="decoration-rule-strong group-hover/link:underline group-hover/link:underline-offset-4">{inst.name}</span>
+          {current && <span className="ml-1.5 text-xs font-normal text-ink-3">{inst.kind === "EQUITY" ? "this stock" : "this fund"}</span>}
+        </span>
+        <span className="truncate text-xs text-ink-3">{inst.symbol}</span>
       </span>
-      <span className="truncate text-[13px] text-ink-3">{inst.symbol}</span>
     </>
   )
-  const base = cn("flex max-w-[240px] min-w-0 flex-col leading-snug", className)
+  const base = cn("flex max-w-[260px] min-w-0 items-center gap-2.5", className)
   if (current) return <div className={base}>{body}</div>
   return (
-    <Link href={`/stocks/${inst.slug}`} className={cn("group/link", base)}>
+    <Link href={hrefOf(inst)} className={cn("group/link", base)}>
       {body}
     </Link>
   )
@@ -46,9 +51,9 @@ export function MiniRange({
   const text = `${label}: ${formatPrice(low, tick)} to ${formatPrice(high, tick)}, now ${formatPrice(value, tick)}`
   return (
     <span role="img" aria-label={text} title={text} className={cn("inline-flex w-24 flex-col gap-1 align-middle", className)}>
-      <span className="relative mt-0.5 h-1 rounded-full bg-surface-2">
+      <span className="relative mt-0.5 h-1.5 rounded-full bg-surface-2">
         <span
-          className="absolute top-1/2 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-paper bg-ink transition-[left] duration-500"
+          className="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-[2.5px] border-paper bg-ink shadow-[0_0_0_1px_var(--rule-strong)] transition-[left] duration-500"
           style={{ left: `${pos}%` }}
         />
       </span>

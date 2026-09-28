@@ -1,19 +1,25 @@
 "use client"
 
 import Link from "next/link"
-import { useMemo } from "react"
-import { getInstrument, marketCapCr, membersOf } from "@greencircuits/market/catalog"
-import { formatNumber, formatPct, formatSigned } from "@greencircuits/market/format"
+import { useMemo, useState } from "react"
+import { getInstrument, hrefOf, marketCapCr, membersOf } from "@greencircuits/market/catalog"
+import { formatNumber, formatSigned } from "@greencircuits/market/format"
 import { useQuoteReader } from "@/lib/stream/hooks"
+import { Monogram } from "@/components/parts/monogram"
+import { Move } from "@/components/parts/move"
 import { cn } from "@/lib/utils"
+
+const FIRST = 20
 
 /**
  * An index's members ranked by how many points each is adding or taking off
  * today, weighted by market value at yesterday's close. `members` are the ids
- * the API has; without them, the demo universe's membership.
+ * the API has; without them, the demo universe's membership. A broad index
+ * shows the twenty that matter most, and the rest on request.
  */
 export function Constituents({ indexId, members: ids }: { indexId: number; members?: number[] }) {
   const read = useQuoteReader(2000)
+  const [all, setAll] = useState(false)
   const index = getInstrument(indexId)!
   const rows = useMemo(() => {
     const members = ids ? ids.flatMap((id) => getInstrument(id) ?? []) : membersOf(indexId)
@@ -30,52 +36,42 @@ export function Constituents({ indexId, members: ids }: { indexId: number; membe
       .sort((a, b) => Math.abs(b.points) - Math.abs(a.points))
   }, [read, indexId, ids, index.prevClose])
   const max = Math.max(...rows.map((r) => Math.abs(r.points)), 0.01)
+  const shown = all ? rows : rows.slice(0, FIRST)
 
   return (
-    <div className="scrollbar-thin overflow-x-auto">
-      <table className="w-full min-w-[560px] text-sm">
-        <thead>
-          <tr className="border-b border-ink text-xs text-ink-3">
-            <th scope="col" className="pb-2 text-left font-normal">
-              Company
-            </th>
-            <th scope="col" className="pb-2 text-right font-normal">
-              Weight
-            </th>
-            <th scope="col" className="pb-2 text-right font-normal">
-              Day
-            </th>
-            <th scope="col" className="w-[40%] pb-2 pl-6 text-left font-normal">
-              Index points
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.inst.id} className="border-b border-rule">
-              <th scope="row" className="py-2.5 pr-4 text-left font-normal">
-                <Link href={`/stocks/${r.inst.slug}`} className="hover:underline">
-                  {r.inst.name}
-                </Link>
-              </th>
-              <td className="num py-2.5 text-right text-ink-2">{formatNumber(r.weight, 1)}%</td>
-              <td className={cn("num py-2.5 text-right", r.pct > 0 ? "text-up" : r.pct < 0 ? "text-down" : "text-ink-2")}>{formatPct(r.pct)}</td>
-              <td className="py-2.5 pl-6">
-                <span className="grid grid-cols-[minmax(0,1fr)_3.5rem] items-center gap-3">
-                  <span className="relative h-2">
-                    <span className="absolute inset-y-[-3px] left-1/2 w-px bg-ink-3/50" />
-                    <span
-                      className={cn("absolute inset-y-0 rounded-[2px]", r.points >= 0 ? "left-1/2 bg-up/75" : "right-1/2 bg-down/75")}
-                      style={{ width: `${(Math.abs(r.points) / max) * 50}%` }}
-                    />
-                  </span>
-                  <span className={cn("num text-right", r.points >= 0 ? "text-up" : "text-down")}>{formatSigned(r.points, 1)}</span>
-                </span>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div>
+      <ol className="-my-2 divide-y divide-rule">
+        {shown.map((r) => (
+          <li key={r.inst.id}>
+            <Link href={hrefOf(r.inst)} className="group grid grid-cols-[30px_minmax(0,1fr)_4rem_minmax(3rem,1.3fr)_5rem] items-center gap-3 py-2">
+              <Monogram text={r.inst.symbol} />
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-semibold decoration-rule-strong underline-offset-4 group-hover:underline">{r.inst.name}</span>
+                <span className="num block text-xs text-ink-3">{formatNumber(r.weight, 1)}% of the index</span>
+              </span>
+              <span className="flex justify-end">
+                <Move value={r.pct} />
+              </span>
+              <span className="relative h-2" aria-hidden="true">
+                <span className="absolute -inset-y-1 left-1/2 w-px bg-rule-strong" />
+                <span
+                  className={cn("absolute inset-y-0 rounded-[3px]", r.points >= 0 ? "left-1/2 bg-up" : "right-1/2 bg-down")}
+                  style={{ width: `${(Math.abs(r.points) / max) * 50}%` }}
+                />
+              </span>
+              <span className={cn("num text-right text-[13px] font-semibold", r.points >= 0 ? "text-up" : "text-down")}>{formatSigned(r.points, 1)} pts</span>
+            </Link>
+          </li>
+        ))}
+      </ol>
+      {rows.length > shown.length && (
+        <p className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px]">
+          <button type="button" onClick={() => setAll(true)} className="font-semibold text-ink-2 hover:text-ink">
+            Show all {rows.length}
+          </button>
+          <span className="text-ink-3">The {FIRST} adding or taking off the most points</span>
+        </p>
+      )}
     </div>
   )
 }

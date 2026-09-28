@@ -14,6 +14,8 @@ export interface UniverseRow {
   since: string
   /** Against the Nifty 50, over the last year. */
   beta: number | null
+  /** The close 250 sessions back, for a year's return; null with less history. */
+  yearAgo: number | null
 }
 
 export interface Universe {

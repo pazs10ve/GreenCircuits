@@ -2,86 +2,43 @@
 
 import type { Instrument, Quote } from "@greencircuits/market/types"
 import { formatCompact, formatNumber, formatPrice, formatSigned } from "@greencircuits/market/format"
-import { Change } from "@/components/market/price"
 import { Figure, Figures } from "@/components/editorial/figures"
+import { Move } from "@/components/parts/move"
+import { RangeMarker } from "@/components/parts/range-marker"
+import { Tag } from "@/components/parts/tag"
 import { Skeleton } from "@/components/ui/skeleton"
-import { formatCountdown, formatExpiry, formatOi, ivPercentile, type LiveChain, type OiUnit } from "./chain-model"
+import { formatCountdown, formatExpiry, ivPercentile, type LiveChain } from "./chain-model"
 
-/** One line of headline numbers for the selected expiry. */
-export function ChainStats({
-  inst,
-  chain,
-  quote,
-  vix,
-  nowMs,
-  unit,
-}: {
-  inst: Instrument
-  chain: LiveChain | null
-  quote: Quote | undefined
-  vix: number | undefined
-  nowMs: number | null
-  unit: OiUnit
-}) {
-  const unitHint = unit === "lakh" ? "lakh units, all strikes" : "contracts, all strikes"
-  const stats: { label: string; value: React.ReactNode; hint: React.ReactNode }[] = chain
-    ? [
-        {
-          label: "Spot",
-          value: formatPrice(chain.spot, inst.tick),
-          hint: <Change change={quote?.change} pct={quote?.changePct} tick={inst.tick} arrow={false} />,
-        },
-        {
-          label: "Future (synthetic)",
-          value: formatPrice(chain.forward, inst.tick),
-          hint: `Basis ${formatSigned(chain.forward - chain.spot, 2)}`,
-        },
-        {
-          label: "ATM IV",
-          value: `${formatNumber(chain.atmIv, 2)}%`,
-          hint: inst.kind === "INDEX" && vix != null ? `India VIX ${formatNumber(vix, 2)}` : `Strike ${formatNumber(chain.atm, 0)}`,
-        },
-        {
-          label: "IV percentile",
-          value: formatNumber(ivPercentile(inst, chain.atmIv), 0),
-          hint: "sample, past year",
-        },
-        {
-          label: "PCR (OI)",
-          value: formatNumber(chain.pcr, 2),
-          hint: "put OI ÷ call OI",
-        },
-        {
-          label: "Max pain",
-          value: formatNumber(chain.maxPain, 0),
-          hint: `${formatSigned(chain.maxPain - chain.spot, 0)} from spot`,
-        },
-        {
-          label: "Expires in",
-          value: nowMs == null ? "–" : formatCountdown(chain.expiry.getTime() - nowMs),
-          hint: `${formatExpiry(chain.expiry)}, 15:30 IST`,
-        },
-        {
-          label: "Lot size",
-          value: formatNumber(chain.lot, 0),
-          hint: `Notional ₹${formatCompact(chain.spot * chain.lot)}`,
-        },
-        { label: "Call OI", value: formatOi(chain.totalCeOi, unit, chain.lot), hint: unitHint },
-        { label: "Put OI", value: formatOi(chain.totalPeOi, unit, chain.lot), hint: unitHint },
-      ]
-    : []
-
+/** The expiry's headline numbers, a tile each: the price and its future, how nervous the options are, max pain, and time left. */
+export function ChainStats({ inst, chain, quote, vix, nowMs }: { inst: Instrument; chain: LiveChain | null; quote: Quote | undefined; vix: number | undefined; nowMs: number | null }) {
+  if (!chain) {
+    return (
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 lg:gap-4">
+        {Array.from({ length: 5 }, (_, i) => (
+          <Skeleton key={i} className="h-[92px] rounded-card" />
+        ))}
+      </div>
+    )
+  }
+  const percentile = ivPercentile(inst, chain.atmIv)
+  const left = nowMs == null ? null : chain.expiry.getTime() - nowMs
   return (
-    <Figures className="grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-5" aria-label="The chain in numbers">
-      {chain
-        ? stats.map((st) => <Figure key={st.label} label={st.label} value={st.value} hint={st.hint} size="sm" />)
-        : Array.from({ length: 10 }, (_, i) => (
-            <div key={i} className="space-y-2 border-t border-rule pt-3">
-              <Skeleton className="h-3 w-16" />
-              <Skeleton className="h-5 w-20" />
-              <Skeleton className="h-3 w-24" />
-            </div>
-          ))}
+    <Figures className="grid-cols-2 sm:grid-cols-3 lg:grid-cols-5" aria-label="The expiry in numbers">
+      <Figure label={inst.kind === "INDEX" ? inst.name : "Share price"} value={formatPrice(chain.spot, inst.tick)} delta={<Move value={quote?.changePct} />} />
+      <Figure label="Future" value={formatPrice(chain.forward, inst.tick)} hint={`${formatSigned(chain.forward - chain.spot, 2)} over the price`} />
+      <Figure
+        label="Implied volatility"
+        value={`${formatNumber(chain.atmIv, 1)}%`}
+        hint={inst.kind === "INDEX" && vix != null ? `At the money · India VIX ${formatNumber(vix, 1)}` : "At the money"}
+        visual={<RangeMarker value={percentile / 100} left="Low" right="High" caption="for the year" label={`Higher than ${formatNumber(percentile, 0)}% of the past year's readings`} />}
+      />
+      <Figure label="Max pain" value={formatNumber(chain.maxPain, 0)} hint={`${formatSigned(chain.maxPain - chain.spot, 0)} from the price`} />
+      <Figure
+        label="Expires in"
+        value={left == null ? "–" : formatCountdown(left)}
+        delta={left != null && left < 2 * 86_400_000 ? <Tag tone="attn">Soon</Tag> : undefined}
+        hint={`${formatExpiry(chain.expiry)} · lots of ${formatNumber(chain.lot, 0)}, ₹${formatCompact(chain.spot * chain.lot)} a lot`}
+      />
     </Figures>
   )
 }

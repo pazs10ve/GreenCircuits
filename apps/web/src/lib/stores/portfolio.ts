@@ -13,9 +13,21 @@ export interface Holding {
 
 interface PortfolioState {
   holdings: Holding[]
-  source: "sample" | "import"
+  /** The sample, or the reader's own: imported from a broker's file, typed in, or both. */
+  source: "sample" | "own"
   importedAt?: Date
+  /** An import: the file's holdings replace whatever was there. */
   replace: (holdings: Holding[]) => void
+  /** More shares: a new holding, or a top-up of one already held at the combined average cost. */
+  add: (holding: Holding) => "started" | "added" | "topped-up"
+  update: (instrumentId: number, patch: Pick<Holding, "qty" | "avgPrice">) => void
+  /** Removes a holding and returns it, for an undo. */
+  remove: (instrumentId: number) => Holding | undefined
+  /** Puts a removed holding back where it was. */
+  restore: (holding: Holding, index: number) => void
+  /** An empty portfolio of the reader's own. */
+  clear: () => void
+  /** Back to the sample. */
   reset: () => void
 }
 
@@ -34,13 +46,57 @@ const SAMPLE: Holding[] = [
 
 export const usePortfolio = create<PortfolioState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       holdings: SAMPLE,
       source: "sample",
-      replace: (holdings) => set({ holdings, source: "import", importedAt: new Date() }),
+      replace: (holdings) => set({ holdings, source: "own", importedAt: new Date() }),
+      add: (holding) => {
+        const { holdings, source } = get()
+        // The sample isn't the reader's: their first holding starts a portfolio of their own.
+        if (source === "sample") {
+          set({ holdings: [holding], source: "own" })
+          return "started"
+        }
+        const held = holdings.find((h) => h.instrumentId === holding.instrumentId)
+        if (!held) {
+          set({ holdings: [...holdings, holding] })
+          return "added"
+        }
+        const qty = held.qty + holding.qty
+        const topped = { ...held, qty, avgPrice: (held.avgPrice * held.qty + holding.avgPrice * holding.qty) / qty }
+        set({ holdings: holdings.map((h) => (h === held ? topped : h)) })
+        return "topped-up"
+      },
+      // Editing or removing a sample holding makes the rest of the sample the reader's own.
+      update: (instrumentId, patch) =>
+        set((s) => ({ holdings: s.holdings.map((h) => (h.instrumentId === instrumentId ? { ...h, ...patch } : h)), source: "own" })),
+      remove: (instrumentId) => {
+        const gone = get().holdings.find((h) => h.instrumentId === instrumentId)
+        if (gone) set((s) => ({ holdings: s.holdings.filter((h) => h !== gone), source: "own" }))
+        return gone
+      },
+      restore: (holding, index) =>
+        set((s) => {
+          if (s.holdings.some((h) => h.instrumentId === holding.instrumentId)) return s
+          const holdings = [...s.holdings]
+          holdings.splice(Math.min(index, holdings.length), 0, holding)
+          return { holdings, source: "own" }
+        }),
+      clear: () => set({ holdings: [], source: "own", importedAt: undefined }),
       reset: () => set({ holdings: SAMPLE, source: "sample", importedAt: undefined }),
     }),
-    { name: "gc.portfolio", storage: safeStorage, version: 1, skipHydration: true },
+    {
+      name: "gc.portfolio",
+      storage: safeStorage,
+      version: 2,
+      skipHydration: true,
+      // Version 1 called the reader's own holdings "import", when importing was the only way to have them.
+      migrate: (persisted, version) => {
+        const old = (persisted ?? {}) as { holdings?: Holding[]; source?: string; importedAt?: Date }
+        if (version < 2) return { ...old, source: old.source === "import" ? "own" : "sample" } as PortfolioState
+        return old as PortfolioState
+      },
+    },
   ),
 )
 

@@ -1,3 +1,4 @@
+import { SECTORS, SIZE_BANDS } from "@greencircuits/market/catalog"
 import type { ScreenRow } from "@greencircuits/market/fundamentals"
 
 /** A screener row with the live quote merged in. Price fields stay null until the feed has started. */
@@ -50,6 +51,8 @@ export interface FieldDef {
   aliases?: string[]
   /** Comes from the live feed rather than yesterday's snapshot. */
   live?: boolean
+  /** Text fields: the values a query may compare them with. */
+  values?: readonly string[]
   /** A condition that uses the field, for hints. */
   example: string
   get: (row: LiveRow) => number | string | null
@@ -372,16 +375,32 @@ export const FIELDS: FieldDef[] = [
     name: "sector",
     label: "Sector",
     title: "Sector",
-    description:
-      "Financials, IT, Energy, Consumer, Auto, Healthcare, Materials, Industrials, Telecom or Utilities. Compare with = or != and quote the name.",
+    description: `${SECTORS.slice(0, -1).join(", ")} or ${SECTORS.at(-1)}. Compare with = or != and quote the name.`,
     unit: "text",
     type: "text",
     group: "Company",
     format: "text",
     decimals: 0,
     aliases: ["industry_group"],
+    values: SECTORS,
     example: 'sector = "IT"',
     get: (r) => r.sector,
+  },
+  {
+    name: "size",
+    label: "Size",
+    title: "Large, mid or small company",
+    description:
+      "SEBI's size bands: Large is the hundred biggest companies (the Nifty 50 and Next 50), Mid the next 150, Small the 250 after them. Compare with = or != and quote it.",
+    unit: "text",
+    type: "text",
+    group: "Company",
+    format: "text",
+    decimals: 0,
+    aliases: ["cap", "size_band", "market_cap_band", "category"],
+    values: SIZE_BANDS,
+    example: 'size = "Mid"',
+    get: (r) => r.size,
   },
 ]
 

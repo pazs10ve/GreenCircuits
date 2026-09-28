@@ -30,7 +30,7 @@ export function LegsList({ legs, onChange }: { legs: StrategyLeg[]; onChange: (l
 
   return (
     <div>
-      <div className="grid grid-cols-[28px_76px_minmax(0,1fr)_64px_24px] items-center gap-2 border-b border-ink pb-2 text-xs text-ink-3">
+      <div className="grid grid-cols-[28px_76px_minmax(0,1fr)_64px_24px] items-center gap-2 border-b border-rule-strong pb-2 text-xs text-ink-3">
         <span>Side</span>
         <span className="text-center">Lots</span>
         <span>Contract</span>

@@ -12,14 +12,16 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command"
-import { COMMODITIES, CURRENCIES, EQUITIES, INDICES } from "@greencircuits/market/catalog"
+import { COMMODITIES, CURRENCIES, INDICES, hrefOf } from "@greencircuits/market/catalog"
 import type { Instrument } from "@greencircuits/market/types"
 import { LiveChange } from "@/components/market/price"
+import { searchCompanies } from "@/lib/search"
 import { cn } from "@/lib/utils"
 import { SITE_NAV } from "./nav"
 
 const MORE_PAGES = [
   { label: "Screener", href: "/screener" },
+  { label: "Funds: mutual funds, ETFs, REITs and InvITs", href: "/funds" },
   { label: "Futures and options", href: "/fo" },
   { label: "IPOs", href: "/ipos" },
   { label: "Bonds", href: "/bonds" },
@@ -29,13 +31,10 @@ const MORE_PAGES = [
   { label: "Your account", href: "/account" },
 ]
 
-function hrefFor(inst: Instrument): string {
-  return inst.kind === "COMMODITY" ? `/commodities?c=${inst.slug}` : `/stocks/${inst.slug}`
-}
-
 /** Site search: companies, indices, commodities and pages. Ctrl K, ⌘K or "/" opens it. */
 export function CommandMenu({ className }: { className?: string }) {
   const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState("")
   const router = useRouter()
 
   useEffect(() => {
@@ -60,7 +59,7 @@ export function CommandMenu({ className }: { className?: string }) {
   )
 
   const item = (inst: Instrument, keywords: string) => (
-    <CommandItem key={inst.id} value={`${inst.name} ${inst.symbol} ${keywords}`} onSelect={() => go(hrefFor(inst))} className="gap-3 py-2">
+    <CommandItem key={inst.id} value={`${inst.name} ${inst.symbol} ${keywords}`} onSelect={() => go(hrefOf(inst))} className="gap-3 py-2">
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm text-ink">{inst.name}</span>
         <span className="block text-xs text-ink-3">
@@ -93,11 +92,21 @@ export function CommandMenu({ className }: { className?: string }) {
       >
         <Search className="size-5" />
       </button>
-      <CommandDialog open={open} onOpenChange={setOpen} title="Search" description="Search companies, indices and pages">
-        <CommandInput placeholder="Company, index or symbol" className="text-sm" />
+      <CommandDialog
+        open={open}
+        onOpenChange={(next) => {
+          setOpen(next)
+          if (!next) setSearch("")
+        }}
+        title="Search"
+        description="Search companies, indices and pages"
+      >
+        <CommandInput value={search} onValueChange={setSearch} placeholder="Company, index or symbol" className="text-sm" />
         <CommandList className="max-h-[440px]">
           <CommandEmpty>Nothing matches. Try a company name like “Infosys”.</CommandEmpty>
-          <CommandGroup heading="Companies">{EQUITIES.map((e) => item(e, e.sector ?? ""))}</CommandGroup>
+          <CommandGroup heading={search.trim() ? "Companies" : "Largest companies"}>
+            {searchCompanies(search).map((e) => item(e, `${e.sector ?? ""} ${e.industry ?? ""}`))}
+          </CommandGroup>
           <CommandGroup heading="Indices">{INDICES.filter((i) => i.symbol !== "INDIA VIX").map((i) => item(i, "index"))}</CommandGroup>
           <CommandGroup heading="Commodities and currencies">{[...COMMODITIES, ...CURRENCIES].map((c) => item(c, "mcx currency"))}</CommandGroup>
           <CommandSeparator />

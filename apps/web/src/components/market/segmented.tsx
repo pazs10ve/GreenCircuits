@@ -3,7 +3,7 @@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { cn } from "@/lib/utils"
 
-/** Single-choice control (chart ranges, views), styled like the price chart's ranges. Never deselects. */
+/** The choice on a panel: ranges, views, measures. The chosen option sits raised on paper. Never deselects. */
 export function Segmented<T extends string>({
   value,
   onChange,
@@ -23,9 +23,9 @@ export function Segmented<T extends string>({
       value={value}
       onValueChange={(v) => v && onChange(v as T)}
       size="sm"
-      spacing={1}
+      spacing={0}
       aria-label={ariaLabel}
-      className={cn("gap-1", className)}
+      className={cn("gap-0.5 rounded-control bg-panel p-0.5", className)}
     >
       {options.map((o) => {
         const opt = typeof o === "string" ? { value: o, label: o } : o
@@ -33,7 +33,7 @@ export function Segmented<T extends string>({
           <ToggleGroupItem
             key={opt.value}
             value={opt.value}
-            className="h-8 rounded-md px-2.5 text-sm text-ink-2 hover:bg-surface hover:text-ink data-[state=on]:bg-ink data-[state=on]:text-paper"
+            className="h-[26px] min-w-0 rounded-[7px] border border-transparent px-2.5 text-[13px] font-medium text-ink-3 shadow-none hover:bg-transparent hover:text-ink data-[state=on]:border-rule-strong data-[state=on]:bg-paper data-[state=on]:font-semibold data-[state=on]:text-ink"
           >
             {opt.label}
           </ToggleGroupItem>

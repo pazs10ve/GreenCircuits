@@ -1,4 +1,4 @@
-/* Scan src/ for classes wherever the dev server was started from (the default is the working directory). */
+/* Scan src/ for classes wherever the dev server is started from (the default is the working directory). */
 @import "tailwindcss" source("../");
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
@@ -8,8 +8,12 @@
 /*
  * GreenCircuits design tokens: ink on paper.
  * A serif (Newsreader) for headlines and figures, a quiet sans (Public Sans)
- * for everything you operate. Colour lives in the data: green and brick red
- * mean up and down and nothing else; ink blue marks links and focus.
+ * for everything you operate. Every colour means one thing:
+ *   ink          everything, by default; shares of a whole are shades of it
+ *   up / down    a rise or a fall, and nothing else
+ *   brand        the lab: testing an idea, and a test's result
+ *   bench        whatever you are measured against: the Nifty, a threshold
+ *   attn         an alert or a deadline, something that wants you
  */
 
 @theme inline {
@@ -19,6 +23,7 @@
   --font-heading: var(--font-newsreader), ui-serif, Georgia, serif;
 
   --color-paper: var(--paper);
+  --color-canvas: var(--canvas);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
   --color-ink: var(--ink);
@@ -33,7 +38,14 @@
   --color-up-muted: var(--up-soft);
   --color-down-muted: var(--down-soft);
   --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
   --color-warning: var(--warning);
+  --color-panel: var(--panel);
+  --color-rule-strong: var(--rule-strong);
+  --color-bench: var(--bench);
+  --color-bench-soft: var(--bench-soft);
+  --color-attn: var(--attn);
+  --color-attn-soft: var(--attn-soft);
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -74,25 +86,41 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  /* Three corners, one per kind of thing: a card, a tile inside it, a control. */
+  --radius-card: 0.875rem;
+  --radius-panel: 0.625rem;
+  --radius-control: 0.5625rem;
 }
 
 :root {
   --radius: 0.375rem;
 
   --paper: oklch(0.982 0.005 85);
+  /* Behind the cards: a shade deeper than the paper they're printed on, so each module reads as one. */
+  --canvas: oklch(0.958 0.007 85);
   --surface: oklch(0.958 0.008 85);
   --surface-2: oklch(0.935 0.01 85);
   --ink: oklch(0.22 0.01 70);
   --ink-2: oklch(0.45 0.012 70);
-  --ink-3: oklch(0.6 0.012 70);
+  /* Dark enough to read at 12px on a panel: meta text is still text. */
+  --ink-3: oklch(0.52 0.012 70);
   --rule: oklch(0.895 0.008 80);
+  /* The edge of something you can press. */
+  --rule-strong: oklch(0.85 0.01 80);
+  /* Inside a card: a figure's tile, a group of controls. */
+  --panel: oklch(0.945 0.007 85);
   --accent-ink: oklch(0.43 0.12 258);
+  --bench: var(--accent-ink);
+  --bench-soft: oklch(0.94 0.022 258);
+  --attn: oklch(0.55 0.11 70);
+  --attn-soft: oklch(0.945 0.03 80);
 
   --up: oklch(0.5 0.11 152);
   --down: oklch(0.52 0.15 30);
   --up-soft: oklch(0.935 0.03 152);
   --down-soft: oklch(0.935 0.035 32);
-  --brand: oklch(0.5 0.11 152);
+  --brand: oklch(0.46 0.085 168);
+  --brand-soft: oklch(0.955 0.022 168);
   --warning: oklch(0.6 0.12 75);
 
   --background: var(--paper);
@@ -133,13 +161,19 @@
 /* A night edition for later; light is the default and the only one offered for now. */
 .dark {
   --paper: oklch(0.19 0.006 70);
+  --canvas: oklch(0.155 0.005 70);
   --surface: oklch(0.225 0.007 70);
   --surface-2: oklch(0.26 0.008 70);
   --ink: oklch(0.93 0.006 85);
   --ink-2: oklch(0.74 0.01 85);
   --ink-3: oklch(0.6 0.01 85);
   --rule: oklch(0.32 0.008 70);
+  --rule-strong: oklch(0.4 0.008 70);
+  --panel: oklch(0.24 0.007 70);
   --accent-ink: oklch(0.72 0.1 258);
+  --bench-soft: oklch(0.72 0.1 258 / 14%);
+  --attn: oklch(0.76 0.12 75);
+  --attn-soft: oklch(0.76 0.12 75 / 14%);
   --up: oklch(0.72 0.13 152);
   --down: oklch(0.7 0.15 32);
   --up-soft: oklch(0.72 0.13 152 / 14%);
@@ -158,7 +192,7 @@
     -webkit-text-size-adjust: 100%;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-canvas text-foreground;
     font-size: 0.9375rem;
     line-height: 1.5;
   }
@@ -200,6 +234,42 @@
   }
   .link:hover {
     text-decoration-line: underline;
+  }
+  /* A small label over a card's title: which part of the site is speaking ("From the lab"). */
+  .kicker {
+    font-size: 0.6875rem;
+    line-height: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  /*
+   * The page's column: fluid, with gutters that grow with the screen, up to a
+   * width that still reads as one page on a wide monitor. Children can bleed to
+   * the screen's edge and back with -mx-(--gutter) px-(--gutter).
+   */
+  .page {
+    --gutter: 1rem;
+    width: 100%;
+    max-width: 105rem;
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+  }
+  @media (width >= 40rem) {
+    .page {
+      --gutter: 1.5rem;
+    }
+  }
+  @media (width >= 64rem) {
+    .page {
+      --gutter: 2rem;
+    }
+  }
+  @media (width >= 96rem) {
+    .page {
+      --gutter: 2.5rem;
+    }
   }
   .scrollbar-thin {
     scrollbar-width: thin;

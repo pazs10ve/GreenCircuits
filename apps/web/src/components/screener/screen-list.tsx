@@ -35,11 +35,11 @@ export function ScreenList({ className }: { className?: string }) {
   }, [rows, read, saved])
 
   return (
-    <nav aria-label="Screens" className={className}>
+    <nav aria-label="Screens" className={cn("rounded-card border border-rule bg-paper p-2", className)}>
       <Heading>Ready-made screens</Heading>
-      <ul className="no-scrollbar -mx-5 flex gap-6 overflow-x-auto px-5 lg:mx-0 lg:block lg:overflow-visible lg:px-0">
+      <ul className="no-scrollbar -mx-(--gutter) flex gap-6 overflow-x-auto px-(--gutter) lg:mx-0 lg:block lg:overflow-visible lg:px-0">
         {PRESETS.map((p) => (
-          <li key={p.id} className="w-60 shrink-0 lg:w-auto lg:border-b lg:border-rule">
+          <li key={p.id} className="w-60 shrink-0 lg:w-auto">
             <ScreenButton
               name={p.name}
               detail={p.description}
@@ -51,13 +51,13 @@ export function ScreenList({ className }: { className?: string }) {
         ))}
       </ul>
 
-      <Heading className="mt-8">Your screens</Heading>
+      <Heading className="mt-4 border-t border-rule pt-3">Your screens</Heading>
       {saved.length === 0 ? (
-        <p className="py-3 text-sm leading-relaxed text-ink-2">Screens you save show up here. They stay in this browser.</p>
+        <p className="px-2 pb-2 text-xs leading-relaxed text-ink-3">Screens you save show up here. They stay in this browser.</p>
       ) : (
-        <ul className="no-scrollbar -mx-5 flex gap-6 overflow-x-auto px-5 lg:mx-0 lg:block lg:overflow-visible lg:px-0">
+        <ul className="no-scrollbar -mx-(--gutter) flex gap-6 overflow-x-auto px-(--gutter) lg:mx-0 lg:block lg:overflow-visible lg:px-0">
           {saved.map((s) => (
-            <li key={s.id} className="group/saved relative w-60 shrink-0 lg:w-auto lg:border-b lg:border-rule">
+            <li key={s.id} className="group/saved relative w-60 shrink-0 lg:w-auto">
               <ScreenButton
                 name={s.name}
                 detail={s.query}
@@ -70,7 +70,7 @@ export function ScreenList({ className }: { className?: string }) {
               <Button
                 variant="ghost"
                 size="icon-xs"
-                className="absolute top-2.5 right-0 text-ink-3 opacity-100 hover:text-down lg:opacity-0 lg:group-hover/saved:opacity-100 lg:focus-visible:opacity-100"
+                className="absolute top-2.5 right-1.5 text-ink-3 opacity-100 hover:text-down lg:opacity-0 lg:group-hover/saved:opacity-100 lg:focus-visible:opacity-100"
                 aria-label={`Delete saved screen ${s.name}`}
                 onClick={() => {
                   remove(s.id)
@@ -88,7 +88,7 @@ export function ScreenList({ className }: { className?: string }) {
 }
 
 function Heading({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <h2 className={cn("border-b border-ink pb-2 text-sm font-semibold", className)}>{children}</h2>
+  return <h2 className={cn("px-2 pt-1.5 pb-2 text-sm font-semibold", className)}>{children}</h2>
 }
 
 function ScreenButton({

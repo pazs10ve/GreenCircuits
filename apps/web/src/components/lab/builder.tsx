@@ -1,5 +1,6 @@
 "use client"
 
+import { FlaskConical } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -12,6 +13,7 @@ import { useUniverse } from "@/lib/data/client"
 import { useLabMode, useRun, useSubmitRun } from "@/lib/lab/client"
 import { earliestStart } from "@/lib/lab/templates"
 import { useMarket } from "@/lib/stream/market-context"
+import { Tag } from "@/components/parts/tag"
 import { cn } from "@/lib/utils"
 import { ConditionList, UniversePicker } from "./conditions"
 import { DateField, InstrumentField, MoneyField, NumberField, SelectField, sentence } from "./fields"
@@ -25,14 +27,19 @@ const KINDS: { kind: Kind; title: string; blurb: string }[] = [
   { kind: "rules", title: "Trade on rules", blurb: "Buy and sell when conditions are met." },
 ]
 
+/** A step of the test as a numbered card: what to buy, when, with how much, over when. */
 function Step({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
   return (
-    <section aria-labelledby={`step-${n}`} className="border-t border-rule pt-5">
-      <h2 id={`step-${n}`} className="mb-4 flex items-baseline gap-3 font-serif text-[1.25rem] leading-tight font-semibold">
-        <span className="num text-[0.9375rem] font-normal text-ink-3">{n}</span>
-        {title}
-      </h2>
-      {children}
+    <section aria-labelledby={`step-${n}`} className="grid grid-cols-[2rem_minmax(0,1fr)] gap-3 sm:gap-3.5">
+      <span className="mt-4 flex size-8 items-center justify-center rounded-full bg-ink text-[13px] font-bold text-paper" aria-hidden="true">
+        {n}
+      </span>
+      <div className="min-w-0 rounded-card border border-rule bg-paper p-4 sm:p-5">
+        <h2 id={`step-${n}`} className="mb-4 text-sm font-semibold">
+          {title}
+        </h2>
+        {children}
+      </div>
     </section>
   )
 }
@@ -93,10 +100,10 @@ export function Builder({ initial }: { initial: Draft }) {
   const x = r.exit
 
   return (
-    <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_21rem] lg:gap-16">
+    <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
       <form
         id="lab-form"
-        className="min-w-0 space-y-12"
+        className="min-w-0 space-y-4"
         onSubmit={(e) => {
           e.preventDefault()
           void run()
@@ -110,13 +117,13 @@ export function Builder({ initial }: { initial: Draft }) {
                 <label
                   key={k.kind}
                   className={cn(
-                    "cursor-pointer rounded-lg border p-4 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring/30",
-                    draft.kind === k.kind ? "border-ink bg-card" : "border-rule hover:border-ink-3/60",
+                    "cursor-pointer rounded-panel border p-4 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring/30",
+                    draft.kind === k.kind ? "border-ink bg-paper" : "border-transparent bg-panel hover:border-rule-strong",
                   )}
                 >
                   <input type="radio" name="kind" value={k.kind} checked={draft.kind === k.kind} onChange={() => update((d) => ({ ...d, kind: k.kind }))} className="sr-only" />
-                  <span className="block font-serif text-[1.0625rem] font-semibold">{k.title}</span>
-                  <span className="mt-1 block text-sm text-ink-2">{k.blurb}</span>
+                  <span className="block text-sm font-semibold">{k.title}</span>
+                  <span className="mt-1 block text-[13px] leading-snug text-ink-2">{k.blurb}</span>
                 </label>
               ))}
             </div>
@@ -254,17 +261,20 @@ export function Builder({ initial }: { initial: Draft }) {
         </Step>
       </form>
 
-      <aside className="lg:pt-5">
-        <div className="space-y-4 rounded-lg border border-rule bg-card p-5 lg:sticky lg:top-24">
-          <h2 className="font-serif text-[1.125rem] font-semibold">In plain words</h2>
+      <aside>
+        <div className="space-y-4 rounded-card border border-rule bg-paper p-5 lg:sticky lg:top-20">
+          <h2 className="text-sm font-semibold">In plain words</h2>
           <div className="space-y-3 font-serif text-[1.0625rem] leading-relaxed">
             {describe(definition, draft.kind === "sip" ? undefined : draft.capital).map((p, i) => (
               <p key={i}>{p}</p>
             ))}
           </div>
-          <p className="text-sm leading-relaxed text-ink-2">
-            Tested from {shortDate(draft.from)} to {shortDate(draft.to)}, against {alternativeOf(alternativeKindFor(definition), definition).phrase}.
-          </p>
+          <div className="flex flex-wrap gap-1.5">
+            <Tag>
+              {shortDate(draft.from)} to {shortDate(draft.to)}
+            </Tag>
+            <Tag tone="bench">Against {alternativeOf(alternativeKindFor(definition), definition).label.toLowerCase()}</Tag>
+          </div>
           {!checked.ok && (
             <ul className="space-y-1 text-sm text-down" aria-live="polite">
               {checked.issues.map((issue) => (
@@ -272,7 +282,8 @@ export function Builder({ initial }: { initial: Draft }) {
               ))}
             </ul>
           )}
-          <Button type="submit" form="lab-form" size="lg" className="w-full" disabled={!checked.ok || submit.isPending}>
+          <Button type="submit" form="lab-form" size="lg" variant="brand" className="w-full" disabled={!checked.ok || submit.isPending}>
+            <FlaskConical />
             {submit.isPending ? (mode === "browser" ? "Running…" : "Sending…") : "Run the test"}
           </Button>
           {submit.isError && <p className="text-sm text-down">{submit.error.message}</p>}

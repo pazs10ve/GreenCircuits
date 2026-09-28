@@ -13,7 +13,7 @@ export function Masthead() {
   const pathname = usePathname()
   return (
     <header className="sticky top-0 z-40 border-b border-rule bg-paper/90 backdrop-blur-md supports-[backdrop-filter]:bg-paper/80">
-      <div className="mx-auto flex h-14 max-w-[1200px] items-center gap-8 px-5">
+      <div className="page flex h-14 items-center gap-8">
         <Link href="/" aria-label="GreenCircuits, today's market" className="shrink-0">
           <Logo />
         </Link>

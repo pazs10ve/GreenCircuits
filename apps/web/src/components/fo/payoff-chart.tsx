@@ -116,7 +116,7 @@ export function PayoffChart({
 
           {ticks(yMin, yMax, yStep).map((v) => (
             <g key={v}>
-              <line x1={PAD.l} x2={width - PAD.r} y1={Y(v)} y2={Y(v)} stroke="var(--border)" strokeDasharray={v === 0 ? undefined : "2 4"} />
+              <line x1={PAD.l} x2={width - PAD.r} y1={Y(v)} y2={Y(v)} style={{ stroke: "var(--rule-strong)" }} strokeDasharray={v === 0 ? undefined : "1 5"} strokeLinecap="round" />
               <text x={PAD.l - 6} y={Y(v)} textAnchor="end" dominantBaseline="middle" className="num fill-ink-3 text-[11px]">
                 {rupeesShort(v)}
               </text>

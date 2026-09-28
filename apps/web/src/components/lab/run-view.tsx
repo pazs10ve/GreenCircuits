@@ -2,18 +2,23 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { Check, Minus, X } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { readDataVersion, type RunInfo, type RunResult, type RunTrade } from "@greencircuits/contracts/lab"
+import { Figure } from "@/components/editorial/figures"
 import { Section } from "@/components/editorial/section"
+import { WatchButton } from "@/components/market/watch-button"
+import { Result, Tag } from "@/components/parts/tag"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatNumber } from "@greencircuits/market/format"
 import { LabError, useDeleteRun, useRun } from "@/lib/lab/client"
-import { alternativeOf, describe, kindLabel, pct } from "@/lib/lab/describe"
-import { holdUp, lede, verdict, worstFall } from "@/lib/lab/report"
+import { alternativeOf, describe, kindLabel, money, pct } from "@/lib/lab/describe"
+import { holdUp, lede, verdict, worstFall, yearly } from "@/lib/lab/report"
 import { cn } from "@/lib/utils"
 import { DrawdownChart, GrowthChart, epochOf } from "./report-charts"
 import { HeldOutTable, MonthlyGrid, NumbersTable, TradesTable } from "./report-tables"
+import { RulesToday } from "./rules-today"
 
 const monthYear = (t: number) => new Intl.DateTimeFormat("en-IN", { month: "short", year: "numeric", timeZone: "UTC" }).format(t * 1000)
 const longDate = (date: string) => new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(epochOf(date) * 1000)
@@ -36,13 +41,61 @@ function Breadcrumb() {
 
 function Title({ run, kicker }: { run: RunInfo; kicker?: React.ReactNode }) {
   return (
-    <header className="mt-3">
+    <header className="mt-2">
       {kicker}
-      <h1 className="font-serif text-[2.25rem] leading-[1.06] font-semibold tracking-[-0.02em] md:text-[3rem]">{run.name}</h1>
-      <p className="mt-2 text-sm text-ink-2">
+      <h1 className="font-serif text-[1.75rem] leading-[1.1] font-semibold tracking-[-0.02em] md:text-[1.875rem]">{run.name}</h1>
+      <p className="mt-1.5 text-[13px] text-ink-3">
         {kindLabel(run.definition)} · {longDate(run.date_from)} to {longDate(run.date_to)}
       </p>
     </header>
+  )
+}
+
+/**
+ * The result at a glance: whether it beat the alternative, by how much it
+ * ended ahead or behind, and the figures that decide it, beside the
+ * alternative's.
+ */
+function Verdict({ run, result, tone, text }: { run: RunInfo; result: RunResult; tone: string; text: string }) {
+  const d = run.definition
+  const m = result.metrics
+  const a = m.alternative
+  const other = alternativeOf(a.kind, d)
+  const sip = d.type === "sip"
+  const gap = m.final_value - a.final_value
+  const Icon = tone === "up" ? Check : tone === "down" ? X : Minus
+  return (
+    <section aria-label="Result" className="mt-6 rounded-card border border-rule bg-paper p-4 sm:p-5">
+      <div className="grid items-center gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]">
+        <div className="flex min-w-0 items-center gap-4">
+          <span
+            className={cn(
+              "flex size-12 shrink-0 items-center justify-center rounded-full",
+              tone === "up" ? "bg-brand text-white" : tone === "down" ? "bg-down-soft text-down" : "bg-surface-2 text-ink-2",
+            )}
+          >
+            <Icon className="size-6" strokeWidth={2.5} aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <p className="font-serif text-[1.375rem] leading-tight font-semibold md:text-[1.5rem]">{text}</p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {gap >= 0 ? <Result>Ahead by {money(gap)}</Result> : <Tag>Behind by {money(-gap)}</Tag>}
+              <Tag>Against {other.label.toLowerCase()}</Tag>
+            </div>
+          </div>
+        </div>
+        <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <Figure variant="panel" size="sm" label="Ended with" value={money(m.final_value)} hint={`${other.label}: ${money(a.final_value)}`} />
+          <Figure variant="panel" size="sm" label={sip ? "A year, XIRR" : "A year"} value={pct(yearly(m, sip))} hint={`${other.label}: ${pct(yearly(a, sip))}`} />
+          <Figure variant="panel" size="sm" label="Worst fall" value={pct(-m.max_drawdown, { digits: 0 })} tone="down" hint={`${other.label}: ${pct(-a.max_drawdown, { digits: 0 })}`} />
+          {sip ? (
+            <Figure variant="panel" size="sm" label="Put in" value={money(m.invested ?? 0)} hint={`over ${m.months} months`} />
+          ) : (
+            <Figure variant="panel" size="sm" label="Paid in charges" value={money(m.charges ?? 0)} hint={d.type === "rules" ? `${m.trades} ${m.trades === 1 ? "trade" : "trades"}` : "to rebalance"} />
+          )}
+        </dl>
+      </div>
+    </section>
   )
 }
 
@@ -67,7 +120,7 @@ export function RunView({ id }: { id: string }) {
         <Breadcrumb />
         <h1 className="mt-3 font-serif text-[2.25rem] leading-tight font-semibold">{missing ? "No such test" : "Couldn't load this test"}</h1>
         <p className="mt-4 text-ink-2">
-          {missing ? "It may have been deleted, or it belongs to another browser: tests are kept per browser, with no sign-in." : error.message}
+          {missing ? "It may have been deleted, or it belongs to another account or browser: tests are kept with the account or browser that ran them." : error.message}
         </p>
         <Button asChild variant="outline" className="mt-6">
           <Link href="/lab">Back to the lab</Link>
@@ -140,6 +193,8 @@ function Report({ run, result, trades }: { run: RunInfo; result: RunResult; trad
   const router = useRouter()
   const remove = useDeleteRun()
   const d = run.definition
+  // One stock or index under test: it can be watched from here.
+  const single = d.type === "rules" ? (d.universe.length === 1 ? d.universe[0] : undefined) : d.instrumentId
   const m = result.metrics
   const v = verdict(run, result)
   const other = alternativeOf(m.alternative.kind, d)
@@ -150,57 +205,55 @@ function Report({ run, result, trades }: { run: RunInfo; result: RunResult; trad
   return (
     <article className="pt-4">
       <Breadcrumb />
-      <Title
-        run={run}
-        kicker={
-          <p className={cn("mb-2 inline-flex items-center gap-2 text-sm font-medium", v.tone === "up" ? "text-up" : v.tone === "down" ? "text-down" : "text-ink-2")}>
-            <span className="size-1.5 rounded-full bg-current" aria-hidden="true" />
-            {v.text}
-          </p>
-        }
-      />
-      <p className="mt-6 max-w-[38em] font-serif text-[1.3125rem] leading-snug text-ink md:text-[1.5rem]">{lede(run, result)}</p>
-      <div className="mt-6 flex flex-wrap gap-2">
-        <Button asChild>
-          <Link href={`/lab/new?run=${run.id}`}>Change the rules</Link>
-        </Button>
-        <Button asChild variant="outline">
-          <Link href="/lab/new">Start a new test</Link>
-        </Button>
-        {confirming ? (
-          <span className="inline-flex items-center gap-2 pl-2 text-sm text-ink-2">
-            Delete this test for good?
-            <Button
-              variant="destructive"
-              size="sm"
-              disabled={remove.isPending}
-              onClick={async () => {
-                await remove.mutateAsync(run.id)
-                router.push("/lab#your-tests")
-              }}
-            >
-              Delete
+      {/* A rules test also says where its rules stand today, beside the result. */}
+      <div className={cn("grid gap-x-14 gap-y-10", d.type === "rules" && "lg:grid-cols-[minmax(0,1fr)_22rem]")}>
+        <div className="min-w-0">
+          <Title run={run} />
+          <div className="mt-5 flex flex-wrap gap-2">
+            <Button asChild variant="brand">
+              <Link href={`/lab/new?run=${run.id}`}>Change the rules</Link>
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => setConfirming(false)}>
-              Keep it
+            <Button asChild variant="outline">
+              <Link href="/lab/new">Start a new test</Link>
             </Button>
-          </span>
-        ) : (
-          <Button variant="ghost" className="text-ink-3" onClick={() => setConfirming(true)}>
-            Delete
-          </Button>
-        )}
+            {single != null && <WatchButton instrumentId={single} size="default" />}
+            {confirming ? (
+              <span className="inline-flex items-center gap-2 pl-2 text-sm text-ink-2">
+                Delete this test for good?
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={remove.isPending}
+                  onClick={async () => {
+                    await remove.mutateAsync(run.id)
+                    router.push("/lab#your-tests")
+                  }}
+                >
+                  Delete
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setConfirming(false)}>
+                  Keep it
+                </Button>
+              </span>
+            ) : (
+              <Button variant="ghost" className="text-ink-3" onClick={() => setConfirming(true)}>
+                Delete
+              </Button>
+            )}
+          </div>
+        </div>
+        {d.type === "rules" && <RulesToday definition={d} trades={trades} dateTo={run.date_to} className="lg:mt-3" />}
       </div>
 
-      <div className="mt-12">
-        <GrowthChart run={run} result={result} />
-        <p className="mt-3 max-w-[48em] text-xs leading-relaxed text-ink-3">
-          The shaded part, from {longDate(result.oos_from)}, is the last 30% of the test, held out and reported separately below.
-          {m.effective_from !== run.date_from && ` The test starts on ${longDate(m.effective_from)}, the first day with prices for everything in it.`}
-        </p>
-      </div>
+      <Verdict run={run} result={result} tone={v.tone} text={v.text} />
 
-      <div className="mt-20 space-y-20">
+      <div className="mt-5 space-y-5">
+        <Section
+          title="Growth of the money"
+          description={`${lede(run, result)} The shaded part, from ${longDate(result.oos_from)}, is the last 30% of the test, held out and reported separately below.${m.effective_from !== run.date_from ? ` The test starts on ${longDate(m.effective_from)}, the first day with prices for everything in it.` : ""}`}
+        >
+          <GrowthChart run={run} result={result} />
+        </Section>
         <Section title="The numbers" description={`This test against ${other.phrase}${d.type !== "sip" ? ", on the same starting money" : ""}.`}>
           <NumbersTable run={run} result={result} />
         </Section>

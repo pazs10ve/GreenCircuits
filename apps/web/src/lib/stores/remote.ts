@@ -183,16 +183,16 @@ async function syncPortfolio() {
   const server = await api<{ holdings: Holding[] }>("/me/portfolio")
   if (server.holdings.length) {
     lastPushed = server.holdings
-    usePortfolio.setState({ holdings: server.holdings, source: "import" })
-  } else if (usePortfolio.getState().source === "import") {
+    usePortfolio.setState({ holdings: server.holdings, source: "own" })
+  } else if (usePortfolio.getState().source === "own") {
     const holdings = usePortfolio.getState().holdings
     await api("/me/portfolio", { method: "PUT", body: JSON.stringify({ holdings }) })
     lastPushed = holdings
   }
   usePortfolio.subscribe((state, prev) => {
     if (state.holdings === prev.holdings || state.holdings === lastPushed) return
-    // Back to the sample portfolio clears the server copy; an import replaces it.
-    const holdings = state.source === "import" ? state.holdings : []
+    // Back to the sample portfolio clears the server copy; the reader's own holdings replace it.
+    const holdings = state.source === "own" ? state.holdings : []
     lastPushed = state.holdings
     void api("/me/portfolio", { method: "PUT", body: JSON.stringify({ holdings }) }).catch(() => toast.error("Couldn't save your portfolio"))
   })

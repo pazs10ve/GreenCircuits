@@ -17,7 +17,13 @@ export const PRESETS: PresetScreen[] = [
     id: "oversold-large-caps",
     name: "Oversold large caps",
     description: "RSI below 35 while still above the 200 DMA",
-    query: "rsi < 35 AND price > sma_200 AND market_cap > 100000",
+    query: 'rsi < 35 AND price > sma_200 AND size = "Large"',
+  },
+  {
+    id: "quality-midcaps",
+    name: "Quality midcaps",
+    description: "Mid-sized companies earning well on little debt",
+    query: 'size = "Mid" AND roce > 20 AND debt_equity < 0.5 AND profit_cagr_3y > 12',
   },
   {
     id: "near-52w-high",

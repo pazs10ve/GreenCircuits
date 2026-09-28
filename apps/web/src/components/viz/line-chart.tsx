@@ -21,6 +21,8 @@ export interface ChartSeries {
 export interface ChartAnnotation {
   t: number
   label: string
+  /** Where the label sits: above a peak, below a trough. The chart leaves room for it. */
+  side: "above" | "below"
 }
 
 /** A shaded stretch from `from` to the end of the chart, e.g. a held-out period. */
@@ -35,11 +37,15 @@ export interface ScrubPoint {
 }
 
 const M = { top: 18, right: 64, bottom: 28, left: 0 }
+/** Pixels kept clear above the highest point (or below the lowest) for an annotation's label. */
+const LABEL_ROOM = 30
 
 interface Geo {
   x: (t: number) => number
   y: (v: number) => number
   yTicks: number[]
+  /** Finer steps, for when an end label hides too many of the usual ones. */
+  yTicksFine: number[]
   xTicks: { t: number; label: string }[]
   paths: { id: string; line: string; area: string | null; end: { x: number; y: number } }[]
 }
@@ -93,12 +99,23 @@ export function LineChart({
       lo = Math.min(lo, reference.value)
       hi = Math.max(hi, reference.value)
     }
-    const pad = Math.max((hi - lo) * 0.08, Math.abs(hi) * 0.001)
-    lo -= pad
-    hi += pad
+    // A series that barely moves still gets some range, centred on it.
+    const minSpan = Math.abs(hi) * 0.002 || 1
+    if (hi - lo < minSpan) {
+      const mid = (hi + lo) / 2
+      lo = mid - minSpan / 2
+      hi = mid + minSpan / 2
+    }
+    // A little air above and below the lines, and room for any annotation's label beside its point.
+    const top = annotations.some((a) => a.side === "above") ? LABEL_ROOM : plotH * 0.07
+    const bottom = annotations.some((a) => a.side === "below") ? LABEL_ROOM : plotH * 0.07
+    const perPx = (hi - lo) / Math.max(1, plotH - top - bottom)
+    hi += top * perPx
+    lo -= bottom * perPx
     const x = (t: number) => M.left + ((t - t0) / Math.max(1, t1 - t0)) * plotW
     const y = (v: number) => M.top + (1 - (v - lo) / (hi - lo)) * plotH
     const yTicks = niceTicks(lo, hi, height > 240 ? 4 : 3).filter((v) => v >= lo && v <= hi)
+    const yTicksFine = niceTicks(lo, hi, height > 240 ? 7 : 5).filter((v) => v >= lo && v <= hi)
     const xTicks = timeTicks(main.points, Math.max(2, Math.floor(plotW / 110)))
     const paths = series.map((s) => {
       const pts = downsample(s.points, Math.round(plotW))
@@ -107,8 +124,8 @@ export function LineChart({
       const last = s.points.at(-1)!
       return { id: s.id, line, area, end: { x: x(last.t), y: y(last.v) } }
     })
-    return { x, y, yTicks, xTicks, paths }
-  }, [series, main, plotW, plotH, reference, height])
+    return { x, y, yTicks, yTicksFine, xTicks, paths }
+  }, [series, main, plotW, plotH, reference, height, annotations])
 
   // Nudge end labels apart when lines finish close together.
   const labels = useMemo(() => {
@@ -122,6 +139,8 @@ export function LineChart({
     }
     return items
   }, [geo, series, endLabels])
+  // The end labels sit in the right margin with the axis's figures; a figure level with a label gives way to it.
+  const labelYs = useMemo(() => labels.map((l) => l.y), [labels])
 
   const scrubTo = useCallback(
     (i: number | null) => {
@@ -170,15 +189,15 @@ export function LineChart({
     >
       {geo && (
         <svg width={width} height={height} className="absolute inset-0 overflow-visible">
-          <StaticLayer geo={geo} series={series} plotW={plotW} plotH={plotH} height={height} yFormat={yFormat} reference={reference} annotations={annotations} shade={shade} />
+          <StaticLayer geo={geo} series={series} plotW={plotW} plotH={plotH} height={height} yFormat={yFormat} reference={reference} annotations={annotations} shade={shade} avoid={labelYs} />
           {labels.map((l) => (
-            <text key={l.s.id} x={l.x + 8} y={l.y + 4} fontSize={12} fontWeight={500} style={{ fill: l.s.color }}>
+            <text key={l.s.id} x={l.x + 8} y={l.y + 4} fontSize={12} fontWeight={600} paintOrder="stroke" strokeWidth={4} strokeLinejoin="round" style={{ fill: l.s.color, stroke: "var(--paper)" }}>
               {l.s.label}
             </text>
           ))}
           {!hovered &&
             geo.paths.slice(0, 1).map((p) => (
-              <circle key={p.id} cx={p.end.x} cy={p.end.y} r={3} style={{ fill: main!.color }} />
+              <circle key={p.id} cx={p.end.x} cy={p.end.y} r={3.5} strokeWidth={2} style={{ fill: main!.color, stroke: "var(--paper)" }} />
             ))}
           {hovered && (
             <g pointerEvents="none">
@@ -217,6 +236,7 @@ const StaticLayer = memo(function StaticLayer({
   reference,
   annotations,
   shade,
+  avoid,
 }: {
   geo: Geo
   series: ChartSeries[]
@@ -227,9 +247,15 @@ const StaticLayer = memo(function StaticLayer({
   reference?: { value: number; label: string }
   annotations: ChartAnnotation[]
   shade?: ChartShade
+  /** Heights of the end labels, which the axis's figures keep clear of. */
+  avoid: number[]
 }) {
   const right = M.left + plotW
   const main = series[0]!
+  const beside = (ticks: number[]) => ticks.filter((v) => !reference || Math.abs(geo.y(v) - geo.y(reference.value)) > 16)
+  // A figure level with an end label gives way to it, but keeps its gridline; with fewer than two left, the scale takes finer steps.
+  const clear = (v: number) => avoid.every((y) => Math.abs(geo.y(v) - y) > 14)
+  const steps = beside(geo.yTicks).filter(clear).length >= 2 ? beside(geo.yTicks) : beside(geo.yTicksFine)
   const shadeX = shade ? Math.min(right, Math.max(M.left, geo.x(shade.from))) : null
   return (
     <g>
@@ -242,18 +268,18 @@ const StaticLayer = memo(function StaticLayer({
           </text>
         </g>
       )}
-      {geo.yTicks
-        .filter((v) => !reference || Math.abs(geo.y(v) - geo.y(reference.value)) > 16)
-        .map((v) => (
+      {steps.map((v) => (
         <g key={v}>
-          <line x1={M.left} x2={right} y1={geo.y(v)} y2={geo.y(v)} style={{ stroke: "var(--rule)" }} strokeWidth={1} />
-          <text x={right + 10} y={geo.y(v) + 4} fontSize={12} className="num" style={{ fill: "var(--ink-3)" }}>
-            {yFormat(v)}
-          </text>
+          <line x1={M.left} x2={right} y1={geo.y(v)} y2={geo.y(v)} style={{ stroke: "var(--rule-strong)" }} strokeWidth={1} strokeDasharray="1 5" strokeLinecap="round" />
+          {clear(v) && (
+            <text x={right + 10} y={geo.y(v) + 4} fontSize={11} className="num" style={{ fill: "var(--ink-3)" }}>
+              {yFormat(v)}
+            </text>
+          )}
         </g>
       ))}
       {geo.xTicks.map((tk) => (
-        <text key={tk.t} x={geo.x(tk.t)} y={height - 8} fontSize={12} textAnchor="middle" style={{ fill: "var(--ink-3)" }}>
+        <text key={tk.t} x={geo.x(tk.t)} y={height - 8} fontSize={11} textAnchor="middle" style={{ fill: "var(--ink-3)" }}>
           {tk.label}
         </text>
       ))}
@@ -278,7 +304,7 @@ const StaticLayer = memo(function StaticLayer({
         const p = geo.paths[i]!
         return (
           <g key={s.id}>
-            {p.area && <path d={p.area} style={{ fill: s.color }} opacity={0.06} />}
+            {p.area && <path d={p.area} style={{ fill: s.color }} opacity={0.07} />}
             <path
               d={p.line}
               fill="none"
@@ -296,14 +322,24 @@ const StaticLayer = memo(function StaticLayer({
         const pt = main.points[nearestIndex(main.points, a.t)]!
         const ax = geo.x(pt.t)
         const ay = geo.y(pt.v)
-        const above = ay > M.top + 34
-        const ly = above ? ay - 14 : ay + 22
-        const anchor = ax > plotW * 0.8 ? "end" : ax < plotW * 0.15 ? "start" : "middle"
+        const above = a.side === "above"
+        const anchor = ax > plotW * 0.85 ? "end" : ax < plotW * 0.15 ? "start" : "middle"
         return (
           <g key={`${a.t}-${i}`}>
-            <line x1={ax} x2={ax} y1={ay} y2={above ? ay - 9 : ay + 9} strokeWidth={1} style={{ stroke: "var(--ink-3)" }} />
+            <line x1={ax} x2={ax} y1={ay} y2={above ? ay - 8 : ay + 8} strokeWidth={1} style={{ stroke: "var(--ink-3)" }} />
             <circle cx={ax} cy={ay} r={3} strokeWidth={1.5} style={{ fill: "var(--paper)", stroke: "var(--ink)" }} />
-            <text x={ax} y={ly} fontSize={11.5} textAnchor={anchor} style={{ fill: "var(--ink-2)" }}>
+            {/* A halo in the paper's colour keeps the label legible where it crosses a gridline. */}
+            <text
+              x={ax}
+              y={above ? ay - 13 : ay + 21}
+              fontSize={11.5}
+              fontWeight={500}
+              textAnchor={anchor}
+              paintOrder="stroke"
+              strokeWidth={4}
+              strokeLinejoin="round"
+              style={{ fill: "var(--ink-2)", stroke: "var(--paper)" }}
+            >
               {a.label}
             </text>
           </g>

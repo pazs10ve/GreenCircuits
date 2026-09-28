@@ -69,10 +69,10 @@ export function QueryEditor({ className }: { className?: string }) {
   }
 
   return (
-    <section className={cn("border-t border-ink pt-4", className)} aria-labelledby={`${inputId}-title`}>
+    <section className={cn("rounded-card border border-rule bg-paper p-4 sm:p-5", className)} aria-labelledby={`${inputId}-title`}>
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
         <div className="min-w-0">
-          <h2 id={`${inputId}-title`} className="font-serif text-[1.375rem] leading-tight font-semibold tracking-[-0.01em]">
+          <h2 id={`${inputId}-title`} className="text-sm leading-snug font-semibold">
             {active ? active.name : applied.empty ? "A new screen" : "Your screen"}
           </h2>
           <p className="mt-1 text-sm text-ink-2">

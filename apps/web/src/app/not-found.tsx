@@ -8,7 +8,7 @@ export default function NotFound() {
       <Link href="/" aria-label="GreenCircuits, today's market">
         <Logo />
       </Link>
-      <div className="max-w-[30rem] border-t border-ink pt-6">
+      <div className="max-w-[30rem] rounded-card border border-rule bg-paper p-6">
         <p className="figure text-[4.5rem] leading-none text-down">404</p>
         <h1 className="mt-4 font-serif text-[1.75rem] leading-tight font-semibold tracking-[-0.02em]">This page hit its lower circuit</h1>
         <p className="mt-3 text-[1.0625rem] leading-relaxed text-ink-2">

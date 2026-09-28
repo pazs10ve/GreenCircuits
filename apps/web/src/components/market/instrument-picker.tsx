@@ -5,12 +5,12 @@ import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { COMMODITIES, CURRENCIES, EQUITIES, INDICES } from "@greencircuits/market/catalog"
+import { COMMODITIES, CURRENCIES, INDICES } from "@greencircuits/market/catalog"
 import type { Instrument } from "@greencircuits/market/types"
+import { searchCompanies } from "@/lib/search"
 import { LiveChange } from "./price"
 
-const GROUPS: { heading: string; items: Instrument[] }[] = [
-  { heading: "Stocks", items: EQUITIES },
+const OTHERS: { heading: string; items: Instrument[] }[] = [
   { heading: "Indices", items: INDICES },
   { heading: "Commodities", items: COMMODITIES },
   { heading: "Currencies", items: CURRENCIES },
@@ -23,16 +23,27 @@ export function InstrumentPicker({
   trigger,
   placeholder = "Search symbol or company…",
   align = "end",
+  stocksOnly = false,
 }: {
   onSelect: (inst: Instrument) => void
   exclude?: number[]
   trigger?: React.ReactNode
   placeholder?: string
   align?: "start" | "center" | "end"
+  /** Companies alone, for a holding or anything else that only a stock can be. */
+  stocksOnly?: boolean
 }) {
   const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState("")
+  const groups = [{ heading: "Stocks", items: searchCompanies(search, { exclude }) }, ...(stocksOnly ? [] : OTHERS)]
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next)
+        if (!next) setSearch("")
+      }}
+    >
       <PopoverTrigger asChild>
         {trigger ?? (
           <Button size="lg">
@@ -42,10 +53,10 @@ export function InstrumentPicker({
       </PopoverTrigger>
       <PopoverContent align={align} className="w-80 p-0">
         <Command>
-          <CommandInput placeholder={placeholder} />
+          <CommandInput value={search} onValueChange={setSearch} placeholder={placeholder} />
           <CommandList className="max-h-80">
             <CommandEmpty>No match.</CommandEmpty>
-            {GROUPS.map((g) => {
+            {groups.map((g) => {
               const items = g.items.filter((i) => !exclude.includes(i.id))
               if (items.length === 0) return null
               return (

@@ -28,8 +28,8 @@ export function GrowthChart({ run, result }: { run: RunInfo; result: RunResult }
   const series = useMemo<ChartSeries[]>(() => {
     const line = (key: keyof EquityPoint): Pt[] => sample.filter((p) => p[key] != null).map((p) => ({ t: p.t, v: p[key] as number }))
     const out: ChartSeries[] = [
-      { id: "v", label: ownLabel(run), points: line("v"), color: "var(--ink)", width: 2 },
-      { id: "a", label: other.label, points: line("a"), color: "var(--accent-ink)" },
+      { id: "v", label: ownLabel(run), points: line("v"), color: "var(--brand)", width: 2.25, area: true },
+      { id: "a", label: other.label, points: line("a"), color: "var(--bench)", dashed: true },
     ]
     if (d.type === "sip") out.push({ id: "inv", label: "Put in", points: line("inv"), color: "var(--ink-3)", dashed: true, width: 1.25 })
     return out
@@ -70,7 +70,7 @@ export function GrowthChart({ run, result }: { run: RunInfo; result: RunResult }
 const M = { top: 12, right: 64, bottom: 28 }
 
 /** Falls from the previous peak, as a shaded area hanging from zero. */
-export function DrawdownChart({ sample, className }: { sample: EquityPoint[]; className?: string }) {
+export function DrawdownChart({ sample, className }: { sample: Pick<EquityPoint, "t" | "dd">[]; className?: string }) {
   const [ref, { width }] = useElementSize<HTMLDivElement>()
   const height = 170
   const geo = useMemo(() => {

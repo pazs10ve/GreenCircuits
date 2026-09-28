@@ -4,12 +4,13 @@ import { useMemo, useState } from "react"
 import { toast } from "sonner"
 import type { OptionType } from "@greencircuits/market/black76"
 import { formatNumber, formatPrice } from "@greencircuits/market/format"
-import { cn } from "@/lib/utils"
 import { foUnderlying, formatExpiry, type LiveRow, type OiUnit } from "./chain-model"
 import { ChainControls, type StrikeWindow } from "./chain-controls"
+import { ExpectedRange, PutCallRatio } from "./chain-gauges"
 import { ChainStats } from "./chain-stats"
 import { ChainTable, type Held } from "./chain-table"
 import { addLeg, quoteOf, type Side, type StrategyLeg } from "./legs"
+import { OiChart } from "./oi-chart"
 import { StrategyBuilder } from "./strategy-builder"
 import { useOptionChain } from "./use-option-chain"
 
@@ -83,7 +84,7 @@ export function OptionChainView({ id, initialExpiry }: { id: number; initialExpi
   }
 
   return (
-    <div className="flex flex-col gap-10">
+    <div className="flex flex-col gap-5">
       <ChainControls
         inst={inst}
         expiries={expiries}
@@ -96,18 +97,25 @@ export function OptionChainView({ id, initialExpiry }: { id: number; initialExpi
         greeks={greeks}
         onGreeks={setGreeks}
       />
-      <ChainStats inst={inst} chain={chain} quote={quote} vix={vix} nowMs={nowMs} unit={unit} />
+      <ChainStats inst={inst} chain={chain} quote={quote} vix={vix} nowMs={nowMs} />
+      <div className="grid gap-5 lg:grid-cols-12">
+        <OiChart chain={chain} unit={unit} className="lg:col-span-8" />
+        <div className="grid content-start gap-5 lg:col-span-4">
+          <ExpectedRange chain={chain} nowMs={nowMs} />
+          <PutCallRatio chain={chain} unit={unit} />
+        </div>
+      </div>
       <div className="@container">
-        <div className="grid gap-x-10 gap-y-14 @min-[74rem]:grid-cols-[minmax(0,1fr)_380px]">
-          <section className="min-w-0 border-t border-ink pt-4" aria-labelledby="chain-title">
+        <div className="grid gap-5 @min-[74rem]:grid-cols-[minmax(0,1fr)_380px]">
+          <section className="min-w-0 rounded-card border border-rule bg-paper p-4 sm:p-5" aria-labelledby="chain-title">
             <div className="mb-4">
-              <h2 id="chain-title" className="font-serif text-[1.375rem] leading-tight font-semibold tracking-[-0.01em]">
+              <h2 id="chain-title" className="text-sm leading-snug font-semibold">
                 {expiry ? `Expiring ${formatExpiry(expiry.date, true)}` : "The chain"}
               </h2>
-              <p className="mt-1 text-sm text-ink-2">
+              <p className="mt-0.5 text-[13px] text-ink-3">
                 {unit === "lakh"
-                  ? "Calls on the left, puts on the right. Open interest and volume in lakh units, IV in per cent, Greeks per unit."
-                  : `Calls on the left, puts on the right. Open interest and volume in contracts of ${formatNumber(inst.lot ?? 1, 0)}, IV in per cent.`}
+                  ? "Calls left, puts right · open interest and volume in lakh units · click a price to buy it, shift-click to sell"
+                  : `Calls left, puts right · open interest and volume in contracts of ${formatNumber(inst.lot ?? 1, 0)} · click a price to buy it, shift-click to sell`}
               </p>
             </div>
             <ChainTable
@@ -124,7 +132,8 @@ export function OptionChainView({ id, initialExpiry }: { id: number; initialExpi
               symbol={inst.symbol}
             />
           </section>
-          <div id="strategy-builder" className={cn("min-w-0 scroll-mt-20")}>
+          {/* Beside the chain, the builder takes the chain's height and scrolls inside it, so neither card is left half empty. */}
+          <div id="strategy-builder" className="relative min-w-0 scroll-mt-20">
             <StrategyBuilder
               inst={inst}
               chain={chain}
@@ -132,6 +141,7 @@ export function OptionChainView({ id, initialExpiry }: { id: number; initialExpi
               centre={centre}
               legs={legs}
               onLegsChange={setLegs}
+              className="scrollbar-thin @min-[74rem]:absolute @min-[74rem]:inset-0 @min-[74rem]:overflow-y-auto"
             />
           </div>
         </div>

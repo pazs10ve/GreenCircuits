@@ -40,21 +40,30 @@ function suggest(inst: Instrument, c: AlertCondition): string {
   return c === "CHANGE_ABOVE" ? "2" : "-2"
 }
 
+/** An alert filled in ahead, e.g. at a test's selling price. */
+export interface AlertPreset {
+  condition: AlertCondition
+  value: number
+  note?: string
+}
+
 /**
  * Create a price or day-change alert for one instrument. Uncontrolled with a
  * trigger button by default; pass `open`/`onOpenChange` and `trigger={null}`
- * to drive it from elsewhere.
+ * to drive it from elsewhere, and `preset` to start from a given alert.
  */
 export function AlertDialogButton({
   instrumentId,
   trigger,
   open,
   onOpenChange,
+  preset,
 }: {
   instrumentId: number
   trigger?: React.ReactNode | null
   open?: boolean
   onOpenChange?: (open: boolean) => void
+  preset?: AlertPreset
 }) {
   const [innerOpen, setInnerOpen] = useState(false)
   const controlled = open !== undefined
@@ -77,20 +86,20 @@ export function AlertDialogButton({
       )}
       <DialogContent className="sm:max-w-md">
         {/* Mounted on open, so the form starts fresh from the live price each time. */}
-        <AlertForm instrumentId={instrumentId} onDone={() => setOpen(false)} />
+        <AlertForm instrumentId={instrumentId} preset={preset} onDone={() => setOpen(false)} />
       </DialogContent>
     </Dialog>
   )
 }
 
-function AlertForm({ instrumentId, onDone }: { instrumentId: number; onDone: () => void }) {
+function AlertForm({ instrumentId, preset, onDone }: { instrumentId: number; preset?: AlertPreset; onDone: () => void }) {
   const inst = getInstrument(instrumentId)!
   const create = useAlerts((s) => s.create)
-  const [condition, setCondition] = useState<AlertCondition>("PRICE_ABOVE")
-  const [value, setValue] = useState(() => suggest(inst, "PRICE_ABOVE"))
+  const [condition, setCondition] = useState<AlertCondition>(preset?.condition ?? "PRICE_ABOVE")
+  const [value, setValue] = useState(() => (preset ? preset.value.toFixed(isPercent(preset.condition) ? 1 : decimalsForTick(inst.tick)) : suggest(inst, "PRICE_ABOVE")))
   const [channels, setChannels] = useState<AlertChannel[]>(["IN_APP"])
   const [repeat, setRepeat] = useState(false)
-  const [note, setNote] = useState("")
+  const [note, setNote] = useState(preset?.note ?? "")
 
   const numeric = Number(value)
   const valid = value.trim() !== "" && Number.isFinite(numeric) && (isPercent(condition) || numeric > 0) && channels.length > 0

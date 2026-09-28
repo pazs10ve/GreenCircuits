@@ -13,7 +13,7 @@ const under = (...prefixes: string[]) => (pathname: string) => prefixes.some((p)
 /** Four sections, organised around what you came to do rather than asset classes. */
 export const SITE_NAV: SiteNavItem[] = [
   { label: "Today", href: "/", icon: Newspaper, match: (p) => p === "/" },
-  { label: "Explore", href: "/stocks", icon: Compass, match: under("/stocks", "/fo", "/screener", "/ipos", "/bonds", "/commodities") },
+  { label: "Markets", href: "/markets", icon: Compass, match: under("/markets", "/stocks", "/funds", "/fo", "/screener", "/ipos", "/bonds", "/commodities", "/compare") },
   { label: "Lab", href: "/lab", icon: FlaskConical, match: under("/lab") },
   { label: "Portfolio", href: "/portfolio", icon: Briefcase, match: under("/portfolio", "/watchlists", "/alerts") },
 ]

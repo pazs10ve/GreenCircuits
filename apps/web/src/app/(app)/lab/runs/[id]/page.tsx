@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 export default async function RunPage({ params }: PageProps<"/lab/runs/[id]">) {
   const { id } = await params
   return (
-    <div className="mx-auto max-w-[1200px] px-5 pt-4 pb-20 md:pt-8">
+    <div className="page pt-4 pb-10 md:pt-8">
       <RunView id={id} />
     </div>
   )

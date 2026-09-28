@@ -23,20 +23,20 @@ export function FeedPreferencesFields({ value, onChange }: { value: Preferences;
             <label
               key={s.style}
               className={cn(
-                "cursor-pointer rounded-lg border p-4 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring/30",
-                value.style === s.style ? "border-ink bg-card" : "border-rule hover:border-ink-3/60",
+                "cursor-pointer rounded-panel border p-4 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring/30",
+                value.style === s.style ? "border-ink bg-paper" : "border-transparent bg-panel hover:border-rule-strong",
               )}
             >
               <input type="radio" name="style" value={s.style} checked={value.style === s.style} onChange={() => onChange({ ...value, style: s.style })} className="sr-only" />
-              <span className="block font-serif text-[1.0625rem] leading-snug font-semibold">{s.title}</span>
-              <span className="mt-1 block text-sm text-ink-2">{s.blurb}</span>
+              <span className="block text-sm leading-snug font-semibold">{s.title}</span>
+              <span className="mt-1 block text-[13px] leading-snug text-ink-2">{s.blurb}</span>
             </label>
           ))}
         </div>
       </fieldset>
       <fieldset>
         <legend className="mb-1 text-sm font-semibold">Sectors you follow</legend>
-        <p className="mb-3 text-sm text-ink-2">Each day, the biggest mover in each one joins your feed, even if you don&apos;t follow the stock.</p>
+        <p className="mb-3 text-[13px] text-ink-3">Each day, the biggest mover in each one joins your feed, even if you don&apos;t follow the stock.</p>
         <div className="flex flex-wrap gap-2">
           {SECTORS.map((sector) => {
             const on = value.sectors.includes(sector)
@@ -47,8 +47,8 @@ export function FeedPreferencesFields({ value, onChange }: { value: Preferences;
                 aria-pressed={on}
                 onClick={() => toggle(sector)}
                 className={cn(
-                  "h-9 rounded-full border px-3.5 text-sm transition-colors",
-                  on ? "border-ink bg-ink text-paper" : "border-rule bg-card text-ink-2 hover:border-ink-3/60 hover:text-ink",
+                  "h-8 rounded-control border px-3 text-[13px] transition-colors",
+                  on ? "border-ink bg-ink font-semibold text-paper" : "border-rule-strong bg-paper text-ink-2 hover:bg-panel hover:text-ink",
                 )}
               >
                 {sector}

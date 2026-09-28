@@ -3,8 +3,10 @@
 import { useState } from "react"
 import Link from "next/link"
 import type { FeedItem, FeedKind } from "@greencircuits/feed/feed"
+import { Tag, type TagTone } from "@/components/parts/tag"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useFeed } from "@/lib/feed/client"
+import { MoreLink } from "@/components/editorial/section"
 import { cn } from "@/lib/utils"
 
 const LABEL: Record<FeedKind, string> = {
@@ -19,22 +21,29 @@ const LABEL: Record<FeedKind, string> = {
   sector: "Your sectors",
 }
 
-const SHOWN = 6
+/** The tag's tone: a rise or a fall in green or red, an alert in amber, a test in the lab's green. */
+function toneOf(item: FeedItem): TagTone {
+  if (item.kind === "alert") return "attn"
+  if (item.kind === "test" || item.kind === "signal") return "brand"
+  return item.tone === "up" ? "up" : item.tone === "down" ? "down" : "neutral"
+}
 
-function Row({ item }: { item: FeedItem }) {
+function Row({ item, compact }: { item: FeedItem; compact: boolean }) {
   const body = (
-    <div className="grid gap-x-6 gap-y-1 py-4 sm:grid-cols-[8rem_minmax(0,1fr)]">
-      <span className={cn("pt-0.5 text-[13px] font-medium", item.tone === "up" ? "text-up" : item.tone === "down" ? "text-down" : "text-ink-3")}>{LABEL[item.kind]}</span>
+    <div className={cn("grid gap-x-4 gap-y-1", compact ? "py-2.5" : "py-3.5 sm:grid-cols-[8.5rem_minmax(0,1fr)]")}>
+      <span>
+        <Tag tone={toneOf(item)}>{LABEL[item.kind]}</Tag>
+      </span>
       <span className="min-w-0">
-        <span className="block font-serif text-[1.0625rem] leading-snug text-ink decoration-1 underline-offset-4 group-hover:underline">{item.title}</span>
-        {item.detail && <span className="mt-1 block text-sm leading-relaxed text-ink-2">{item.detail}</span>}
+        <span className={cn("block text-sm leading-snug font-medium decoration-rule-strong underline-offset-4 group-hover:underline", compact ? "line-clamp-2" : "")}>{item.title}</span>
+        {item.detail && <span className="mt-0.5 block truncate text-xs text-ink-3">{item.detail}</span>}
       </span>
     </div>
   )
   return (
     <li>
       {item.href ? (
-        <Link href={item.href} className="group block outline-none focus-visible:bg-surface">
+        <Link href={item.href} className="group block outline-none focus-visible:bg-panel">
           {body}
         </Link>
       ) : (
@@ -44,10 +53,11 @@ function Row({ item }: { item: FeedItem }) {
   )
 }
 
-/** The personalised feed: what matters today about the stocks you follow. */
-export function ForYou() {
+/** The personalised feed: what matters today about the stocks you follow. `compact` for a side rail. */
+export function ForYou({ compact = false }: { compact?: boolean }) {
   const { data, isPending } = useFeed()
   const [all, setAll] = useState(false)
+  const SHOWN = compact ? 4 : 6
 
   if (isPending || !data) {
     return (
@@ -60,17 +70,20 @@ export function ForYou() {
   }
   if (!data.following && !data.items.length) {
     return (
-      <p className="max-w-[40em] text-[0.9375rem] leading-relaxed text-ink-2">
-        Your feed fills up as you follow stocks. Add some to a{" "}
-        <Link href="/watchlists" className="link">
-          watchlist
-        </Link>
-        , set an alert, or{" "}
-        <Link href="/lab" className="link">
-          test an idea in the lab
-        </Link>
-        , and this is where you&apos;ll hear what moved, what&apos;s coming up and what your rules would do.
-      </p>
+      <div className={cn("text-ink-2", compact ? "text-sm" : "text-[0.9375rem]")}>
+        <p>Follow a few stocks, and what matters about them shows up here.</p>
+        <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+          <Link href="/watchlists" className="link">
+            Make a watchlist
+          </Link>
+          <Link href="/alerts" className="link">
+            Set an alert
+          </Link>
+          <Link href="/lab" className="link">
+            Test an idea
+          </Link>
+        </p>
+      </div>
     )
   }
   if (!data.items.length) {
@@ -79,9 +92,9 @@ export function ForYou() {
   const shown = all ? data.items : data.items.slice(0, SHOWN)
   return (
     <div>
-      <ol className="divide-y divide-rule border-y border-rule">
+      <ol className="-my-2.5 divide-y divide-rule">
         {shown.map((item) => (
-          <Row key={item.id} item={item} />
+          <Row key={item.id} item={item} compact={compact} />
         ))}
       </ol>
       {data.items.length > SHOWN && (
@@ -96,8 +109,6 @@ export function ForYou() {
 /** The section's action: tuning the feed, or keeping it on every device. */
 export function ForYouAction() {
   return (
-    <Link href="/account#feed" className="link inline-flex items-center gap-1 text-sm font-medium">
-      Tune your feed <span aria-hidden="true">→</span>
-    </Link>
+    <MoreLink href="/account#feed">Tune</MoreLink>
   )
 }

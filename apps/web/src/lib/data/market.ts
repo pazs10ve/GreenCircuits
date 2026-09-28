@@ -84,9 +84,11 @@ export const getFeed = cache(async (): Promise<Feed> => {
 /**
  * A read from the API for a page in live mode, and null in demo mode. Next's
  * fetch cache keeps the API's last answers after the API stops, and those
- * mustn't sit beside the demo's simulated prices.
+ * mustn't sit beside the demo's simulated prices. With the backend up, a slow
+ * answer (a cold cache) is worth waiting for: giving up would put the demo's
+ * sample figures on a page that says they're real.
  */
 export async function liveGet<T>(path: string, options?: Parameters<typeof apiGet>[1]): Promise<T | null> {
   const feed = await getFeed()
-  return feed.quotes ? apiGet<T>(path, options) : null
+  return feed.quotes ? apiGet<T>(path, { timeoutMs: 8000, ...options }) : null
 }

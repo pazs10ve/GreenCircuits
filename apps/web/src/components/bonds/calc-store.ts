@@ -40,12 +40,13 @@ const DEFAULTS: CalcInputs = {
 export const useBondCalc = create<CalcState>()((set) => ({
   ...DEFAULTS,
   set: (patch) => set(patch),
+  // A bond with a price but no yield of its own (it didn't trade today) is loaded to work the yield out.
   load: (bond) =>
     set({
-      solve: "price",
+      solve: bond.ytm == null && bond.price != null ? "yield" : "price",
       coupon: String(bond.coupon ?? 0),
-      ytm: bond.ytm.toFixed(2),
-      price: bond.price.toFixed(4),
+      ytm: (bond.ytm ?? 7).toFixed(2),
+      price: (bond.price ?? 100).toFixed(4),
       years: bond.yearsLeft.toFixed(2),
       frequency: bond.frequency,
       source: bond.name,

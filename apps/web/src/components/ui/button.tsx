@@ -4,14 +4,16 @@ import { cn } from "cn"
 import { Slot } from "radix-ui"
 
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-md border border-transparent bg-clip-padding font-medium whitespace-nowrap transition-colors outline-none select-none focus-visible:ring-2 focus-visible:ring-ring/35 focus-visible:ring-offset-1 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-45 aria-invalid:border-destructive [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/button inline-flex shrink-0 items-center justify-center rounded-control border border-transparent bg-clip-padding font-semibold whitespace-nowrap transition-colors outline-none select-none focus-visible:ring-2 focus-visible:ring-ring/35 focus-visible:ring-offset-1 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-45 aria-invalid:border-destructive [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
         default: "bg-primary text-primary-foreground hover:bg-primary/88",
-        outline: "border-rule bg-background text-foreground hover:border-ink-3/50 hover:bg-surface aria-expanded:bg-surface",
+        // The lab's actions: testing an idea is what the site is for, so it gets the brand's green.
+        brand: "bg-brand text-white hover:bg-brand/90 aria-expanded:bg-brand/90",
+        outline: "border-rule-strong bg-paper text-foreground hover:border-ink-3/50 hover:bg-panel aria-expanded:bg-panel",
         secondary: "bg-surface text-foreground hover:bg-surface-2 aria-expanded:bg-surface-2",
-        ghost: "text-ink-2 hover:bg-surface hover:text-foreground aria-expanded:bg-surface aria-expanded:text-foreground",
+        ghost: "text-ink-2 hover:bg-panel hover:text-foreground aria-expanded:bg-panel aria-expanded:text-foreground",
         destructive: "bg-down-soft text-down hover:bg-down-soft/70",
         link: "h-auto px-0 text-accent-ink underline-offset-4 hover:underline",
       },

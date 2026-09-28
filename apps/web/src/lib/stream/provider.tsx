@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo } from "react"
-import type { Dataset, Source } from "@greencircuits/contracts"
+import { fromWire, type Dataset, type Source, type WireQuote } from "@greencircuits/contracts"
 import { openingQuotes } from "@greencircuits/market/session"
 import type { Quote } from "@greencircuits/market/types"
 import { connectLive } from "./live"
@@ -45,7 +45,8 @@ export function StreamProvider({
 }: {
   mode: MarketMode
   seed: number
-  snapshot?: Quote[]
+  /** Live mode: the quotes for the first render, in the stream's wire format. */
+  snapshot?: WireQuote[]
   streamUrl?: string
   source: Source
   dataset: Dataset
@@ -53,7 +54,10 @@ export function StreamProvider({
   children: React.ReactNode
 }) {
   const live = mode === "live" && !!streamUrl && !!snapshot?.length
-  const initial = useMemo(() => (live ? new Map(snapshot!.map((q) => [q.id, q])) : openingQuotes(seed)), [live, snapshot, seed])
+  const initial = useMemo(
+    () => (live ? new Map(snapshot!.map((w): [number, Quote] => [w[0], fromWire(w)])) : openingQuotes(seed)),
+    [live, snapshot, seed],
+  )
 
   useEffect(() => {
     if (live) {

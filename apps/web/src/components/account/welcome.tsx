@@ -16,7 +16,7 @@ export function Welcome({ next }: { next?: string }) {
 
   return (
     <div>
-      <h1 className="font-serif text-[2.25rem] leading-tight font-semibold tracking-[-0.02em] md:text-[2.75rem]">
+      <h1 className="font-serif text-[1.875rem] leading-[1.08] font-semibold tracking-[-0.02em] md:text-[2.5rem]">
         {me?.name ? `Welcome, ${me.name.split(" ")[0]}` : "Welcome"}
       </h1>
       <p className="mt-3 mb-10 max-w-[36rem] text-[1.0625rem] leading-relaxed text-ink-2">

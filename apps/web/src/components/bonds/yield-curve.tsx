@@ -2,9 +2,10 @@
 
 import { useState } from "react"
 import type { CurvePoint } from "@greencircuits/market/reference"
-import { formatNumber, formatSigned } from "@greencircuits/market/format"
+import { formatNumber } from "@greencircuits/market/format"
 import { useElementSize } from "@/hooks/use-element-size"
 import { cn } from "@/lib/utils"
+import { Bp } from "./bp"
 
 const HEIGHT = 260
 const M = { top: 14, right: 16, bottom: 26, left: 44 }
@@ -12,7 +13,7 @@ const M = { top: 14, right: 16, bottom: 26, left: 44 }
 const SERIES = [
   { key: "today", label: "Today", stroke: "var(--ink)", width: 2, dash: undefined, swatch: "bg-ink" },
   { key: "monthAgo", label: "A month ago", stroke: "var(--ink-3)", width: 1.5, dash: "5 4", swatch: "bg-ink-3" },
-  { key: "yearAgo", label: "A year ago", stroke: "var(--accent-ink)", width: 1.5, dash: "1.5 3.5", swatch: "bg-accent-ink" },
+  { key: "yearAgo", label: "A year ago", stroke: "var(--rule-strong)", width: 2, dash: "2 4", swatch: "bg-rule-strong" },
 ] as const
 
 type SeriesKey = (typeof SERIES)[number]["key"]
@@ -47,17 +48,16 @@ function monotonePath(pts: [number, number][]): string {
   return d
 }
 
-function bp(a: number, b: number): string {
-  return `${formatSigned((a - b) * 100, 0)} bp`
-}
-
 /**
- * G-Sec par yield curve: today, a month ago and a year ago. The x axis is
- * maturity on a log(1 + years) scale, so the short end is readable.
- * Hover, tap or use the arrow keys to read values at each tenor.
+ * G-Sec par yield curve: today, a month ago and a year ago, where there's a
+ * curve from then. The x axis is maturity on a log(1 + years) scale, so the
+ * short end is readable. Hover, tap or use the arrow keys to read values at
+ * each tenor.
  */
 export function YieldCurveChart({ points }: { points: CurvePoint[] }) {
   const [ref, size] = useElementSize<HTMLDivElement>()
+  const series = SERIES.filter((s) => points.every((p) => p[s.key as SeriesKey] != null))
+  const at = (p: CurvePoint, key: SeriesKey) => p[key] as number
   const benchmark = Math.max(0, points.findIndex((p) => p.tenor === 10))
   const [active, setActive] = useState<number | null>(null)
   const shown = active ?? benchmark
@@ -70,7 +70,7 @@ export function YieldCurveChart({ points }: { points: CurvePoint[] }) {
   const [t0, t1] = [lx(points[0]!.tenor), lx(points.at(-1)!.tenor)]
   const x = (t: number) => M.left + ((lx(t) - t0) / (t1 - t0)) * plotW
 
-  const values = points.flatMap((p) => [p.today, p.monthAgo, p.yearAgo])
+  const values = points.flatMap((p) => series.map((s) => at(p, s.key)))
   const step = 0.5
   const yMin = Math.floor((Math.min(...values) - 0.1) / step) * step
   const yMax = Math.ceil((Math.max(...values) + 0.1) / step) * step
@@ -110,18 +110,25 @@ export function YieldCurveChart({ points }: { points: CurvePoint[] }) {
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-2">
         <div aria-live="polite" className="min-w-0">
-          <div className="text-[13px] text-ink-3">
-            {tenorLabel(point.tenor)} G-Sec{point.tenor === 10 ? " · benchmark" : ""}
+          <div className="text-xs text-ink-3">
+            {tenorLabel(point.tenor)} government bond{point.tenor === 10 ? " · benchmark" : ""}
           </div>
-          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
-            <span className="figure text-[1.75rem] leading-tight">{formatNumber(point.today, 2)}%</span>
-            <span className="num text-[13px] text-ink-3">
-              {bp(point.today, point.monthAgo)} vs a month ago · {bp(point.today, point.yearAgo)} vs a year ago
-            </span>
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1">
+            <span className="figure text-[1.625rem] leading-none">{formatNumber(point.today, 2)}%</span>
+            {point.monthAgo != null && (
+              <span className="inline-flex items-center gap-1 text-xs text-ink-3">
+                <Bp value={(point.today - point.monthAgo) * 100} /> a month
+              </span>
+            )}
+            {point.yearAgo != null && (
+              <span className="inline-flex items-center gap-1 text-xs text-ink-3">
+                <Bp value={(point.today - point.yearAgo) * 100} /> a year
+              </span>
+            )}
           </div>
         </div>
-        <ul className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-ink-3" aria-label="Legend">
-          {SERIES.map((s) => (
+        <ul className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-2" aria-label="Legend">
+          {series.map((s) => (
             <li key={s.key} className="flex items-center gap-1.5">
               <svg width="16" height="6" aria-hidden="true" className="shrink-0">
                 <line x1="0" x2="16" y1="3" y2="3" stroke={s.stroke} strokeWidth={s.width} strokeDasharray={s.dash} strokeLinecap="round" />
@@ -154,7 +161,7 @@ export function YieldCurveChart({ points }: { points: CurvePoint[] }) {
           >
             {yTicks.map((v) => (
               <g key={v}>
-                <line x1={M.left} x2={width - M.right} y1={y(v)} y2={y(v)} stroke="var(--border)" />
+                <line x1={M.left} x2={width - M.right} y1={y(v)} y2={y(v)} style={{ stroke: "var(--rule-strong)" }} strokeDasharray="1 5" strokeLinecap="round" />
                 <text x={M.left - 8} y={y(v)} dy="0.32em" textAnchor="end" className="num fill-ink-3 text-[11px]">
                   {formatNumber(v, 1)}%
                 </text>
@@ -174,10 +181,10 @@ export function YieldCurveChart({ points }: { points: CurvePoint[] }) {
 
             <line x1={x(point.tenor)} x2={x(point.tenor)} y1={M.top} y2={HEIGHT - M.bottom} stroke="var(--ink-3)" strokeOpacity={0.5} strokeDasharray="3 3" />
 
-            {[...SERIES].reverse().map((s) => (
+            {[...series].reverse().map((s) => (
               <path
                 key={s.key}
-                d={monotonePath(points.map((p) => [x(p.tenor), y(p[s.key as SeriesKey])]))}
+                d={monotonePath(points.map((p) => [x(p.tenor), y(at(p, s.key))]))}
                 fill="none"
                 stroke={s.stroke}
                 strokeWidth={s.width}
@@ -187,15 +194,15 @@ export function YieldCurveChart({ points }: { points: CurvePoint[] }) {
               />
             ))}
             {points.map((p, i) => (
-              <circle key={p.tenor} cx={x(p.tenor)} cy={y(p.today)} r={i === shown ? 0 : 2.25} fill="var(--ink)" />
+              <circle key={p.tenor} cx={x(p.tenor)} cy={y(p.today)} r={i === shown ? 0 : 3} strokeWidth={1.5} style={{ fill: "var(--paper)", stroke: "var(--ink)" }} />
             ))}
-            {SERIES.map((s) => (
+            {series.map((s) => (
               <circle
                 key={s.key}
                 cx={x(point.tenor)}
-                cy={y(point[s.key as SeriesKey])}
+                cy={y(at(point, s.key))}
                 r={s.key === "today" ? 4.5 : 3.5}
-                fill="var(--card)"
+                fill="var(--paper)"
                 stroke={s.stroke}
                 strokeWidth={2}
               />

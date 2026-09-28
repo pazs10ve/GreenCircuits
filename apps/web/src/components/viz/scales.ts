@@ -105,3 +105,38 @@ export function linePath(points: Pt[], x: (t: number) => number, y: (v: number) 
   }
   return d
 }
+
+/**
+ * A smooth line through the points that never overshoots them (monotone cubic, after Fritsch and Carlson):
+ * a small trend line reads as a shape rather than a scribble, and every point stays where it was.
+ */
+export function monotonePath(points: readonly (readonly [number, number])[]): string {
+  const n = points.length
+  const f = (v: number) => v.toFixed(1)
+  if (n < 3) return points.map(([x, y], i) => `${i ? "L" : "M"}${f(x)},${f(y)}`).join("")
+  const h: number[] = []
+  const m: number[] = []
+  for (let i = 0; i < n - 1; i++) {
+    const dx = points[i + 1]![0] - points[i]![0] || 1e-9
+    h.push(dx)
+    m.push((points[i + 1]![1] - points[i]![1]) / dx)
+  }
+  const t: number[] = [m[0]!]
+  for (let i = 1; i < n - 1; i++) {
+    if (m[i - 1]! * m[i]! <= 0) t.push(0)
+    else {
+      const w1 = 2 * h[i]! + h[i - 1]!
+      const w2 = h[i]! + 2 * h[i - 1]!
+      t.push((w1 + w2) / (w1 / m[i - 1]! + w2 / m[i]!))
+    }
+  }
+  t.push(m[n - 2]!)
+  let d = `M${f(points[0]![0])},${f(points[0]![1])}`
+  for (let i = 0; i < n - 1; i++) {
+    const [x0, y0] = points[i]!
+    const [x1, y1] = points[i + 1]!
+    const k = h[i]! / 3
+    d += `C${f(x0 + k)},${f(y0 + t[i]! * k)},${f(x1 - k)},${f(y1 - t[i + 1]! * k)},${f(x1)},${f(y1)}`
+  }
+  return d
+}

@@ -1,16 +1,19 @@
 import type { Metadata } from "next"
-import { COMMODITIES } from "@greencircuits/market/catalog"
-import { formatNumber, formatPrice } from "@greencircuits/market/format"
-import { fiftyTwoWeek, sparkline } from "@greencircuits/market/history"
-import { CommoditiesLede } from "@/components/commodities/commodities-lede"
-import { CommodityTable, type CommodityStatic } from "@/components/commodities/commodity-table"
-import { unitWords } from "@/components/commodities/units"
+import { COMMODITIES, INDEX, getInstrument, hrefOf } from "@greencircuits/market/catalog"
+import { formatNumber } from "@greencircuits/market/format"
+import { dailyCandles, sparkline } from "@greencircuits/market/history"
+import { COMMODITY_GROUPS } from "@greencircuits/market/reference"
+import type { Instrument } from "@greencircuits/market/types"
+import { CommodityTiles } from "@/components/commodities/commodity-tiles"
+import { commodityName, unitWords } from "@/components/commodities/units"
+import { YearBars } from "@/components/commodities/year-bars"
+import { KeyStats } from "@/components/company/key-stats"
 import { PricePanel } from "@/components/company/price-panel"
-import { Figure, Figures } from "@/components/editorial/figures"
 import { PageHead } from "@/components/editorial/page-head"
+import { Panel } from "@/components/editorial/panel"
 import { Section } from "@/components/editorial/section"
 import { WatchButton } from "@/components/market/watch-button"
-import { SectionNav } from "@/components/shell/section-nav"
+import { Tag } from "@/components/parts/tag"
 import { getFeed } from "@/lib/data/market"
 import { getUniverse } from "@/lib/data/universe"
 
@@ -41,57 +44,70 @@ function one(value: string | string[] | undefined): string | undefined {
 export default async function CommoditiesPage({ searchParams }: PageProps<"/commodities">) {
   const params = await searchParams
   const inst = COMMODITIES.find((c) => c.slug === one(params.c)?.toLowerCase()) ?? COMMODITIES[0]!
-  const [universe, { dataset }] = await Promise.all([getUniverse(), getFeed()])
+  const [universe, feed] = await Promise.all([getUniverse(), getFeed()])
+  const real = feed.dataset === "real"
 
   const rows = new Map(universe?.instruments.map((r) => [r.id, r]))
-  const statics: CommodityStatic[] = COMMODITIES.flatMap((c) => {
-    if (universe) {
-      const r = rows.get(c.id)
-      return r ? [{ id: c.id, spark: r.spark, low52: r.low52, high52: r.high52 }] : []
-    }
-    const year = fiftyTwoWeek(c)
-    return [{ id: c.id, spark: sparkline(c, 30), low52: year.low, high52: year.high }]
+  const sparks: Record<number, number[]> = Object.fromEntries(
+    COMMODITIES.flatMap((c) => {
+      if (universe) {
+        const r = rows.get(c.id)
+        return r ? [[c.id, r.spark]] : []
+      }
+      return [[c.id, sparkline(c, 30)]]
+    }),
+  )
+  // The year's change to the last close the server knows, from the universe or the demo's history.
+  const price = (id: number) => feed.quotes?.find((q) => q.id === id)?.ltp ?? getInstrument(id)?.prevClose ?? 0
+  const yearAgo = (i: Instrument) => (universe ? (rows.get(i.id)?.yearAgo ?? null) : dailyCandles(i, 251)[0]!.close)
+  const nifty = getInstrument(INDEX.NIFTY)!
+  const year = [...COMMODITIES.map((c) => ({ inst: c, bench: false })), { inst: nifty, bench: true }].flatMap(({ inst: i, bench }) => {
+    const then = yearAgo(i)
+    return then ? [{ id: i.id, name: bench ? i.name : commodityName(i), href: bench ? hrefOf(i) : `/commodities?c=${i.slug}`, pct: (price(i.id) / then - 1) * 100, bench }] : []
   })
-  const year = statics.find((s) => s.id === inst.id)
-  const usualMove = (inst.vol / Math.sqrt(252)) * 100
+  const group = Object.entries(COMMODITY_GROUPS).find(([, symbols]) => symbols.includes(inst.symbol))?.[0]
+  const lotUnit = inst.symbol === "GOLD" ? "kilogram" : inst.symbol === "CRUDEOIL" ? "barrels" : inst.symbol === "NATURALGAS" ? "mmBtu" : "kilograms"
 
   return (
-    <div className="mx-auto max-w-[1200px] px-5 pt-6 pb-20">
-      <SectionNav section="explore" />
-      <PageHead title="Commodities" serif lede={<CommoditiesLede />} />
-      <p className="mt-3 max-w-[46rem] text-sm text-ink-3">
-        {dataset === "real"
+    <div className="page pt-6 pb-10">
+      <PageHead title="Commodities" lede={real ? "COMEX and NYMEX futures in rupees, in MCX's units · change today" : "Simulated prices, quoted the way MCX quotes them · change today"} />
+      <CommodityTiles sparks={sparks} selected={inst.id} />
+
+      <div className="mt-5 grid gap-5 lg:grid-cols-12">
+        <Panel aria-label={`${inst.name} price`} className="lg:col-span-8">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <h2 className="text-sm font-semibold">{commodityName(inst)}</h2>
+              <Tag>{unitWords(inst)}</Tag>
+              {group && <Tag>{group}</Tag>}
+            </div>
+            <WatchButton instrumentId={inst.id} />
+          </div>
+          <PricePanel id={inst.id} defaultRange="1Y" />
+        </Panel>
+        <Section title="Key figures" size="rail" className="lg:col-span-4">
+          <KeyStats
+            id={inst.id}
+            stats={{
+              extra: [{ label: "MCX lot", value: formatNumber(inst.lot ?? 0, 0), hint: lotUnit }],
+            }}
+          />
+          <div className="mt-5 border-t border-rule pt-4">
+            <h3 className="text-xs text-ink-3">What moves it</h3>
+            <p className="mt-1.5 text-[13px] leading-relaxed text-ink-2">{DRIVERS[inst.symbol]}</p>
+          </div>
+        </Section>
+        {year.length > 1 && (
+          <Section title="A year, against shares" description="Each one's change in price over the past year, in rupees, beside the Nifty 50's." className="lg:col-span-12">
+            <YearBars rows={year} />
+          </Section>
+        )}
+      </div>
+      <p className="mt-6 text-xs text-ink-3">
+        {real
           ? "International futures (gold, silver and copper from COMEX, oil and gas from NYMEX), converted to rupees at the day's exchange rate and quoted in MCX's units. MCX's own prices include import duty, so they run higher."
           : "Simulated prices, quoted the way MCX quotes them."}
       </p>
-
-      <div className="mt-14 space-y-16">
-        <Section title="Prices" description="Bullion, energy and base metals. Pick one to see it in full.">
-          <CommodityTable data={statics} selected={inst.id} />
-        </Section>
-
-        <Section id="detail" title={inst.name} description={`Quoted in ${unitWords(inst).replace("₹ per", "rupees per")}.`} action={<WatchButton instrumentId={inst.id} />}>
-          <PricePanel id={inst.id} defaultRange="1Y" />
-          <div className="mt-12 grid gap-x-14 gap-y-10 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-            <div>
-              <h3 className="text-sm font-semibold">What moves it</h3>
-              <p className="mt-2 max-w-[40em] font-serif text-[1.125rem] leading-relaxed text-ink-2">{DRIVERS[inst.symbol]}</p>
-            </div>
-            <Figures className="self-start sm:grid-cols-2 lg:grid-cols-2">
-              <Figure label="Usual daily move" value={`${formatNumber(usualMove, 1)}%`} hint="one standard deviation" />
-              <Figure label="MCX lot" value={formatNumber(inst.lot ?? 0, 0)} hint={inst.symbol === "GOLD" ? "kilogram" : inst.symbol === "CRUDEOIL" ? "barrels" : inst.symbol === "NATURALGAS" ? "mmBtu" : "kilograms"} />
-              {year && (
-                <Figure
-                  label="52-week range"
-                  value={`₹${formatPrice(year.low52, inst.tick)}`}
-                  hint={`to ₹${formatPrice(year.high52, inst.tick)}`}
-                  className="col-span-2 sm:col-span-2"
-                />
-              )}
-            </Figures>
-          </div>
-        </Section>
-      </div>
     </div>
   )
 }

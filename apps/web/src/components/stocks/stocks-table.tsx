@@ -2,17 +2,20 @@
 
 import { useMemo } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
-import { EQUITIES, marketCapCr } from "@greencircuits/market/catalog"
+import { EQUITIES, marketCapCr, sizeBand, type SizeBand } from "@greencircuits/market/catalog"
 import type { Instrument, Quote, Sector } from "@greencircuits/market/types"
 import { formatCompact, formatCrore, formatNumber } from "@greencircuits/market/format"
 import { useQuoteReader } from "@/lib/stream/hooks"
+import { normalise } from "@/lib/search"
 import { useMarket } from "@/lib/stream/market-context"
 import { DataTable } from "@/components/data/data-table"
-import { DayChange, Price } from "@/components/market/price"
+import { Price } from "@/components/market/price"
+import { Move } from "@/components/parts/move"
 import { Sparkline } from "@/components/market/sparkline"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { InstrumentCell, MiniRange } from "./cells"
+import { StockCards } from "./stock-cards"
 import { withLive, type StockStatic } from "./derive"
 
 interface Row {
@@ -29,10 +32,6 @@ interface Row {
   relVol: number | undefined
 }
 
-/** Lower-case letters and digits only, so "m&m", "M & M" and "bajaj auto" all match. */
-function normalise(text: string): string {
-  return text.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]/g, "")
-}
 
 const columns: ColumnDef<Row>[] = [
   {
@@ -53,7 +52,7 @@ const columns: ColumnDef<Row>[] = [
     id: "change",
     header: "Day",
     accessorFn: (r) => r.q?.changePct ?? 0,
-    cell: ({ row }) => <DayChange pct={row.original.q?.changePct} />,
+    cell: ({ row }) => <Move value={row.original.q?.changePct} />,
     meta: { align: "right" },
   },
   {
@@ -114,11 +113,16 @@ export function StocksTable({
   data,
   query,
   sector,
+  size,
+  layout = "table",
   onClear,
 }: {
   data: StockStatic[]
   query: string
   sector: Sector | "all"
+  size: SizeBand | "all"
+  /** Cards to browse, or the table to sort and scan. */
+  layout?: "cards" | "table"
   onClear: () => void
 }) {
   const read = useQuoteReader(1000)
@@ -130,6 +134,7 @@ export function StocksTable({
     const out: Row[] = []
     for (const inst of EQUITIES) {
       if (sector !== "all" && inst.sector !== sector) continue
+      if (size !== "all" && sizeBand(inst.indices) !== size) continue
       if (needle && !normalise(inst.symbol).includes(needle) && !normalise(inst.name).includes(needle)) continue
       const s = statics.get(inst.id)
       if (!s) continue
@@ -152,38 +157,37 @@ export function StocksTable({
       })
     }
     return out
-  }, [read, statics, query, sector, dataset])
+  }, [read, statics, query, sector, size, dataset])
 
-  const filtered = query.trim() !== "" || sector !== "all"
+  const filtered = query.trim() !== "" || sector !== "all" || size !== "all"
+  const empty = (
+    <span className="inline-flex flex-wrap items-center justify-center gap-1">
+      No company matches
+      {query.trim() && <span className="font-medium text-ink">“{query.trim()}”</span>}
+      {size !== "all" && <span>among {size.toLowerCase()} companies</span>}
+      {sector !== "all" && <span>in {sector}</span>}.
+      <Button variant="link" size="sm" className="h-auto px-1" onClick={onClear}>
+        Clear the filters
+      </Button>
+    </span>
+  )
 
+  if (layout === "cards") return <StockCards rows={rows} noun={filtered ? "matching companies" : "companies"} empty={empty} />
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col rounded-card border border-rule bg-paper p-4 sm:p-5">
       <DataTable
         columns={columns}
         data={rows}
         initialSorting={[{ id: "mcap", desc: true }]}
         getRowId={(r) => String(r.inst.id)}
         getRowHref={(r) => `/stocks/${r.inst.slug}`}
-        empty={
-          <span className="inline-flex flex-wrap items-center justify-center gap-1">
-            No company matches
-            {query.trim() && <span className="font-medium text-ink">“{query.trim()}”</span>}
-            {sector !== "all" && <span>in {sector}</span>}.
-            <Button variant="link" size="sm" className="h-auto px-1" onClick={onClear}>
-              Clear the filters
-            </Button>
-          </span>
-        }
+        noun={filtered ? "matching companies" : "companies"}
+        empty={empty}
       />
-      <p className="mt-3 flex flex-wrap justify-between gap-x-6 gap-y-1 text-sm text-ink-3">
-        <span className="num">
-          {rows.length} of {EQUITIES.length} companies{filtered ? " match" : ""}
-        </span>
-        <span>
-          {dataset === "real"
-            ? "Market value and P/E use the live price with each company's shares and last twelve months' earnings."
-            : "Market value and P/E combine the live price with sample shares and earnings."}
-        </span>
+      <p className="mt-2 text-xs text-ink-3">
+        {dataset === "real"
+          ? "Market value and P/E use the live price with each company's shares and last twelve months' earnings."
+          : "Market value and P/E combine the live price with each company's shares and sample earnings."}
       </p>
     </div>
   )

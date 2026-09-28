@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import { formatOi, type ChainQuote, type LiveRow, type OiUnit } from "./chain-model"
 import type { Side } from "./legs"
+import { CALL, PUT } from "./oi-chart"
 
 type Col = "ltp" | "iv" | "oi" | "oiChg" | "vol" | "bid" | "ask" | "delta" | "gamma" | "theta" | "vega"
 
@@ -89,12 +90,12 @@ export function ChainTable({
   }, [ready, scrollKey, scrollToSpot])
 
   const cellBase = "h-10 border-b border-rule px-2 text-right whitespace-nowrap"
-  const headBase = "sticky top-7 z-20 h-8 border-b border-ink bg-paper px-2 text-right text-xs font-normal text-ink-3"
+  const headBase = "sticky top-7 z-20 h-8 border-b border-rule-strong bg-paper px-2 text-right text-xs font-medium text-ink-3"
 
   const renderCell = (col: Col, row: LiveRow, type: OptionType) => {
     const q = type === "CE" ? row.ce : row.pe
     const itm = spot != null && (type === "CE" ? row.strike < spot : row.strike > spot)
-    const shade = itm ? "bg-surface" : "group-hover/row:bg-surface/60"
+    const shade = itm ? "bg-panel" : "group-hover/row:bg-panel/70"
     if (col === "ltp") {
       return (
         <LtpCell key={col} q={q} row={row} type={type} held={held.get(`${row.strike}:${type}`)} onTrade={onTrade} symbol={symbol} className={shade} />
@@ -105,8 +106,8 @@ export function ChainTable({
         <td key={col} className={cn(cellBase, "relative", shade)}>
           <span
             aria-hidden="true"
-            className={cn("absolute inset-y-2 rounded-[2px] transition-[width] duration-500", type === "CE" ? "right-1 bg-down/20" : "left-1 bg-up/20")}
-            style={{ width: `calc(${(q.oi / maxOi) * 100}% - 8px)` }}
+            className={cn("absolute inset-y-2 rounded-[2px] opacity-25 transition-[width] duration-500", type === "CE" ? "right-1" : "left-1")}
+            style={{ width: `calc(${(q.oi / maxOi) * 100}% - 8px)`, background: type === "CE" ? CALL : PUT }}
           />
           <span className="num relative">{formatOi(q.oi, unit, lot)}</span>
         </td>

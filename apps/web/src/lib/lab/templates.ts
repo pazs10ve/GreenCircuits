@@ -95,3 +95,30 @@ export function fromTemplate(template: string | undefined, symbol: string | unde
   const universe = bySymbol ? [bySymbol.id] : (question?.universe ?? [instrumentId])
   return templateDefinition(template, instrumentId, universe)
 }
+
+export interface Idea {
+  template: Template
+  title: string
+  blurb: string
+  /** The builder with the idea's rules filled in, ready to change and run. */
+  href: string
+}
+
+/** The lab's questions put to one stock, fund or index, for the pages that research it. */
+export function ideasFor(inst: Instrument): Idea[] {
+  const idea = (template: Template, title: string, blurb: string): Idea => ({
+    template,
+    title,
+    blurb,
+    href: `/lab/new?template=${template}&symbol=${encodeURIComponent(inst.symbol)}`,
+  })
+  const ideas = [
+    idea("sip", "Invest every month", `₹10,000 into ${inst.name} each month, whatever the price.`),
+    idea("sip-vs-dip", "Wait for a dip", `Keep each month's money in cash until it's 10% below its high, then buy.`),
+    idea("trend", "Follow the trend", "Own it only while it's above its 200-day average."),
+  ]
+  // Timing an oversold bounce is a stock-picker's rule; for an index, the question is how much to hold at all.
+  return inst.kind === "INDEX"
+    ? [...ideas, idea("rebalance", "Mix in bonds", "60% here and 40% in bonds, set back to that mix every April.")]
+    : [...ideas, idea("rsi-dip", "Buy when it's oversold", "Buy when its 14-day RSI falls below 30; sell 10% higher or after 60 days.")]
+}
