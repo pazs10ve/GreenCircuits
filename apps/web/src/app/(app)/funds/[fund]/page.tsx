@@ -10,7 +10,6 @@ import { Section } from "@/components/editorial/section"
 import { listedFundStatics, type FundStatic } from "@/components/funds/data"
 import { MutualFundPage } from "@/components/funds/mutual-fund-page"
 import { ListedTable } from "@/components/funds/listed-table"
-import { TestIdeaMenu } from "@/components/lab/test-idea-menu"
 import { TestIt } from "@/components/lab/test-it"
 import { Tag } from "@/components/parts/tag"
 import { ETFS, getInstrument, getInstrumentBySlug, isListedFund } from "@greencircuits/market/catalog"
@@ -94,9 +93,8 @@ export default async function FundPage({ params }: PageProps<"/funds/[fund]">) {
             {inst.category && <Tag>{inst.category}</Tag>}
           </>
         }
-      >
-        {testable && <TestIdeaMenu instrumentId={inst.id} />}
-      </InstrumentHeader>
+        test={testable}
+      />
       {inst.kind !== "ETF" && <p className="mt-3 text-[13px] text-ink-3">{trust}</p>}
       {testable && <StickySummary instrumentId={inst.id} />}
 

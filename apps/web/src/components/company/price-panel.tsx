@@ -24,6 +24,7 @@ import { formatDateIST, formatPrice, formatSigned, formatTimeIST } from "@greenc
 import type { Candle, Quote } from "@greencircuits/market/types"
 import { useQuote, useSession } from "@/lib/stream/hooks"
 import { useDailyBars, useIntradayBars } from "@/lib/data/client"
+import { barsIn, quoteIn, rateOn } from "@/components/charts/in-currency"
 import { useMarket } from "@/lib/stream/market-context"
 import { quoteStore } from "@/lib/stream/store"
 import { usePreferences } from "@/lib/stores/preferences"
@@ -54,14 +55,22 @@ function withQuote(bars: Candle[], q: Quote | undefined, weeklyBars: boolean): C
   return [...bars, { time: Math.floor(Date.parse(`${istDay(q.ts)}T00:00:00Z`) / 1000), open: q.open, high: q.high, low: q.low, close: q.ltp, volume: q.volume }]
 }
 
+/** Another currency to price a chart in: its rate against the rupee, its sign, and a factor for a change of unit. */
+export interface ChartCurrency {
+  id: number
+  symbol: string
+  factor: number
+}
+
 /**
  * The headline price and its chart: a line of closes, or candles with the
  * studies a reader picks. Scrubbing either replaces the big figure with the
- * price at that moment and the change since the range began.
+ * price at that moment and the change since the range began. In another
+ * currency, each bar is converted at its own day's rate.
  */
-export function PricePanel({ id, defaultRange = "1Y" }: { id: number; defaultRange?: Range }) {
+export function PricePanel({ id, defaultRange = "1Y", currency }: { id: number; defaultRange?: Range; currency?: ChartCurrency }) {
   const inst = getInstrument(id)!
-  const q = useQuote(id)
+  const rupeeQuote = useQuote(id)
   const { mode, initial } = useMarket()
   const now = useNow(60_000)
   const [range, setRange] = useState<Range>(defaultRange)
@@ -77,12 +86,18 @@ export function PricePanel({ id, defaultRange = "1Y" }: { id: number; defaultRan
   // Candles fetch history before the first bar shown, so the averages are there from the start.
   const sessions = !candles ? spec.sessions : weeklyBars ? WEEKLY_SESSIONS : spec.sessions + WARMUP
   // Index levels are points, not rupees.
-  const currency = inst.kind === "INDEX" ? "" : "₹"
+  const sign = currency ? currency.symbol : inst.kind === "INDEX" ? "" : "₹"
+  const tick = currency ? 0.01 : inst.tick
   const intraday = useIntradayBars(id, 5)
   const daily = useDailyBars(id, sessions, range !== "1D")
+  // The currency's own bars and quote, when the chart is in it.
+  const fxInst = currency ? getInstrument(currency.id) : undefined
+  const fxQuote = useQuote(currency?.id ?? id)
+  const fxIntraday = useIntradayBars(currency?.id ?? id, 5, currency != null && range === "1D")
+  const fxDaily = useDailyBars(currency?.id ?? id, sessions, currency != null && range !== "1D")
 
   // Bars for the range: live from the database, or generated in the demo to meet the current price.
-  const bars = useMemo<Candle[] | null>(() => {
+  const rupeeBars = useMemo<Candle[] | null>(() => {
     if (minute == null) return null
     if (range === "1D") {
       if (mode === "live") return intraday.data?.length ? intraday.data : null
@@ -92,6 +107,25 @@ export function PricePanel({ id, defaultRange = "1Y" }: { id: number; defaultRan
     if (mode === "live") return daily.data?.length ? daily.data : null
     return dailyCandles(inst, sessions)
   }, [minute, range, id, inst, initial, mode, sessions, intraday.data, daily.data])
+
+  const fxBars = useMemo<Candle[] | null>(() => {
+    if (!fxInst || minute == null) return null
+    if (range === "1D") {
+      if (mode === "live") return fxIntraday.data?.length ? fxIntraday.data : null
+      const live = quoteStore.get(fxInst.id) ?? initial.get(fxInst.id)
+      return live ? intradayCandles(fxInst, live.open, live.ltp, 5, new Date(minute)) : null
+    }
+    if (mode === "live") return fxDaily.data?.length ? fxDaily.data : null
+    return dailyCandles(fxInst, sessions)
+  }, [fxInst, minute, range, mode, initial, sessions, fxIntraday.data, fxDaily.data])
+
+  // In another currency, nothing is drawn until the rates are in: rupees under a dollar sign would mislead.
+  const bars = useMemo<Candle[] | null>(() => {
+    if (!currency) return rupeeBars
+    if (!rupeeBars || !fxBars) return null
+    return barsIn(rupeeBars, rateOn(fxBars, range === "1D"), currency.factor)
+  }, [currency, rupeeBars, fxBars, range])
+  const q = currency ? quoteIn(rupeeQuote, fxQuote, currency.factor) : rupeeQuote
 
   const points = useMemo(() => {
     if (candles || !bars || !q || minute == null) return null
@@ -119,10 +153,10 @@ export function PricePanel({ id, defaultRange = "1Y" }: { id: number; defaultRan
       if (p.v < lo.v) lo = p
     }
     return [
-      { t: hi.t, label: `High ${currency}${formatPrice(hi.v, inst.tick)}`, side: "above" },
-      { t: lo.t, label: `Low ${currency}${formatPrice(lo.v, inst.tick)}`, side: "below" },
+      { t: hi.t, label: `High ${sign}${formatPrice(hi.v, tick)}`, side: "above" },
+      { t: lo.t, label: `Low ${sign}${formatPrice(lo.v, tick)}`, side: "below" },
     ]
-  }, [points, range, inst.tick, currency])
+  }, [points, range, tick, sign])
 
   // The change is over what's on screen: from the first visible candle, or the first point of the line.
   const firstShown = candleBars ? candleBars[Math.max(0, candleBars.length - (visibleBars ?? candleBars.length))]?.open : points?.[0]?.v
@@ -224,8 +258,8 @@ export function PricePanel({ id, defaultRange = "1Y" }: { id: number; defaultRan
       <p className="mt-3 flex min-h-5 flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-ink-3">
         {scrub && shown != null && (
           <span className="num font-semibold text-ink">
-            {currency}
-            {formatPrice(shown, inst.tick)}
+            {sign}
+            {formatPrice(shown, tick)}
           </span>
         )}
         {change != null && pct != null && <Move value={pct} />}
@@ -242,7 +276,7 @@ export function PricePanel({ id, defaultRange = "1Y" }: { id: number; defaultRan
                 visible={visibleBars}
                 indicators={indicators}
                 intraday={range === "1D"}
-                tick={inst.tick}
+                tick={tick}
                 height={360}
                 onHover={(bar) => setScrub(bar ? { t: bar.time, values: [bar.close] } : null)}
                 ariaLabel={`${inst.name} ${weeklyBars ? "weekly" : range === "1D" ? "five-minute" : "daily"} candles, ${spec.phrase}.`}
@@ -260,7 +294,7 @@ export function PricePanel({ id, defaultRange = "1Y" }: { id: number; defaultRan
             series={[{ id: "price", points, color: up >= 0 ? "var(--up)" : "var(--down)", area: true }]}
             reference={range === "1D" && q ? { value: q.prevClose, label: "Prev close" } : undefined}
             annotations={annotations}
-            yFormat={(v) => formatPrice(v, inst.tick >= 1 ? 1 : inst.tick < 0.05 ? inst.tick : 1)}
+            yFormat={(v) => formatPrice(v, currency ? (Math.abs(v) >= 100 ? 1 : 0.01) : tick >= 1 ? 1 : tick < 0.05 ? tick : 1)}
             onScrub={setScrub}
           />
         ) : (

@@ -7,24 +7,28 @@ import { AlertDialogButton } from "@/components/market/alert-dialog"
 import { WatchButton } from "@/components/market/watch-button"
 import { Monogram } from "@/components/parts/monogram"
 import { Button } from "@/components/ui/button"
+import { TestIdeaMenu } from "@/components/lab/test-idea-menu"
+import { FootActions } from "./foot-actions"
 import { PriceBlock } from "./price-block"
 
 /**
  * The head of an instrument's page: where it sits, its monogram and name with
- * a few tags, and the live price with watch, alert and whatever else the page adds.
- * The same for a company, an index and a listed fund.
+ * a few tags, and the live price with watch, alert and a test of an idea on it.
+ * The same for a company, an index and a listed fund. On a phone the actions
+ * sit at the screen's foot instead.
  */
 export function InstrumentHeader({
   inst,
   tags,
   crumbs,
-  children,
+  test = false,
 }: {
   inst: Instrument
   tags: React.ReactNode
   /** Defaults to Markets, then the company's sector. */
   crumbs?: { href: string; label: string }[]
-  children?: React.ReactNode
+  /** Whether it can be tested in the lab: a company, an index or an ETF. */
+  test?: boolean
 }) {
   // A company's monogram is its symbol; an index's, its number where it has one ("50" for the Nifty 50).
   const letters = inst.kind === "INDEX" ? inst.name.replace(/\D/g, "") || inst.symbol : inst.symbol
@@ -56,7 +60,7 @@ export function InstrumentHeader({
       </div>
       <div className="flex flex-wrap items-center gap-x-7 gap-y-3">
         <PriceBlock id={inst.id} />
-        <div className="flex flex-wrap gap-2">
+        <div className="hidden flex-wrap gap-2 md:flex">
           <WatchButton instrumentId={inst.id} size="default" />
           <AlertDialogButton
             instrumentId={inst.id}
@@ -66,9 +70,10 @@ export function InstrumentHeader({
               </Button>
             }
           />
-          {children}
+          {test && <TestIdeaMenu instrumentId={inst.id} />}
         </div>
       </div>
+      <FootActions instrumentId={inst.id} test={test} />
     </header>
   )
 }

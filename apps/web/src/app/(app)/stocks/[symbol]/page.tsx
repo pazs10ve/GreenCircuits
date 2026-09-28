@@ -173,9 +173,8 @@ async function Company({ inst, tab }: { inst: Instrument; tab?: string }) {
             {inst.industry && <Tag>{inst.industry}</Tag>}
           </>
         }
-      >
-        <TestIdeaMenu instrumentId={inst.id} />
-      </InstrumentHeader>
+        test
+      />
       <StickySummary instrumentId={inst.id} />
       <PageTabs key={inst.id} tabs={tabs} initial={tab} label={`About ${inst.name}`} />
     </div>
@@ -267,9 +266,8 @@ async function Market({ inst, tab }: { inst: Instrument; tab?: string }) {
             {tracked && <Tag>{members.length} companies</Tag>}
           </>
         }
-      >
-        {index && <TestIdeaMenu instrumentId={inst.id} />}
-      </InstrumentHeader>
+        test={index}
+      />
       {index && <StickySummary instrumentId={inst.id} />}
       {since && (
         <p className="mt-3 text-[13px] text-ink-3">

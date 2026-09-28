@@ -15,13 +15,13 @@ import { getInstrument } from "@greencircuits/market/catalog"
 import { ideasFor } from "@/lib/lab/templates"
 
 /** "Test an idea": the lab's questions put to this instrument, each opening the builder with its rules filled in. */
-export function TestIdeaMenu({ instrumentId, size = "default" }: { instrumentId: number; size?: "default" | "sm" }) {
+export function TestIdeaMenu({ instrumentId, size = "default", className }: { instrumentId: number; size?: "default" | "sm" | "lg"; className?: string }) {
   const inst = getInstrument(instrumentId)
   if (!inst) return null
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="brand" size={size}>
+        <Button variant="brand" size={size} className={className}>
           <FlaskConical /> Test an idea <ChevronDown className="-mr-1 opacity-80" />
         </Button>
       </DropdownMenuTrigger>

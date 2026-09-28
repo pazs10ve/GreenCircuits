@@ -50,9 +50,9 @@ export function StickySummary({ instrumentId }: { instrumentId: number }) {
               <span className={cn("num", q.changePct > 0 ? "text-up" : q.changePct < 0 ? "text-down" : "text-ink-2")}>{formatPct(q.changePct)}</span>
             </p>
           )}
-          <div className="ml-auto flex shrink-0 items-center gap-2">
-            <WatchButton instrumentId={instrumentId} size="sm" iconOnly className="sm:hidden" />
-            <WatchButton instrumentId={instrumentId} size="sm" className="hidden sm:inline-flex" />
+          {/* On a phone the actions are at the screen's foot already. */}
+          <div className="ml-auto hidden shrink-0 items-center gap-2 md:flex">
+            <WatchButton instrumentId={instrumentId} size="sm" />
             <TestIdeaMenu instrumentId={instrumentId} size="sm" />
           </div>
         </div>

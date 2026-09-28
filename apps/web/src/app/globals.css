@@ -301,3 +301,8 @@
     animation: none;
   }
 }
+
+/* A page with actions of its own at a phone's foot (an instrument's) gives them the tab bar's place. */
+body:has([data-foot-actions]) [data-tab-bar] {
+  display: none;
+}

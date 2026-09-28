@@ -6,7 +6,7 @@ import { COMMODITY_GROUPS } from "@greencircuits/market/reference"
 import type { Instrument } from "@greencircuits/market/types"
 import { CommodityTiles, type Currency } from "@/components/commodities/commodity-tiles"
 import { GoldSilver } from "@/components/commodities/gold-silver"
-import { commodityName, inDollarTerms, unitWords } from "@/components/commodities/units"
+import { abroad, commodityName, inDollarTerms, unitWords } from "@/components/commodities/units"
 import { YearBars } from "@/components/commodities/year-bars"
 import { KeyStats } from "@/components/company/key-stats"
 import { PricePanel } from "@/components/company/price-panel"
@@ -49,6 +49,8 @@ export default async function CommoditiesPage({ searchParams }: PageProps<"/comm
   const params = await searchParams
   const inst = COMMODITIES.find((c) => c.slug === one(params.c)?.toLowerCase()) ?? COMMODITIES[0]!
   const currency: Currency = one(params.in) === "usd" ? "usd" : "inr"
+  // In dollars, by the unit quoted abroad: gold by the ounce, copper by the pound.
+  const dollars = currency === "usd" ? abroad(inst) : null
   const [universe, feed] = await Promise.all([getUniverse(), getFeed()])
   const real = feed.dataset === "real"
 
@@ -114,17 +116,17 @@ export default async function CommoditiesPage({ searchParams }: PageProps<"/comm
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
               <h2 className="text-sm font-semibold">{commodityName(inst)}</h2>
-              <Tag>{unitWords(inst)}</Tag>
+              <Tag>{dollars ? `$ ${dollars.per}` : unitWords(inst)}</Tag>
               {group && <Tag>{group}</Tag>}
-              {currency === "usd" && <span className="text-xs text-ink-3">The chart stays in rupees</span>}
             </div>
             <WatchButton instrumentId={inst.id} />
           </div>
-          <PricePanel id={inst.id} defaultRange="1Y" />
+          <PricePanel id={inst.id} defaultRange="1Y" currency={dollars ? { id: USDINR, symbol: "$", factor: dollars.factor } : undefined} />
         </Panel>
         <Section title="Key figures" size="rail" className="lg:col-span-4">
           <KeyStats
             id={inst.id}
+            currency={dollars ? { id: USDINR, symbol: "$", factor: dollars.factor } : undefined}
             stats={{
               extra: [{ label: "MCX lot", value: formatNumber(inst.lot ?? 0, 0), hint: lotUnit }],
             }}

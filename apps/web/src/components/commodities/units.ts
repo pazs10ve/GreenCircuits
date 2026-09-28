@@ -21,6 +21,9 @@ const ABROAD: Record<string, { per: string; factor: number }> = {
   ALUMINIUM: { per: "a tonne", factor: 1000 },
 }
 
+/** How a commodity is quoted abroad: the unit, and how many of MCX's make it; null for one it doesn't know. */
+export const abroad = (inst: Instrument) => ABROAD[inst.symbol] ?? null
+
 /** A price in rupees by MCX's unit, as dollars by the unit quoted abroad; null without a rate or a known unit. */
 export function inDollars(inst: Instrument, rupees: number, rupeesPerDollar: number | undefined): { value: number; per: string } | null {
   const abroad = ABROAD[inst.symbol]

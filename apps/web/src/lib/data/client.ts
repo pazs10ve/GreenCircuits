@@ -17,12 +17,12 @@ async function getCandles(path: string): Promise<Candle[]> {
 }
 
 /** The latest session's intraday bars, refreshed every minute. */
-export function useIntradayBars(id: number, minutes: 1 | 5 | 15 = 5) {
+export function useIntradayBars(id: number, minutes: 1 | 5 | 15 = 5, enabled = true) {
   const { mode } = useMarket()
   return useQuery({
     queryKey: ["intraday", id, minutes],
     queryFn: () => getCandles(`/instruments/${id}/intraday?minutes=${minutes}`),
-    enabled: mode === "live",
+    enabled: mode === "live" && enabled,
     refetchInterval: 60_000,
     staleTime: 30_000,
   })

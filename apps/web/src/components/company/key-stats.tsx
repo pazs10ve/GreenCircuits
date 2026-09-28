@@ -10,6 +10,8 @@ import { useMarket } from "@/lib/stream/market-context"
 import { Figure } from "@/components/editorial/figures"
 import { RangeMarker } from "@/components/parts/range-marker"
 import { ShareBar } from "@/components/parts/share-bar"
+import { barsIn, quoteIn, rateOn } from "@/components/charts/in-currency"
+import type { ChartCurrency } from "./price-panel"
 import { usualDailyMove } from "./year-stats"
 
 /** The figures that don't move with the price, worked out on the server. */
@@ -34,14 +36,20 @@ type Tile = { label: string; value: string; hint?: string; tone?: "up" | "down";
  * The numbers a reader checks beside the chart: the day's trading, where the
  * price sits in its year, and, for a company, its size and valuation.
  */
-export function KeyStats({ id, stats }: { id: number; stats: StaticStats }) {
+export function KeyStats({ id, stats, currency }: { id: number; stats: StaticStats; currency?: ChartCurrency }) {
   const inst = getInstrument(id)!
-  const q = useQuote(id)
+  const rupeeQuote = useQuote(id)
+  const fxQuote = useQuote(currency?.id ?? id)
+  const q = currency ? quoteIn(rupeeQuote, fxQuote, currency.factor) : rupeeQuote
   const { mode } = useMarket()
   // The same year of bars the price chart asks for, so it comes from the same cache.
   const daily = useDailyBars(id, 250)
+  const fxDaily = useDailyBars(currency?.id ?? id, 250, currency != null)
   const year = useMemo(() => {
-    const bars = mode === "live" ? daily.data : dailyCandles(inst, 250)
+    const rupees = mode === "live" ? daily.data : dailyCandles(inst, 250)
+    const fx = !currency ? null : mode === "live" ? fxDaily.data : dailyCandles(getInstrument(currency.id)!, 250)
+    // In another currency, each day's bar at that day's rate; nothing until the rates are in.
+    const bars = !currency ? rupees : rupees?.length && fx?.length ? barsIn(rupees, rateOn(fx, false), currency.factor) : null
     if (!bars?.length) return null
     const extremes = bars.flatMap((b) => [b.high, b.low])
     return {
@@ -51,7 +59,7 @@ export function KeyStats({ id, stats }: { id: number; stats: StaticStats }) {
       usual: usualDailyMove(bars.map((b) => b.close)),
       full: bars.length >= 240,
     }
-  }, [mode, daily.data, inst, q?.high, q?.low])
+  }, [mode, daily.data, fxDaily.data, currency, inst, q?.high, q?.low])
   const read = useQuoteReader(2000)
   const breadth = useMemo(() => {
     if (!stats.memberIds?.length) return null
@@ -63,7 +71,7 @@ export function KeyStats({ id, stats }: { id: number; stats: StaticStats }) {
     }
     return { up, down, flat: stats.memberIds.length - up - down, total: stats.memberIds.length }
   }, [read, stats.memberIds])
-  const price = (v: number | undefined) => (v == null ? "–" : formatPrice(v, inst.tick))
+  const price = (v: number | undefined) => (v == null ? "–" : `${currency ? currency.symbol : ""}${formatPrice(v, currency ? 0.01 : inst.tick)}`)
   const where = year && q ? (q.ltp - year.low) / Math.max(1e-9, year.high - year.low) : null
   const today = q && q.high > q.low ? (q.ltp - q.low) / (q.high - q.low) : null
   const busy = q && inst.avgVolume ? q.volume / inst.avgVolume : null
