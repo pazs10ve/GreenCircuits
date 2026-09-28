@@ -11,6 +11,7 @@ import type { Env } from "./env"
 import { authRoutes } from "./modules/auth"
 import { companyRoutes } from "./modules/companies"
 import { feedRoutes } from "./modules/feed"
+import { fundRoutes } from "./modules/funds"
 import { healthRoutes } from "./modules/health"
 import { instrumentRoutes } from "./modules/instruments"
 import { labRoutes } from "./modules/lab"
@@ -93,6 +94,7 @@ export async function buildApp({ db, valkey, env, logger = false }: AppDeps) {
       await v1.register(companyRoutes)
       await v1.register(marketRoutes)
       await v1.register(universeRoutes)
+      await v1.register(fundRoutes)
       await v1.register(referenceRoutes)
       await v1.register(authRoutes)
       await v1.register(meRoutes)

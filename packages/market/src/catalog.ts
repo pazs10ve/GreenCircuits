@@ -1,8 +1,15 @@
-import type { Instrument, Sector } from "./types"
+import data from "./data/equities.json"
+import fundData from "./data/listed-funds.json"
+import type { Instrument, InstrumentKind, Sector } from "./types"
 
 /**
- * The simulated universe. Symbols and company names are real; prices, volumes
- * and index membership are sample values that anchor the simulator.
+ * The universe. The stocks are the Nifty 500, from data/equities.json, and the
+ * listed funds every ETF, REIT and InvIT on NSE that Yahoo prices, from
+ * data/listed-funds.json; `pnpm catalog` builds both from the official index
+ * lists, NSE's security masters, AMFI and Yahoo Finance. Symbols, names,
+ * sectors, index membership (except the Sensex's), lots and what each ETF
+ * tracks are real. Prices, shares, volumes, volatility and beta are one day's,
+ * and anchor the simulator; the demo market moves on from there.
  */
 
 export const INDEX = {
@@ -13,6 +20,10 @@ export const INDEX = {
   MIDCAP: 5,
   FINNIFTY: 6,
   VIX: 7,
+  NEXT50: 8,
+  NIFTY500: 9,
+  MIDCAP150: 10,
+  SMALLCAP250: 11,
 } as const
 
 /** NSE equity tick sizes by price band (revised monthly since April 2025). */
@@ -29,100 +40,110 @@ export function slugify(symbol: string): string {
   return symbol.toLowerCase().replace(/&/g, "-and-").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
 }
 
+/** Index levels at the catalog's date; the fallbacks cover an index the generator couldn't price. */
+const anchors = data.indices as Record<string, number>
+const level = (id: number, fallback: number) => anchors[id] ?? fallback
+
 const indexRows: Omit<Instrument, "slug">[] = [
-  { id: INDEX.NIFTY, symbol: "NIFTY 50", name: "Nifty 50", exchange: "NSE", kind: "INDEX", prevClose: 25114.2, vol: 0.13, beta: 1, tick: 0.05, avgVolume: 0, lot: 65, isFo: true },
-  { id: INDEX.SENSEX, symbol: "SENSEX", name: "BSE Sensex", exchange: "BSE", kind: "INDEX", prevClose: 82012.66, vol: 0.13, beta: 1, tick: 0.05, avgVolume: 0, lot: 20, isFo: true },
-  { id: INDEX.BANKNIFTY, symbol: "BANK NIFTY", name: "Nifty Bank", exchange: "NSE", kind: "INDEX", prevClose: 55340.1, vol: 0.15, beta: 1.1, tick: 0.05, avgVolume: 0, lot: 30, isFo: true },
-  { id: INDEX.NIFTYIT, symbol: "NIFTY IT", name: "Nifty IT", exchange: "NSE", kind: "INDEX", prevClose: 36542.35, vol: 0.2, beta: 0.8, tick: 0.05, avgVolume: 0 },
-  { id: INDEX.MIDCAP, symbol: "NIFTY MIDCAP 100", name: "Nifty Midcap 100", exchange: "NSE", kind: "INDEX", prevClose: 57418.9, vol: 0.17, beta: 1.15, tick: 0.05, avgVolume: 0 },
-  { id: INDEX.FINNIFTY, symbol: "FIN NIFTY", name: "Nifty Financial Services", exchange: "NSE", kind: "INDEX", prevClose: 26482.75, vol: 0.14, beta: 1.05, tick: 0.05, avgVolume: 0, lot: 60, isFo: true },
-  { id: INDEX.VIX, symbol: "INDIA VIX", name: "India VIX", exchange: "NSE", kind: "INDEX", prevClose: 11.92, vol: 0.75, beta: -4, tick: 0.0025, avgVolume: 0 },
+  { id: INDEX.NIFTY, symbol: "NIFTY 50", name: "Nifty 50", exchange: "NSE", kind: "INDEX", prevClose: level(INDEX.NIFTY, 25114.2), vol: 0.13, beta: 1, tick: 0.05, avgVolume: 0, lot: 65, isFo: true },
+  { id: INDEX.SENSEX, symbol: "SENSEX", name: "BSE Sensex", exchange: "BSE", kind: "INDEX", prevClose: level(INDEX.SENSEX, 82012.66), vol: 0.13, beta: 1, tick: 0.05, avgVolume: 0, lot: 20, isFo: true },
+  { id: INDEX.BANKNIFTY, symbol: "BANK NIFTY", name: "Nifty Bank", exchange: "NSE", kind: "INDEX", prevClose: level(INDEX.BANKNIFTY, 55340.1), vol: 0.15, beta: 1.1, tick: 0.05, avgVolume: 0, lot: 30, isFo: true },
+  { id: INDEX.NIFTYIT, symbol: "NIFTY IT", name: "Nifty IT", exchange: "NSE", kind: "INDEX", prevClose: level(INDEX.NIFTYIT, 36542.35), vol: 0.2, beta: 0.8, tick: 0.05, avgVolume: 0 },
+  { id: INDEX.MIDCAP, symbol: "NIFTY MIDCAP 100", name: "Nifty Midcap 100", exchange: "NSE", kind: "INDEX", prevClose: level(INDEX.MIDCAP, 57418.9), vol: 0.17, beta: 1.15, tick: 0.05, avgVolume: 0 },
+  { id: INDEX.FINNIFTY, symbol: "FIN NIFTY", name: "Nifty Financial Services", exchange: "NSE", kind: "INDEX", prevClose: level(INDEX.FINNIFTY, 26482.75), vol: 0.14, beta: 1.05, tick: 0.05, avgVolume: 0, lot: 60, isFo: true },
+  { id: INDEX.VIX, symbol: "INDIA VIX", name: "India VIX", exchange: "NSE", kind: "INDEX", prevClose: level(INDEX.VIX, 11.92), vol: 0.75, beta: -4, tick: 0.0025, avgVolume: 0 },
+  { id: INDEX.NEXT50, symbol: "NIFTY NEXT 50", name: "Nifty Next 50", exchange: "NSE", kind: "INDEX", prevClose: level(INDEX.NEXT50, 68500), vol: 0.17, beta: 1.1, tick: 0.05, avgVolume: 0 },
+  { id: INDEX.NIFTY500, symbol: "NIFTY 500", name: "Nifty 500", exchange: "NSE", kind: "INDEX", prevClose: level(INDEX.NIFTY500, 22800), vol: 0.14, beta: 1.02, tick: 0.05, avgVolume: 0 },
+  { id: INDEX.MIDCAP150, symbol: "NIFTY MIDCAP 150", name: "Nifty Midcap 150", exchange: "NSE", kind: "INDEX", prevClose: level(INDEX.MIDCAP150, 22000), vol: 0.17, beta: 1.15, tick: 0.05, avgVolume: 0 },
+  { id: INDEX.SMALLCAP250, symbol: "NIFTY SMALLCAP 250", name: "Nifty Smallcap 250", exchange: "NSE", kind: "INDEX", prevClose: level(INDEX.SMALLCAP250, 17500), vol: 0.2, beta: 1.25, tick: 0.05, avgVolume: 0 },
 ]
 const indices: Instrument[] = indexRows.map((i) => ({ ...i, slug: slugify(i.symbol) }))
 
-// symbol, name, sector, industry, prevClose, shares (crore), vol, beta, avg volume (lakh shares), in Sensex
-type Row = [string, string, Sector, string, number, number, number, number, number, boolean]
-
-const rows: Row[] = [
-  ["RELIANCE", "Reliance Industries", "Energy", "Oil, Gas & Consumable Fuels", 1412.6, 1353, 0.22, 1.0, 98, true],
-  ["HDFCBANK", "HDFC Bank", "Financials", "Private Sector Bank", 986.4, 1535, 0.18, 0.95, 172, true],
-  ["BHARTIARTL", "Bharti Airtel", "Telecom", "Telecom Services", 1921.3, 600, 0.21, 0.8, 64, true],
-  ["TCS", "Tata Consultancy Services", "IT", "IT Services", 3065.5, 362, 0.2, 0.7, 28, true],
-  ["ICICIBANK", "ICICI Bank", "Financials", "Private Sector Bank", 1411.8, 713, 0.19, 1.05, 131, true],
-  ["SBIN", "State Bank of India", "Financials", "Public Sector Bank", 812.35, 892, 0.24, 1.2, 146, true],
-  ["INFY", "Infosys", "IT", "IT Services", 1480.2, 415, 0.22, 0.75, 74, true],
-  ["BAJFINANCE", "Bajaj Finance", "Financials", "Non Banking Financial Company", 948.15, 620, 0.28, 1.3, 88, true],
-  ["HINDUNILVR", "Hindustan Unilever", "Consumer", "Personal Products", 2481.9, 235, 0.17, 0.55, 17, true],
-  ["ITC", "ITC", "Consumer", "Cigarettes & Tobacco Products", 410.45, 1251, 0.18, 0.6, 142, true],
-  ["LT", "Larsen & Toubro", "Industrials", "Civil Construction", 3622.4, 137.5, 0.22, 1.1, 21, true],
-  ["HCLTECH", "HCL Technologies", "IT", "IT Services", 1450.6, 271, 0.23, 0.75, 35, true],
-  ["KOTAKBANK", "Kotak Mahindra Bank", "Financials", "Private Sector Bank", 2010.5, 199, 0.2, 0.95, 31, true],
-  ["SUNPHARMA", "Sun Pharmaceutical Industries", "Healthcare", "Pharmaceuticals", 1641.25, 240, 0.21, 0.55, 22, true],
-  ["MARUTI", "Maruti Suzuki India", "Auto", "Passenger Cars & Utility Vehicles", 15902, 31.4, 0.23, 0.9, 5, true],
-  ["M&M", "Mahindra & Mahindra", "Auto", "Passenger Cars & Utility Vehicles", 3451.7, 124, 0.26, 1.1, 24, true],
-  ["AXISBANK", "Axis Bank", "Financials", "Private Sector Bank", 1150.3, 310, 0.23, 1.15, 69, true],
-  ["ULTRACEMCO", "UltraTech Cement", "Materials", "Cement & Cement Products", 12304, 29.5, 0.22, 0.9, 3, true],
-  ["NTPC", "NTPC", "Utilities", "Power Generation", 340.25, 970, 0.24, 0.85, 118, true],
-  ["BAJAJFINSV", "Bajaj Finserv", "Financials", "Holding Company", 2010.8, 160, 0.26, 1.2, 12, true],
-  ["TITAN", "Titan Company", "Consumer", "Gems, Jewellery & Watches", 3552.1, 89, 0.24, 0.9, 11, true],
-  ["ETERNAL", "Eternal", "Consumer", "E-Retail", 330.45, 965, 0.38, 1.4, 390, true],
-  ["ONGC", "Oil & Natural Gas Corporation", "Energy", "Oil Exploration & Production", 240.18, 1258, 0.27, 0.9, 162, false],
-  ["ADANIPORTS", "Adani Ports & SEZ", "Industrials", "Port & Port Services", 1420.9, 216, 0.3, 1.3, 38, true],
-  ["POWERGRID", "Power Grid Corporation", "Utilities", "Power Transmission", 290.35, 930, 0.2, 0.7, 104, true],
-  ["BEL", "Bharat Electronics", "Industrials", "Aerospace & Defense", 405.6, 731, 0.32, 1.2, 205, true],
-  ["WIPRO", "Wipro", "IT", "IT Services", 245.62, 1047, 0.24, 0.8, 96, false],
-  ["JSWSTEEL", "JSW Steel", "Materials", "Iron & Steel", 1150.4, 244, 0.28, 1.25, 29, false],
-  ["COALINDIA", "Coal India", "Energy", "Coal", 390.15, 616, 0.26, 0.85, 72, false],
-  ["TATASTEEL", "Tata Steel", "Materials", "Iron & Steel", 168.42, 1248, 0.3, 1.35, 330, true],
-  ["ASIANPAINT", "Asian Paints", "Consumer", "Paints", 2481.3, 96, 0.22, 0.7, 14, true],
-  ["NESTLEIND", "Nestle India", "Consumer", "Packaged Foods", 1180.6, 193, 0.18, 0.5, 11, true],
-  ["TRENT", "Trent", "Consumer", "Speciality Retail", 4951.5, 35.5, 0.35, 1.3, 9, true],
-  ["GRASIM", "Grasim Industries", "Materials", "Cement & Cement Products", 2781.2, 68, 0.24, 1.0, 7, false],
-  ["HINDALCO", "Hindalco Industries", "Materials", "Aluminium", 760.3, 225, 0.3, 1.3, 64, false],
-  ["TECHM", "Tech Mahindra", "IT", "IT Services", 1480.9, 98, 0.26, 0.85, 26, true],
-  ["SBILIFE", "SBI Life Insurance", "Financials", "Life Insurance", 1810.4, 100, 0.22, 0.75, 9, false],
-  ["HDFCLIFE", "HDFC Life Insurance", "Financials", "Life Insurance", 765.2, 215, 0.23, 0.75, 25, false],
-  ["CIPLA", "Cipla", "Healthcare", "Pharmaceuticals", 1520.8, 80.8, 0.22, 0.5, 15, false],
-  ["DRREDDY", "Dr. Reddy's Laboratories", "Healthcare", "Pharmaceuticals", 1250.4, 83.4, 0.22, 0.5, 18, false],
-  ["EICHERMOT", "Eicher Motors", "Auto", "2/3 Wheelers", 6902, 27.4, 0.26, 0.95, 5, false],
-  ["BAJAJ-AUTO", "Bajaj Auto", "Auto", "2/3 Wheelers", 8904.5, 27.9, 0.24, 0.85, 4, false],
-  ["HEROMOTOCO", "Hero MotoCorp", "Auto", "2/3 Wheelers", 5301, 20, 0.27, 0.9, 6, false],
-  ["APOLLOHOSP", "Apollo Hospitals", "Healthcare", "Hospital", 7702.5, 14.4, 0.25, 0.7, 4, false],
-  ["TATACONSUM", "Tata Consumer Products", "Consumer", "Tea & Coffee", 1110.2, 99, 0.24, 0.7, 15, false],
-  ["SHRIRAMFIN", "Shriram Finance", "Financials", "Non Banking Financial Company", 640.55, 188, 0.32, 1.3, 58, false],
-  ["JIOFIN", "Jio Financial Services", "Financials", "Holding Company", 305.4, 635, 0.33, 1.2, 190, false],
-  ["ADANIENT", "Adani Enterprises", "Industrials", "Trading & Distributors", 2401.6, 115, 0.38, 1.45, 24, true],
-  ["BRITANNIA", "Britannia Industries", "Consumer", "Packaged Foods", 5902, 24, 0.19, 0.5, 3, false],
+/** One stock in data/equities.json, in the order of its "columns". */
+type Row = [
+  id: number,
+  symbol: string,
+  name: string,
+  isin: string | null,
+  sector: Sector,
+  industry: string | null,
+  prevClose: number,
+  sharesCr: number,
+  vol: number,
+  beta: number,
+  avgVolume: number,
+  indices: number[],
+  lot: number | null,
 ]
 
-const bankSymbols = new Set(["HDFCBANK", "ICICIBANK", "SBIN", "KOTAKBANK", "AXISBANK"])
+const equities: Instrument[] = (data.equities as unknown as Row[]).map(
+  ([id, symbol, name, isin, sector, industry, prevClose, sharesCr, vol, beta, avgVolume, memberOf, lot]) => {
+    const inst: Instrument = {
+      id,
+      symbol,
+      name,
+      slug: slugify(symbol),
+      exchange: "NSE",
+      kind: "EQUITY",
+      sector,
+      prevClose,
+      vol,
+      beta,
+      tick: tickFor(prevClose),
+      sharesCr,
+      avgVolume,
+      isFo: lot != null,
+      indices: memberOf,
+    }
+    if (industry) inst.industry = industry
+    if (isin) inst.isin = isin
+    if (lot != null) inst.lot = lot
+    return inst
+  },
+)
 
-const equities: Instrument[] = rows.map((r, i) => {
-  const [symbol, name, sector, industry, prevClose, sharesCr, vol, beta, avgLakh, inSensex] = r
-  const memberOf: number[] = [INDEX.NIFTY]
-  if (inSensex) memberOf.push(INDEX.SENSEX)
-  if (bankSymbols.has(symbol)) memberOf.push(INDEX.BANKNIFTY)
-  if (sector === "IT") memberOf.push(INDEX.NIFTYIT)
-  if (sector === "Financials") memberOf.push(INDEX.FINNIFTY)
-  return {
-    id: 100 + i,
-    symbol,
-    name,
-    slug: slugify(symbol),
-    exchange: "NSE",
-    kind: "EQUITY",
-    sector,
-    industry,
-    prevClose,
-    vol,
-    beta,
-    tick: tickFor(prevClose),
-    sharesCr,
-    avgVolume: avgLakh * 1e5,
-    isFo: true,
-    indices: memberOf,
-  }
-})
+/** When the stocks' prices, shares and volumes were taken (the last close before `pnpm catalog` ran). */
+export const CATALOG_DATE = data.asOf
+
+/** One fund in data/listed-funds.json, in the order of its "columns". */
+type FundRow = [
+  id: number,
+  symbol: string,
+  name: string,
+  isin: string | null,
+  kind: "ETF" | "REIT" | "INVIT",
+  category: string | null,
+  underlying: string | null,
+  tracks: number | null,
+  prevClose: number,
+  vol: number,
+  beta: number,
+  avgVolume: number,
+]
+
+const funds: Instrument[] = (fundData.funds as unknown as FundRow[]).map(
+  ([id, symbol, name, isin, kind, category, underlying, tracks, prevClose, vol, beta, avgVolume]) => {
+    const inst: Instrument = {
+      id,
+      symbol,
+      name,
+      slug: slugify(symbol),
+      exchange: "NSE",
+      kind,
+      prevClose,
+      vol,
+      beta,
+      // NSE quotes ETFs, REITs and InvITs in paise.
+      tick: 0.01,
+      avgVolume,
+    }
+    if (isin) inst.isin = isin
+    if (category) inst.category = category
+    if (underlying) inst.underlying = underlying
+    if (tracks != null) inst.tracks = tracks
+    return inst
+  },
+)
 
 const commodities: Instrument[] = [
   { id: 300, symbol: "GOLD", name: "Gold", unit: "₹ / 10 g", prevClose: 109850, vol: 0.14, beta: -0.1, tick: 1, lot: 1, avgVolume: 14000 },
@@ -140,7 +161,11 @@ const currencies: Instrument[] = [
   { id: 402, symbol: "GBPINR", name: "Pound / Rupee", prevClose: 118.6275, vol: 0.07, beta: -0.1, tick: 0.0025, lot: 1000, avgVolume: 90000 },
 ].map((c) => ({ ...c, slug: slugify(c.symbol), exchange: "NSE" as const, kind: "CURRENCY" as const, isFo: true }))
 
-export const INSTRUMENTS: Instrument[] = [...indices, ...equities, ...commodities, ...currencies]
+/**
+ * Everything, by id. The ingestor loads the same instruments from the database
+ * in id order, so the server's simulator and the in-browser demo agree for a seed.
+ */
+export const INSTRUMENTS: Instrument[] = [...indices, ...equities, ...commodities, ...currencies, ...funds].sort((a, b) => a.id - b.id)
 
 const byId = new Map(INSTRUMENTS.map((i) => [i.id, i]))
 const bySlug = new Map(INSTRUMENTS.map((i) => [i.slug, i]))
@@ -157,6 +182,28 @@ export const EQUITIES = equities
 export const INDICES = indices
 export const COMMODITIES = commodities
 export const CURRENCIES = currencies
+export const ETFS = funds.filter((f) => f.kind === "ETF")
+/** REITs and InvITs. */
+export const TRUSTS = funds.filter((f) => f.kind === "REIT" || f.kind === "INVIT")
+export const LISTED_FUNDS = funds
+
+/** What ETFs hold, broadest first: the categories the catalog sorts them into. */
+export const ETF_CATEGORIES = ["Broad market", "Sector and theme", "Strategy", "Gold", "Silver", "Liquid", "Bonds", "International", "Hybrid"].filter((c) =>
+  funds.some((f) => f.category === c),
+)
+
+const FUND_KINDS = new Set<InstrumentKind>(["ETF", "REIT", "INVIT"])
+
+export function isListedFund(inst: Pick<Instrument, "kind">): boolean {
+  return FUND_KINDS.has(inst.kind)
+}
+
+/** The page an instrument lives on. */
+export function hrefOf(inst: Pick<Instrument, "kind" | "slug">): string {
+  if (inst.kind === "COMMODITY") return `/commodities?c=${inst.slug}`
+  if (FUND_KINDS.has(inst.kind)) return `/funds/${inst.slug}`
+  return `/stocks/${inst.slug}`
+}
 
 /** Headline instruments for the top-bar ticker. */
 export const TICKER_IDS = [INDEX.NIFTY, INDEX.SENSEX, INDEX.BANKNIFTY, INDEX.NIFTYIT, INDEX.VIX, 400, 300, 302]
@@ -170,9 +217,35 @@ export function marketCapCr(instrument: Instrument, price: number): number {
   return (instrument.sharesCr ?? 0) * price
 }
 
+export type SizeBand = "Large" | "Mid" | "Small"
+
+export const SIZE_BANDS: SizeBand[] = ["Large", "Mid", "Small"]
+
+/**
+ * SEBI's size bands, read from index membership: large is the hundred biggest
+ * companies (the Nifty 50 and Next 50), mid the next 150 (the Midcap 150),
+ * small the 250 after them (the Smallcap 250).
+ */
+export function sizeBand(indexIds: readonly number[] | undefined): SizeBand | null {
+  if (!indexIds) return null
+  if (indexIds.includes(INDEX.NIFTY) || indexIds.includes(INDEX.NEXT50)) return "Large"
+  if (indexIds.includes(INDEX.MIDCAP150)) return "Mid"
+  if (indexIds.includes(INDEX.SMALLCAP250)) return "Small"
+  return null
+}
+
 export const SECTORS: Sector[] = [
-  "Financials", "IT", "Energy", "Consumer", "Auto", "Healthcare", "Materials", "Industrials", "Telecom", "Utilities",
+  "Financials", "IT", "Energy", "Consumer", "Auto", "Healthcare", "Materials", "Industrials", "Telecom", "Utilities", "Realty",
 ]
 
-/** Derivative underlyings with option chains. */
-export const OPTION_UNDERLYINGS = [INDEX.NIFTY, INDEX.BANKNIFTY, INDEX.FINNIFTY, INDEX.SENSEX, 100, 104, 106, 102, 105]
+/** Derivative underlyings with option chains: the indices with options, then every F&O stock, largest first. */
+export const OPTION_UNDERLYINGS: number[] = [
+  INDEX.NIFTY,
+  INDEX.BANKNIFTY,
+  INDEX.FINNIFTY,
+  INDEX.SENSEX,
+  ...equities
+    .filter((e) => e.isFo)
+    .sort((a, b) => marketCapCr(b, b.prevClose) - marketCapCr(a, a.prevClose))
+    .map((e) => e.id),
+]

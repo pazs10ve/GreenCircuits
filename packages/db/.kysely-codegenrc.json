@@ -1,7 +1,7 @@
 {
   "dialect": "postgres",
   "outFile": "src/schema.ts",
-  "includePattern": "{ref,md,corp,fi,ipo,scr,app,lab,ops}.*",
+  "includePattern": "{ref,md,corp,fi,ipo,mf,scr,app,lab,ops}.*",
   "dateParser": "string",
   "numericParser": "number",
   "typeMapping": {

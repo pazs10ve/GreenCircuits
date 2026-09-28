@@ -18,10 +18,11 @@ const SECTOR_NOUN: Record<Sector, { noun: string; plural: boolean }> = {
   Consumer: { noun: "consumer stocks", plural: true },
   Auto: { noun: "carmakers", plural: true },
   Healthcare: { noun: "drugmakers", plural: true },
-  Materials: { noun: "metal and cement stocks", plural: true },
+  Materials: { noun: "metal, chemical and cement stocks", plural: true },
   Industrials: { noun: "industrials", plural: true },
   Telecom: { noun: "telecom", plural: false },
   Utilities: { noun: "power utilities", plural: true },
+  Realty: { noun: "property developers", plural: true },
 }
 
 export interface Contribution {
@@ -233,6 +234,19 @@ export function biggestSince(inst: Instrument, changePct: number, moves: DailyMo
   return moves.length >= 200 ? `Its biggest one-day ${word} in more than a year` : null
 }
 
+/** Each sector's change across every stock followed, weighted by market value at the previous close, in %. */
+export function sectorChanges(read: Read): Map<Sector, number> {
+  const acc = new Map<Sector, { cap: number; weighted: number }>()
+  for (const inst of EQUITIES) {
+    const q = read(inst.id)
+    if (!q || !inst.sector) continue
+    const cap = marketCapCr(inst, q.prevClose)
+    const cur = acc.get(inst.sector) ?? { cap: 0, weighted: 0 }
+    acc.set(inst.sector, { cap: cur.cap + cap, weighted: cur.weighted + cap * q.changePct })
+  }
+  return new Map([...acc].map(([sector, v]) => [sector, v.cap ? v.weighted / v.cap : 0]))
+}
+
 /** The stocks whose moves are most unusual for them: the change against the stock's daily volatility. */
 export function unusualMoves(read: Read, limit = 5): { inst: Instrument; q: Quote }[] {
   return EQUITIES.map((inst) => ({ inst, q: read(inst.id) }))
@@ -254,10 +268,9 @@ export function notableMoves(
   ranges: Map<number, { high: number; low: number }>,
   results: Map<number, string>,
   limit = 5,
-  { members, closed, history }: StoryOptions & { history?: (id: number) => Candle[] | undefined } = {},
+  { closed, history }: StoryOptions & { history?: (id: number) => Candle[] | undefined } = {},
 ): MoveNote[] {
-  const { sectors } = niftyAttribution(read, members)
-  const sectorPct = new Map(sectors.map((s) => [s.sector, s.changePct]))
+  const sectorPct = sectorChanges(read)
   const past = closed != null
 
   return unusualMoves(read, limit).map(({ inst, q }) => {

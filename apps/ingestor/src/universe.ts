@@ -2,6 +2,9 @@ import { sql } from "kysely"
 import type { Db } from "@greencircuits/db"
 import type { Instrument, InstrumentKind } from "@greencircuits/market/types"
 
+/** What a listing is, from the type of security it quotes. */
+const LISTED_KIND: Record<string, InstrumentKind> = { EQUITY: "EQUITY", ETF: "ETF", REIT: "REIT", INVIT: "INVIT" }
+
 /**
  * The tradable universe from the security master: every active listing, index
  * and spot reference, with the simulator's parameters (kept in attrs), index
@@ -14,7 +17,7 @@ export async function loadUniverse(db: Db): Promise<Instrument[]> {
     db
       .selectFrom("ref.instrument as i")
       .leftJoin("ref.security as s", "s.id", "i.security_id")
-      .select(["i.id", "i.kind", "i.segment", "i.exchange_code", "i.trading_symbol", "i.display_name", "i.tick_size", "i.lot_size", "i.quote_unit", "i.attrs", "s.shares_outstanding"])
+      .select(["i.id", "i.kind", "i.segment", "i.exchange_code", "i.trading_symbol", "i.display_name", "i.tick_size", "i.lot_size", "i.quote_unit", "i.attrs", "s.shares_outstanding", "s.security_type"])
       .where("i.status", "=", "ACTIVE")
       .where("i.kind", "in", ["LISTING", "INDEX", "SPOT"])
       .orderBy("i.id")
@@ -31,7 +34,13 @@ export async function loadUniverse(db: Db): Promise<Instrument[]> {
   return rows.map((r) => {
     const a = (r.attrs ?? {}) as Record<string, number | string | boolean | null>
     const kind: InstrumentKind =
-      r.kind === "LISTING" ? "EQUITY" : r.kind === "INDEX" ? "INDEX" : r.segment === "CURRENCY_DERIV" ? "CURRENCY" : "COMMODITY"
+      r.kind === "LISTING"
+        ? LISTED_KIND[r.security_type ?? "EQUITY"] ?? "EQUITY"
+        : r.kind === "INDEX"
+          ? "INDEX"
+          : r.segment === "CURRENCY_DERIV"
+            ? "CURRENCY"
+            : "COMMODITY"
     const inst: Instrument = {
       id: r.id,
       symbol: r.trading_symbol,
@@ -48,6 +57,9 @@ export async function loadUniverse(db: Db): Promise<Instrument[]> {
     }
     if (a.sector) inst.sector = a.sector as Instrument["sector"] & string
     if (a.industry) inst.industry = String(a.industry)
+    if (a.category) inst.category = String(a.category)
+    if (a.underlying) inst.underlying = String(a.underlying)
+    if (a.tracks != null) inst.tracks = Number(a.tracks)
     if (r.shares_outstanding) inst.sharesCr = r.shares_outstanding / 1e7
     if (a.lot != null) inst.lot = Number(a.lot)
     else if (r.lot_size > 1) inst.lot = r.lot_size

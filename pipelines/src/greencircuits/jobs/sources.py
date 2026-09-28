@@ -1,7 +1,8 @@
-"""The free sources behind the real-data mode, each reduced to plain Python values.
+"""The free sources behind the real-data mode and the stock catalog, each reduced to plain Python values.
 
-- Yahoo Finance: daily prices (split-adjusted), financial statements and results dates.
+- Yahoo Finance: daily prices (split-adjusted), financial statements, results dates, quotes and profiles.
 - NSE's website JSON: shareholding patterns, board meetings, FII/DII flows, IPOs.
+- NSE's archive: F&O lot sizes.
 - niftyindices.com: index membership (official CSVs).
 
 All unofficial and for personal use on your own machine; see docs/adr/0007.
@@ -11,6 +12,7 @@ from __future__ import annotations
 
 import csv
 import io
+import json
 import math
 import re
 from dataclasses import dataclass, field
@@ -31,6 +33,10 @@ YAHOO_SYMBOLS: dict[int, str] = {
     5: "NIFTY_MIDCAP_100.NS",
     6: "NIFTY_FIN_SERVICE.NS",
     7: "^INDIAVIX",
+    8: "^NSMIDCP",  # Nifty Next 50
+    9: "^CRSLDX",  # Nifty 500
+    10: "NIFTYMIDCAP150.NS",
+    11: "NIFTYSMLCAP250.NS",
     300: "GC=F",
     301: "SI=F",
     302: "CL=F",
@@ -86,6 +92,10 @@ class History:
 
 def _local_day(ts: int, gmtoffset: int) -> date:
     return (datetime.fromtimestamp(ts, UTC) + timedelta(seconds=gmtoffset)).date()
+
+
+def ist_today() -> str:
+    return (datetime.now(UTC) + timedelta(hours=5, minutes=30)).date().isoformat()
 
 
 def yahoo_history(fetch: Fetcher, symbol: str, today: str, years: int = 10) -> History:
@@ -154,7 +164,15 @@ def yahoo_financials(symbol: str) -> Financials:
     return Financials(
         info={
             k: info.get(k)
-            for k in ("longBusinessSummary", "sharesOutstanding", "bookValue", "trailingEps", "website")
+            for k in (
+                "longBusinessSummary",
+                "sharesOutstanding",
+                "bookValue",
+                "trailingEps",
+                "website",
+                # The statements' currency, which isn't always the listing's: Infosys reports in dollars.
+                "financialCurrency",
+            )
         },
         annual=_rows(t.income_stmt),
         quarterly=_rows(t.quarterly_income_stmt),
@@ -266,10 +284,369 @@ NIFTY_LISTS = {
     4: "ind_niftyitlist.csv",
     5: "ind_niftymidcap100list.csv",
     6: "ind_niftyfinancelist.csv",
+    8: "ind_niftynext50list.csv",
+    9: "ind_nifty500list.csv",
+    10: "ind_niftymidcap150list.csv",
+    11: "ind_niftysmallcap250list.csv",
 }
+
+
+@dataclass
+class Constituent:
+    symbol: str
+    #: As NSE writes it, "Reliance Industries Ltd.".
+    name: str
+    #: NSE's sector, such as "Capital Goods" (the lists call it the industry).
+    sector: str
+    isin: str
+
+
+def index_list(fetch: Fetcher, index_id: int, today: str) -> list[Constituent]:
+    """The companies in an index, from the official constituent list."""
+    text = fetch.text(f"https://niftyindices.com/IndexConstituent/{NIFTY_LISTS[index_id]}", today)
+    return [
+        Constituent(
+            row["Symbol"].strip(),
+            (row.get("Company Name") or "").strip(),
+            (row.get("Industry") or "").strip(),
+            (row.get("ISIN Code") or "").strip(),
+        )
+        for row in csv.DictReader(io.StringIO(text))
+        if (row.get("Symbol") or "").strip()
+    ]
 
 
 def index_members(fetch: Fetcher, index_id: int, today: str) -> list[str]:
     """NSE symbols in an index, from the official constituent list."""
-    text = fetch.text(f"https://niftyindices.com/IndexConstituent/{NIFTY_LISTS[index_id]}", today)
-    return [row["Symbol"].strip() for row in csv.DictReader(io.StringIO(text)) if row.get("Symbol")]
+    return [c.symbol for c in index_list(fetch, index_id, today)]
+
+
+# ----------------------------------------------------------------- NSE archives
+
+NSE_ARCHIVES = "https://nsearchives.nseindia.com/content"
+ARCHIVE_HEADERS = {"Referer": "https://www.nseindia.com/"}
+
+
+@dataclass
+class ListedEtf:
+    symbol: str
+    isin: str
+    #: What it holds, as NSE words it: "Nifty 50", or sometimes the fund's own name.
+    asset: str
+    #: EQUITY, COMMODITY, DEBT, GLOBAL INDICES or Hybrid.
+    kind: str
+    #: What it tracks: "Nifty 50", "GOLD", "Overnight ETFs and Liquid ETF".
+    underlying: str
+
+
+def nse_etfs(fetch: Fetcher, today: str) -> list[ListedEtf]:
+    """Every ETF listed on NSE, from its security master."""
+    text = fetch.text(f"{NSE_ARCHIVES}/equities/eq_etfseclist.csv", today, ARCHIVE_HEADERS)
+    out = []
+    for row in csv.DictReader(io.StringIO(text)):
+        r = {(k or "").strip(): (v or "").strip() for k, v in row.items()}
+        if r.get("Symbol") and r.get("ISINNumber"):
+            out.append(
+                ListedEtf(
+                    r["Symbol"],
+                    r["ISINNumber"],
+                    r.get("Underlying Asset", ""),
+                    r.get("ETF Underlying", ""),
+                    r.get("Underlying Key", ""),
+                )
+            )
+    return out
+
+
+def nse_trusts(fetch: Fetcher, today: str) -> list[tuple[str, str, str]]:
+    """(symbol, name, REIT or INVIT) for every listed real-estate and infrastructure trust."""
+    text = fetch.text(f"{NSE_ARCHIVES}/equities/sec_list.csv", today, ARCHIVE_HEADERS)
+    kinds = {"RR": "REIT", "IV": "INVIT"}
+    return [
+        (row["Symbol"].strip(), row["Security Name"].strip(), kinds[row["Series"].strip()])
+        for row in csv.DictReader(io.StringIO(text))
+        if (row.get("Series") or "").strip() in kinds
+    ]
+
+
+# ------------------------------------------------------------------------- AMFI
+
+
+@dataclass
+class AmfiScheme:
+    code: int
+    #: The growth or payout ISIN, and the reinvestment one.
+    isin: str | None
+    isin_reinvest: str | None
+    name: str
+    amc: str
+    #: "Open Ended", "Close Ended" or "Interval Fund".
+    structure: str
+    #: SEBI's category, as AMFI writes it: "Equity Scheme - Large Cap Fund".
+    category: str
+    #: "Direct" or "Regular" ("" when AMFI doesn't say).
+    plan: str
+    #: "Growth" or "IDCW" ("" when AMFI doesn't say).
+    option: str
+    nav: float | None
+    nav_date: date | None
+
+
+_AMFI_HEADER = re.compile(r"^(Open Ended|Close Ended|Interval Fund)\s+Schemes\s*\((.+)\)\s*$")
+
+
+def _plan_option(name: str, plan: str, option: str) -> tuple[str, str]:
+    """AMFI's newer file has columns for these; older rows only say so in the name."""
+    text = f"{plan} {option} {name}".lower()
+    plan_out = "Direct" if "direct" in text else "Regular" if "regular" in text else ""
+    option_out = (
+        "Growth"
+        if "growth" in text
+        else "IDCW"
+        if re.search(r"idcw|dividend|payout|reinvest|bonus", text)
+        else ""
+    )
+    return plan_out, option_out
+
+
+def parse_amfi(text: str) -> list[AmfiScheme]:
+    """AMFI's NAVAll.txt: category headings, fund house lines, then one row per scheme."""
+    out: list[AmfiScheme] = []
+    structure, category, amc = "", "", ""
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line or line.startswith("Scheme Code"):
+            continue
+        if ";" not in line:
+            heading = _AMFI_HEADER.match(line)
+            if heading:
+                structure, category = heading.group(1), re.sub(r"\s+", " ", heading.group(2)).strip()
+            else:
+                amc = line
+            continue
+        cells = [c.strip() for c in line.split(";")]
+        if len(cells) == 8:
+            code, isin, isin_r, name, plan, option, nav, day = cells
+        elif len(cells) == 6:
+            code, isin, isin_r, name, nav, day = cells
+            plan = option = ""
+        else:
+            continue
+        if not code.isdigit():
+            continue
+        plan, option = _plan_option(name, plan, option)
+        try:
+            value: float | None = float(nav)
+        except ValueError:
+            value = None
+        try:
+            when: date | None = _nse_date(day)
+        except ValueError:
+            when = None
+        out.append(
+            AmfiScheme(
+                int(code),
+                isin if isin not in ("", "-") else None,
+                isin_r if isin_r not in ("", "-") else None,
+                name,
+                amc,
+                structure,
+                category,
+                plan,
+                option,
+                value,
+                when,
+            )
+        )
+    return out
+
+
+def amfi_schemes(fetch: Fetcher, today: str) -> list[AmfiScheme]:
+    """Every mutual fund scheme with its latest NAV, from AMFI's daily file."""
+    return parse_amfi(fetch.text("https://www.amfiindia.com/spages/NAVAll.txt", today, legacy_encoding=True))
+
+
+#: SEBI's categories inside AMFI's headings, in the order they're tried: the first match wins.
+_EQUITY = [
+    (r"large\s*&\s*mid|large and mid", "Large and mid cap"),
+    (r"large cap", "Large cap"),
+    (r"mid cap", "Mid cap"),
+    (r"small cap", "Small cap"),
+    (r"multi cap", "Multi cap"),
+    (r"flexi cap", "Flexi cap"),
+    (r"focused", "Focused"),
+    (r"value|contra", "Value and contra"),
+    (r"dividend yield", "Dividend yield"),
+    (r"elss|tax saver", "Tax saver (ELSS)"),
+    (r"sectoral|thematic", "Sector and theme"),
+]
+_HYBRID = [
+    (r"aggressive", "Aggressive hybrid"),
+    (r"balanced advantage|dynamic asset", "Balanced advantage"),
+    (r"multi asset", "Multi-asset"),
+    (r"arbitrage", "Arbitrage"),
+    (r"equity savings", "Equity savings"),
+    (r"conservative", "Conservative hybrid"),
+    (r"balanced", "Balanced hybrid"),
+]
+_DEBT = [
+    (r"overnight", "Overnight"),
+    (r"liquid", "Liquid"),
+    (r"money market", "Money market"),
+    (r"ultra short", "Ultra short duration"),
+    (r"low duration", "Low duration"),
+    (r"medium to long", "Medium to long duration"),
+    (r"short", "Short duration"),
+    (r"medium", "Medium duration"),
+    (r"long", "Long duration"),
+    (r"dynamic", "Dynamic bond"),
+    (r"corporate bond", "Corporate bond"),
+    (r"credit risk", "Credit risk"),
+    (r"banking and psu|banking & psu", "Banking and PSU"),
+    (r"gilt", "Gilt"),
+    (r"float", "Floater"),
+]
+
+
+_DEBT_INDEX = re.compile(r"bond|gilt|g-?sec|sdl|crisil|debt|t-?bill|psu|target maturity", re.IGNORECASE)
+
+
+def fund_category(amfi_category: str, name: str = "") -> tuple[str, str] | None:
+    """(asset class, category) for a scheme, from AMFI's heading; None for ETFs, which are listings.
+
+    AMFI's headings vary ("Equity Scheme - Large Cap Fund", "Equity Schemes - Large Cap Fund",
+    "Income/Debt Oriented Schemes - Liquid Fund"), so they're matched on words, not spelling. An
+    index fund's heading doesn't always say what the index holds; its name does.
+    """
+    text = re.sub(r"\s+", " ", amfi_category.replace("�", "'")).strip().lower()
+    head, _, tail = text.partition(" - ")
+    tail = tail or head
+    if "etf" in text or "exchange traded" in text:
+        return None
+    if "index fund" in text:
+        return "Index", "Debt index" if "debt" in tail or _DEBT_INDEX.search(name) else "Equity index"
+    if "fof" in text or "fund of funds" in text:
+        return "Fund of funds", "Overseas" if "overseas" in text else "Domestic"
+    if "retirement" in text:
+        return "Solution", "Retirement"
+    if "children" in text:
+        return "Solution", "Children"
+    for pattern_list, asset_class, words in (
+        (_EQUITY, "Equity", ("equity",)),
+        (_HYBRID, "Hybrid", ("hybrid",)),
+        (_DEBT, "Debt", ("debt", "income")),
+    ):
+        if any(w in head for w in words):
+            for pattern, category in pattern_list:
+                if re.search(pattern, tail):
+                    return asset_class, category
+            return asset_class, "Other " + asset_class.lower()
+    return "Other", tail.strip().capitalize() or "Other"
+
+
+def mfapi_history(fetch: Fetcher, code: int, today: str) -> list[tuple[date, float]]:
+    """A scheme's whole NAV history, oldest first, from mfapi.in (a free mirror of AMFI's data)."""
+    body = fetch.json(f"https://api.mfapi.in/mf/{code}", today)
+    out = {}
+    for row in body.get("data") or []:
+        try:
+            day = datetime.strptime(row["date"], "%d-%m-%Y").replace(tzinfo=UTC).date()
+            nav = float(row["nav"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        if nav > 0:
+            out[day] = nav
+    return sorted(out.items())
+
+
+def fo_lots(fetch: Fetcher, today: str) -> dict[str, int]:
+    """The lot size of each stock with futures and options on NSE, for the nearest expiry."""
+    text = fetch.text(f"{NSE_ARCHIVES}/fo/fo_mktlots.csv", today, ARCHIVE_HEADERS)
+    lots: dict[str, int] = {}
+    stocks = False
+    for line in text.splitlines():
+        cells = [c.strip() for c in line.split(",")]
+        if len(cells) < 3:
+            continue
+        # Index contracts come first, then a heading row, then single stocks.
+        if cells[0].lower().startswith("derivatives on individual securities"):
+            stocks = True
+            continue
+        lot = next((int(c) for c in cells[2:] if c.isdigit()), None)
+        if stocks and cells[1] and lot:
+            lots[cells[1]] = lot
+    return lots
+
+
+# ------------------------------------------------------------- Yahoo, in batches
+
+
+def yahoo_closes(
+    fetch: Fetcher, symbols: list[str], today: str, span: str = "1y"
+) -> dict[str, dict[date, float]]:
+    """Daily closes by symbol from Yahoo's spark endpoint, 20 symbols a request (it has no volumes).
+
+    While a market trades, the last close is the latest price.
+    """
+    out: dict[str, dict[date, float]] = {}
+    for i in range(0, len(symbols), 20):
+        chunk = ",".join(quote(s) for s in symbols[i : i + 20])
+        body = fetch.json(
+            f"https://query1.finance.yahoo.com/v7/finance/spark?symbols={chunk}&range={span}&interval=1d",
+            today,
+        )
+        for r in (body.get("spark") or {}).get("result") or []:
+            x = (r.get("response") or [{}])[0]
+            offset = int((x.get("meta") or {}).get("gmtoffset", 0))
+            closes = (((x.get("indicators") or {}).get("quote") or [{}])[0]).get("close") or []
+            out[r["symbol"]] = {
+                _local_day(ts, offset): float(c)
+                for ts, c in zip(x.get("timestamp") or [], closes, strict=False)
+                if c is not None and math.isfinite(c) and c > 0
+            }
+    return out
+
+
+class Yahoo:
+    """Yahoo's endpoints that want a session cookie and its crumb: batch quotes and company profiles.
+
+    Responses are cached under their URL without the crumb, so a rerun the same day needs neither.
+    """
+
+    def __init__(self, fetch: Fetcher) -> None:
+        self.fetch = fetch
+        self._crumb: str | None = None
+
+    def _crumb_now(self) -> str:
+        if self._crumb is None:
+            # fc.yahoo.com sets the session cookie (the page itself is a 404); the crumb goes with it.
+            self.fetch.client.get("https://fc.yahoo.com")
+            res = self.fetch.client.get("https://query2.finance.yahoo.com/v1/test/getcrumb")
+            res.raise_for_status()
+            self._crumb = res.text.strip()
+        return self._crumb
+
+    def _json(self, url: str, today: str) -> Any:
+        hit = self.fetch.cached(url, today)
+        if hit is not None:
+            return json.loads(hit)
+        return self.fetch.json(f"{url}&crumb={quote(self._crumb_now())}", today, cache_url=url)
+
+    def quotes(self, symbols: list[str], today: str) -> dict[str, dict[str, Any]]:
+        """Each symbol's quote (shares outstanding, average volume, the last close), 50 symbols a request."""
+        out: dict[str, dict[str, Any]] = {}
+        for i in range(0, len(symbols), 50):
+            chunk = ",".join(quote(s) for s in symbols[i : i + 50])
+            body = self._json(f"https://query2.finance.yahoo.com/v7/finance/quote?symbols={chunk}", today)
+            for q in (body.get("quoteResponse") or {}).get("result") or []:
+                out[q["symbol"]] = q
+        return out
+
+    def profile(self, symbol: str, today: str) -> dict[str, Any]:
+        """A company's profile: industry, sector, business summary."""
+        body = self._json(
+            f"https://query2.finance.yahoo.com/v10/finance/quoteSummary/{quote(symbol)}?modules=assetProfile",
+            today,
+        )
+        result = (body.get("quoteSummary") or {}).get("result") or [{}]
+        return result[0].get("assetProfile") or {}

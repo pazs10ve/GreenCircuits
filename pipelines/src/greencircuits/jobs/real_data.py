@@ -9,8 +9,9 @@ company pages switch to real data without changing. `pnpm db:seed` switches back
 
 Sources (free, unofficial, personal use only; see docs/adr/0007):
 - Yahoo Finance: ten years of daily prices, financial statements, results dates;
-- NSE's website: shareholding, board meetings, FII/DII flows, IPOs;
-- niftyindices.com: index membership.
+- NSE's website: shareholding, board meetings, FII/DII flows, IPOs, ETF NAVs;
+- niftyindices.com: index membership;
+- AMFI and mfapi.in: mutual fund schemes and their NAV history.
 """
 
 from __future__ import annotations
@@ -19,6 +20,7 @@ import argparse
 import json
 import math
 import os
+import re
 import sys
 import time
 from bisect import bisect_right
@@ -33,13 +35,22 @@ from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
 from ..lab.indicators import ema, rsi, sma
+from .bonds import ListedBond, bond_name, fit_curve, parse_company, parse_gold_bond, parse_government, ytm_of
+from .catalog import fund_name, plain_name
+from .cleaning import repair_fund_bars
 from .http import CACHE_DIR, Fetcher
 from .sources import (
     COMMODITY_TO_INR,
     NIFTY_LISTS,
+    NSE,
+    NSE_HEADERS,
     Bar,
     Financials,
+    amfi_schemes,
+    fund_category,
     index_members,
+    ist_today,
+    mfapi_history,
     nse_board_meetings,
     nse_fii_dii,
     nse_ipos,
@@ -53,7 +64,11 @@ DSN = os.environ.get("DATABASE_URL", "postgres://greencircuits:greencircuits@loc
 ISSUER_OFFSET = 1000  # equity issuer and security ids are 1000 + the instrument id
 NIFTY, USDINR = 1, 400
 CRORE = 1e7
-STEPS = ["membership", "prices", "financials", "shareholding", "events", "flows", "ipos", "snapshot"]
+#: What a character AMFI's file can't encode arrives as.
+REPLACEMENT = "\ufffd"
+STEPS = [
+    "membership", "prices", "financials", "shareholding", "events", "flows", "ipos", "funds", "bonds", "snapshot",
+]  # fmt: skip
 
 
 @dataclass
@@ -63,9 +78,16 @@ class Instrument:
     kind: str
     name: str
     attrs: dict[str, Any]
+    #: A listing's security: EQUITY for a company's shares, ETF, REIT or INVIT for a listed fund.
+    security_type: str | None = None
 
     @property
     def equity(self) -> bool:
+        """A company's shares: only these have results, shareholding and board meetings."""
+        return self.kind == "LISTING" and self.security_type in (None, "EQUITY")
+
+    @property
+    def listed(self) -> bool:
         return self.kind == "LISTING"
 
     @property
@@ -92,9 +114,11 @@ class Context:
     def equities(self) -> list[Instrument]:
         return [i for i in self.instruments if i.equity]
 
-
-def ist_today() -> str:
-    return (datetime.now(UTC) + timedelta(hours=5, minutes=30)).date().isoformat()
+    def checkpoint(self, step: str, done: int, total: int, every: int = 50) -> None:
+        """Every `every` stocks: say how far a long step has got, and commit, so a failure later keeps the work."""
+        if done and done % every == 0 and done < total:
+            self.conn.commit()
+            print(f"    {step}: {done} of {total}", flush=True)
 
 
 # -------------------------------------------------------------------- membership
@@ -145,7 +169,8 @@ def _convert(bars: list[Bar], factor: float, fx: list[Bar]) -> list[Bar]:
 def load_prices(ctx: Context) -> int:
     fx = yahoo_history(ctx.fetch, "USDINR=X", ctx.today).bars
     written = 0
-    for inst in ctx.instruments:
+    for n, inst in enumerate(ctx.instruments):
+        ctx.checkpoint("prices", n, len(ctx.instruments))
         symbol = yahoo_symbol(inst.id, inst.symbol)
         try:
             history = yahoo_history(ctx.fetch, symbol, ctx.today)
@@ -160,6 +185,13 @@ def load_prices(ctx: Context) -> int:
         if not bars:
             ctx.warn(f"{inst.symbol}: no bars")
             continue
+        if inst.security_type == "ETF":
+            # Yahoo leaves many ETF unit splits unadjusted, and has the odd faulty day. Indices and
+            # commodities have lower ids, so what the fund follows is already loaded.
+            follows = {b.day: b.close for b in ctx.bars.get(inst.attrs.get("tracks") or NIFTY, [])}
+            bars, fixes = repair_fund_bars(bars, follows)
+            for fix in fixes:
+                ctx.warn(f"{inst.symbol}: {fix}")
         if len(bars) < 30:
             # Yahoo has no history for a few indices, only the latest close. Real days already
             # stored are kept, so the history builds up one run at a time.
@@ -182,7 +214,7 @@ def load_prices(ctx: Context) -> int:
         ):
             prev = before["close"] if before else None
             for b in bars:
-                turnover = b.volume * (b.high + b.low + b.close) / 3 if inst.equity else None
+                turnover = b.volume * (b.high + b.low + b.close) / 3 if inst.listed else None
                 copy.write_row(
                     (
                         inst.id,
@@ -230,7 +262,7 @@ def load_prices(ctx: Context) -> int:
 
     # Beta against the Nifty 50 over the last year, on dates both traded.
     nifty = {b.day: b.close for b in ctx.bars.get(NIFTY, [])}
-    for inst in ctx.equities:
+    for inst in (i for i in ctx.instruments if i.listed):
         bars = [b for b in ctx.bars.get(inst.id, [])[-252:] if b.day in nifty]
         if len(bars) < 60:
             continue
@@ -411,15 +443,57 @@ def _cagr(later: float | None, earlier: float | None, years: int) -> float | Non
     return ((later / earlier) ** (1 / years) - 1) * 100
 
 
+#: The exchange-rate series for statements Yahoo reports in another currency.
+FX_INSTRUMENTS = {"USD": 400, "EUR": 401, "GBP": 402}
+#: Yahoo's statement lines that count shares or give a rate rather than an amount of money.
+NOT_MONEY = re.compile(r"Shares|Share Issued|Tax Rate")
+
+
+def _in_rupees(ctx: Context, f: Financials, currency: str) -> Financials | None:
+    """Statements in another currency, converted at the exchange rate on each period's last day."""
+    bars = ctx.bars.get(FX_INSTRUMENTS.get(currency, -1))
+    if not bars:
+        return None
+    days = [b.day for b in bars]
+
+    def rate(day: date) -> float:
+        return bars[max(bisect_right(days, day) - 1, 0)].close
+
+    def convert(table: dict[str, dict[date, float]]) -> dict[str, dict[date, float]]:
+        return {
+            line: values if NOT_MONEY.search(line) else {d: v * rate(d) for d, v in values.items()}
+            for line, values in table.items()
+        }
+
+    return Financials(
+        f.info, convert(f.annual), convert(f.quarterly), convert(f.balance), convert(f.cashflow), f.calendar
+    )
+
+
 def load_financials(ctx: Context) -> int:
     written = 0
-    for inst in ctx.equities:
+    equities = ctx.equities
+    for n, inst in enumerate(equities):
+        ctx.checkpoint("financials", n, len(equities), every=25)
         symbol = yahoo_symbol(inst.id, inst.symbol)
+        if inst.id not in ctx.dividends:
+            # Without the prices step in this run, the dividend yield and its history would read as none:
+            # take the dividends from the price history, which today's cache usually holds.
+            try:
+                ctx.dividends[inst.id] = yahoo_history(ctx.fetch, symbol, ctx.today).dividends
+            except Exception as err:  # noqa: BLE001
+                ctx.warn(f"{inst.symbol}: no dividends, {err}")
         try:
             f = _financials_cached(ctx, inst, symbol)
         except Exception as err:  # noqa: BLE001
             ctx.warn(f"{inst.symbol}: no financials, {err}")
             continue
+        if (currency := f.info.get("financialCurrency") or "INR") != "INR":
+            converted = _in_rupees(ctx, f, currency)
+            if converted is None:
+                ctx.warn(f"{inst.symbol}: statements are in {currency}, and there's no rate to convert them")
+                continue
+            f = converted
         ctx.financials[inst.id] = f
         statements: list[tuple[str, str, date, dict[str, float]]] = []
         for day in _periods(f.annual):
@@ -574,7 +648,9 @@ def _valuations(
 
 def load_shareholding(ctx: Context) -> int:
     written = 0
-    for inst in ctx.equities:
+    equities = ctx.equities
+    for n, inst in enumerate(equities):
+        ctx.checkpoint("shareholding", n, len(equities))
         try:
             rows = nse_shareholding(ctx.fetch, inst.symbol, ctx.today)
         except Exception as err:  # noqa: BLE001
@@ -651,6 +727,264 @@ def load_flows(ctx: Context) -> int:
     return len(rows)
 
 
+# ------------------------------------------------------------------------- funds
+
+#: A scheme with fewer NAVs on record than this gets its whole history fetched.
+HISTORY_KNOWN = 30
+
+
+def load_funds(ctx: Context) -> int:
+    """Mutual funds and ETF NAVs.
+
+    Every open-ended scheme's direct growth plan from AMFI's daily file, with that day's NAV; the
+    first time a scheme is seen, its whole NAV history from mfapi.in; then each scheme's returns.
+    And each listed ETF's NAV from NSE, to show how far its price strays from what it holds.
+    """
+    conn = ctx.conn
+    rows = []
+    seen: set[int] = set()
+    for s in amfi_schemes(ctx.fetch, ctx.today):
+        if s.structure != "Open Ended" or s.plan != "Direct" or s.option != "Growth" or not s.nav:
+            continue
+        category = fund_category(s.category, s.name)
+        if category is None or s.code in seen:
+            continue
+        seen.add(s.code)
+        rows.append((s, *category))
+    with conn.cursor() as cur:
+        cur.executemany(
+            "INSERT INTO mf.scheme (code, isin, name, amc, amfi_category, asset_class, category, nav, nav_date) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) ON CONFLICT (code) DO UPDATE SET "
+            "name = EXCLUDED.name, amc = EXCLUDED.amc, amfi_category = EXCLUDED.amfi_category, "
+            "asset_class = EXCLUDED.asset_class, category = EXCLUDED.category, nav = EXCLUDED.nav, "
+            "nav_date = EXCLUDED.nav_date, updated_at = now()",
+            [
+                (
+                    s.code,
+                    s.isin,
+                    fund_name(s.name.replace(REPLACEMENT, "'")),
+                    s.amc,
+                    s.category,
+                    asset,
+                    cat,
+                    s.nav,
+                    s.nav_date,
+                )
+                for s, asset, cat in rows
+            ],
+        )
+        cur.executemany(
+            "INSERT INTO mf.nav (scheme_code, nav_date, nav) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING",
+            [(s.code, s.nav_date, s.nav) for s, _, _ in rows if s.nav_date],
+        )
+    conn.commit()
+
+    counts = {
+        r["scheme_code"]: r["n"]
+        for r in conn.execute("SELECT scheme_code, count(*) AS n FROM mf.nav GROUP BY scheme_code")
+    }
+    need = [s for s, _, _ in rows if counts.get(s.code, 0) < HISTORY_KNOWN]
+    written = len(rows)
+    for n, s in enumerate(need):
+        ctx.checkpoint("fund histories", n, len(need), every=100)
+        try:
+            history = mfapi_history(ctx.fetch, s.code, ctx.today)
+        except Exception as err:  # noqa: BLE001 — one scheme's history failing shouldn't stop the rest
+            ctx.warn(f"scheme {s.code}: no NAV history, {err}")
+            continue
+        with conn.cursor() as cur:
+            cur.execute(
+                "CREATE TEMP TABLE IF NOT EXISTS nav_in (nav_date date, nav numeric) ON COMMIT DELETE ROWS"
+            )
+            with cur.copy("COPY nav_in (nav_date, nav) FROM STDIN") as copy:
+                for day, nav in history:
+                    copy.write_row((day, nav))
+            cur.execute(
+                "INSERT INTO mf.nav (scheme_code, nav_date, nav) SELECT %s, nav_date, nav FROM nav_in "
+                "ON CONFLICT DO NOTHING",
+                (s.code,),
+            )
+            cur.execute("TRUNCATE nav_in")
+        written += len(history)
+
+    # Returns to each scheme's latest NAV, from the NAV on or before the same date 1, 3, 5 and 10 years back.
+    conn.execute(
+        """
+        WITH r AS (
+          SELECT s.code,
+            (SELECT min(nav_date) FROM mf.nav n WHERE n.scheme_code = s.code) AS launched,
+            (SELECT nav FROM mf.nav n WHERE n.scheme_code = s.code AND n.nav_date <= s.nav_date - interval '1 year'
+               ORDER BY nav_date DESC LIMIT 1) AS y1,
+            (SELECT nav FROM mf.nav n WHERE n.scheme_code = s.code AND n.nav_date <= s.nav_date - interval '3 years'
+               ORDER BY nav_date DESC LIMIT 1) AS y3,
+            (SELECT nav FROM mf.nav n WHERE n.scheme_code = s.code AND n.nav_date <= s.nav_date - interval '5 years'
+               ORDER BY nav_date DESC LIMIT 1) AS y5,
+            (SELECT nav FROM mf.nav n WHERE n.scheme_code = s.code AND n.nav_date <= s.nav_date - interval '10 years'
+               ORDER BY nav_date DESC LIMIT 1) AS y10
+          FROM mf.scheme s
+        )
+        UPDATE mf.scheme s SET
+          launched_on = r.launched,
+          return_1y_pct = CASE WHEN r.y1 > 0 THEN (s.nav / r.y1 - 1) * 100 END,
+          cagr_3y_pct = CASE WHEN r.y3 > 0 THEN (power(s.nav / r.y3, 1.0 / 3) - 1) * 100 END,
+          cagr_5y_pct = CASE WHEN r.y5 > 0 THEN (power(s.nav / r.y5, 1.0 / 5) - 1) * 100 END,
+          cagr_10y_pct = CASE WHEN r.y10 > 0 THEN (power(s.nav / r.y10, 1.0 / 10) - 1) * 100 END
+        FROM r WHERE r.code = s.code
+        """
+    )
+
+    # ETFs: NSE publishes each one's NAV beside its price.
+    try:
+        body = ctx.fetch.json(f"{NSE}/etf", ctx.today, NSE_HEADERS)
+        nav_date = body.get("navDate")
+        navs = {
+            r["symbol"]: float(r["nav"]) for r in body.get("data", []) if r.get("nav") not in (None, "", "-")
+        }
+        with conn.cursor() as cur:
+            cur.executemany(
+                "UPDATE ref.instrument i SET attrs = i.attrs || %s FROM ref.security s "
+                "WHERE s.id = i.security_id AND s.security_type = 'ETF' AND i.trading_symbol = %s",
+                [(Jsonb({"nav": nav, "navDate": nav_date}), symbol) for symbol, nav in navs.items()],
+            )
+    except Exception as err:  # noqa: BLE001
+        ctx.warn(f"ETF NAVs: {err}")
+    return written
+
+
+# ------------------------------------------------------------------------- bonds
+
+#: The demo's sample bonds: issuers 2000–2099 and securities 2100–2199 (packages/db/src/seed/fixed-income.ts).
+SAMPLE_BOND_ISSUERS, SAMPLE_BONDS = range(2000, 2100), range(2100, 2200)
+BOND_ISSUER_TYPE = {
+    "GSEC": "CENTRAL_GOVT",
+    "TBILL": "CENTRAL_GOVT",
+    "SGB": "CENTRAL_GOVT",
+    "SDL": "STATE_GOVT",
+}
+BOND_TERMS = {  # coupon type, day count
+    "TBILL": ("ZERO", "ACT/364"),
+    "GSEC": ("FIXED", "30/360"),
+    "SDL": ("FIXED", "30/360"),
+    "SGB": ("FIXED", "ACT/365"),
+    "CORPORATE_BOND": ("FIXED", "ACT/365"),
+}
+
+
+def _bond_security(conn: psycopg.Connection, b: ListedBond, issuer_id: int) -> int:
+    """The security row for a bond, found by ISIN (a gold bond, which NSE lists without one, by name)."""
+    name = bond_name(b)
+    found = (
+        conn.execute("SELECT id FROM ref.security WHERE isin = %s", (b.isin,)).fetchone()
+        if b.isin
+        else conn.execute(
+            "SELECT id FROM ref.security WHERE security_type = 'SGB' AND name = %s", (name,)
+        ).fetchone()
+    )
+    if found:
+        conn.execute(
+            "UPDATE ref.security SET name = %s, issuer_id = %s, face_value = %s, updated_at = now() WHERE id = %s",
+            (name, issuer_id, b.face_value, found["id"]),
+        )
+        return found["id"]
+    return conn.execute(
+        "INSERT INTO ref.security (issuer_id, security_type, isin, name, face_value) VALUES (%s, %s, %s, %s, %s) RETURNING id",
+        (issuer_id, b.kind, b.isin or None, name, b.face_value),
+    ).fetchone()["id"]
+
+
+def load_bonds(ctx: Context) -> int:
+    """Bonds listed on NSE: government and state bonds, T-bills, company bonds and gold bonds, with the
+    day's price and yield, company bonds' ratings, and the government's yield curve fitted to its bonds."""
+    conn = ctx.conn
+    today = date.fromisoformat(ctx.today)
+    gov = ctx.fetch.json(f"{NSE}/liveBonds-traded-on-cm?type=gsec", ctx.today, NSE_HEADERS).get("data") or []
+    corp = (
+        ctx.fetch.json(f"{NSE}/liveBonds-traded-on-cm?type=bonds", ctx.today, NSE_HEADERS).get("data") or []
+    )
+    gold = ctx.fetch.json(f"{NSE}/sovereign-gold-bonds", ctx.today, NSE_HEADERS).get("data") or []
+    # A company's bonds share the first seven characters of its shares' ISIN, which names the company.
+    issuers_by_code = {
+        r["isin"][:7]: r["name"]
+        for r in conn.execute(
+            "SELECT s.isin, iss.name FROM ref.security s JOIN ref.issuer iss ON iss.id = s.issuer_id "
+            "WHERE s.security_type = 'EQUITY' AND s.isin IS NOT NULL"
+        )
+    }
+    parsed = [
+        *(parse_government(r) for r in gov),
+        *(parse_company(r, issuers_by_code) for r in corp),
+        *(parse_gold_bond(r) for r in gold),
+    ]
+    bonds = [b for b in parsed if b is not None and b.maturity > today and b.price]
+
+    # The demo's sample bonds would pass for real ones beside them.
+    sample = list(SAMPLE_BONDS)
+    for table in ("fi.price_daily", "corp.credit_rating", "fi.cashflow", "fi.bond"):
+        conn.execute(f"DELETE FROM {table} WHERE security_id = ANY(%s)", (sample,))
+    conn.execute("DELETE FROM ref.security WHERE id = ANY(%s)", (sample,))
+    conn.execute(
+        "DELETE FROM ref.issuer i WHERE i.id = ANY(%s) AND NOT EXISTS (SELECT 1 FROM ref.security s WHERE s.issuer_id = i.id)",
+        (list(SAMPLE_BOND_ISSUERS),),
+    )
+
+    issuer_ids = {r["name"]: r["id"] for r in conn.execute("SELECT id, name FROM ref.issuer")}
+    written = 0
+    curve_points: list[tuple[float, float]] = []
+    for b in bonds:
+        issuer_name = "Government of India" if b.kind == "SGB" else b.issuer
+        if issuer_name not in issuer_ids:
+            issuer_ids[issuer_name] = conn.execute(
+                "INSERT INTO ref.issuer (name, issuer_type) VALUES (%s, %s) RETURNING id",
+                (issuer_name, BOND_ISSUER_TYPE.get(b.kind, "COMPANY")),
+            ).fetchone()["id"]
+        issuer_id = issuer_ids[issuer_name]
+        sid = _bond_security(conn, b, issuer_id)
+        coupon_type, day_count = BOND_TERMS[b.kind]
+        conn.execute(
+            "INSERT INTO fi.bond (security_id, maturity_date, face_value, coupon_type, coupon_rate_pct, coupon_frequency, day_count) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s) ON CONFLICT (security_id) DO UPDATE SET maturity_date = EXCLUDED.maturity_date, "
+            "face_value = EXCLUDED.face_value, coupon_type = EXCLUDED.coupon_type, coupon_rate_pct = EXCLUDED.coupon_rate_pct, "
+            "coupon_frequency = EXCLUDED.coupon_frequency, day_count = EXCLUDED.day_count",
+            (sid, b.maturity, b.face_value, coupon_type, b.coupon, b.frequency, day_count),
+        )
+        ytm = ytm_of(b, today)
+        conn.execute(
+            "INSERT INTO fi.price_daily (security_id, trade_date, venue, clean_price, ytm_pct, trades) "
+            "VALUES (%s, %s, 'NSE', %s, %s, %s) ON CONFLICT (security_id, trade_date, venue) DO UPDATE SET "
+            "clean_price = EXCLUDED.clean_price, ytm_pct = EXCLUDED.ytm_pct, trades = EXCLUDED.trades",
+            (sid, today, b.price, ytm, b.volume),
+        )
+        if b.rating and b.agency:
+            conn.execute("DELETE FROM corp.credit_rating WHERE security_id = %s", (sid,))
+            conn.execute(
+                "INSERT INTO corp.credit_rating (issuer_id, security_id, agency, scale, rating, rated_on) "
+                "VALUES (%s, %s, %s, 'LONG_TERM', %s, %s)",
+                (issuer_id, sid, b.agency, b.rating, today),
+            )
+        # The curve is drawn through the government bonds that traded today with three years or more to run. Bills
+        # trade too thinly on NSE's retail market for their yields to mean much, and a bond's maturity is known only
+        # to the year, which matters less the longer it has to run.
+        if b.kind == "GSEC" and ytm is not None and (b.maturity - today).days > 3 * 365 and 3 < ytm < 12:
+            curve_points.append(((b.maturity - today).days / 365.25, ytm))
+        written += 1
+
+    curve = fit_curve(curve_points)
+    if curve:
+        conn.execute("DELETE FROM fi.yield_curve_point WHERE curve = 'GSEC_PAR' AND as_of = %s", (today,))
+        with conn.cursor() as cur:
+            cur.executemany(
+                "INSERT INTO fi.yield_curve_point (curve, as_of, tenor_years, yield_pct) VALUES ('GSEC_PAR', %s, %s, %s)",
+                [(today, tenor, round(y, 4)) for tenor, y in curve],
+            )
+    # The sample curve's month-ago and year-ago points would sit beside the real one as if they were history.
+    conn.execute(
+        "DELETE FROM fi.yield_curve_point WHERE curve = 'GSEC_PAR' AND as_of <> %s AND as_of NOT IN "
+        "(SELECT trade_date FROM fi.price_daily WHERE venue = 'NSE')",
+        (today,),
+    )
+    return written
+
+
 # -------------------------------------------------------------------------- IPOs
 
 IPO_ISSUERS = range(3000, 3100)
@@ -668,7 +1002,7 @@ def load_ipos(ctx: Context) -> int:
         issuer = IPO_ISSUERS.start + n
         conn.execute(
             "INSERT INTO ref.issuer (id, name, issuer_type, fs_format) OVERRIDING SYSTEM VALUE VALUES (%s, %s, 'COMPANY', 'GENERAL')",
-            (issuer, ipo["name"]),
+            (issuer, plain_name(ipo["name"])),
         )
         issue = conn.execute(
             "INSERT INTO ipo.issue (issuer_id, board, pricing, exchanges, status, price_band_low, price_band_high, open_date, close_date) "
@@ -818,6 +1152,8 @@ STEP_FUNCTIONS: dict[str, Callable[[Context], int]] = {
     "events": load_events,
     "flows": load_flows,
     "ipos": load_ipos,
+    "funds": load_funds,
+    "bonds": load_bonds,
     "snapshot": load_snapshot,
 }
 
@@ -838,7 +1174,14 @@ def clear_api_caches() -> int:
 
     client = redis.Redis.from_url(os.environ.get("VALKEY_URL", "redis://localhost:6380"))
     try:
-        patterns = ("gc:company:*", "gc:today:*", "gc:universe:*", "gc:screener:*", "gc:overview:*")
+        patterns = (
+            "gc:company:*",
+            "gc:today:*",
+            "gc:universe:*",
+            "gc:screener:*",
+            "gc:overview:*",
+            "gc:funds:*",
+        )
         keys = [k for pattern in patterns for k in client.scan_iter(pattern, count=500)]
         return client.delete(*keys) if keys else 0
     except redis.RedisError:
@@ -864,9 +1207,18 @@ def main(argv: list[str] | None = None) -> int:
     today = ist_today()
     with psycopg.connect(DSN, row_factory=dict_row) as conn:
         instruments = [
-            Instrument(r["id"], r["trading_symbol"], r["kind"], r["display_name"], r["attrs"] or {})
+            Instrument(
+                r["id"],
+                r["trading_symbol"],
+                r["kind"],
+                r["display_name"],
+                r["attrs"] or {},
+                r["security_type"],
+            )
             for r in conn.execute(
-                "SELECT id, trading_symbol, kind, display_name, attrs FROM ref.instrument WHERE status = 'ACTIVE' AND kind <> 'OPTION' ORDER BY id"
+                "SELECT i.id, i.trading_symbol, i.kind, i.display_name, i.attrs, s.security_type::text AS security_type "
+                "FROM ref.instrument i LEFT JOIN ref.security s ON s.id = i.security_id "
+                "WHERE i.status = 'ACTIVE' AND i.kind <> 'OPTION' ORDER BY i.id"
             )
         ]
         ctx = Context(conn, Fetcher(refresh=args.refresh), today, instruments)

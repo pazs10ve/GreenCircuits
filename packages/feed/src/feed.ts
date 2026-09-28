@@ -2,7 +2,7 @@ import type { Preferences } from "@greencircuits/contracts/account"
 import { money, nameOf, pct, verdictOf } from "@greencircuits/contracts/describe"
 import type { RunMetrics } from "@greencircuits/contracts/lab"
 import type { StrategyDefinition } from "@greencircuits/contracts/strategy"
-import { EQUITIES, getInstrument } from "@greencircuits/market/catalog"
+import { EQUITIES, getInstrument, hrefOf } from "@greencircuits/market/catalog"
 import { formatNumber, formatPrice } from "@greencircuits/market/format"
 import type { Instrument, Quote } from "@greencircuits/market/types"
 import type { Signal } from "./signals"
@@ -85,10 +85,9 @@ export function usualMove(inst: Pick<Instrument, "vol">): number {
   return (inst.vol / Math.sqrt(252)) * 100
 }
 
-const hrefOf = (id: number) => {
+const hrefById = (id: number) => {
   const inst = getInstrument(id)
-  if (!inst) return undefined
-  return inst.kind === "COMMODITY" ? `/commodities?c=${inst.slug}` : `/stocks/${inst.slug}`
+  return inst ? hrefOf(inst) : undefined
 }
 
 function why(reasons: Reason[] | undefined): string | undefined {
@@ -163,7 +162,7 @@ export function buildFeed(input: FeedInput): FeedItem[] {
       instrumentId: a.instrumentId,
       title: `Your alert on ${nameOf(a.instrumentId, { article: false })} went off: it ${CONDITIONS[a.condition](a.value)}.`,
       detail: a.triggeredPrice != null ? `It was at ₹${formatPrice(a.triggeredPrice, getInstrument(a.instrumentId)?.tick)} when it did.` : undefined,
-      href: hrefOf(a.instrumentId),
+      href: hrefById(a.instrumentId),
       tone: a.condition === "PRICE_ABOVE" || a.condition === "CHANGE_ABOVE" ? "up" : "down",
       score: 90,
     })
@@ -202,7 +201,7 @@ export function buildFeed(input: FeedInput): FeedItem[] {
         instrumentId: id,
         title: `${nameOf(id, { article: false })} ${past ? "closed" : "is"} at a 52-week ${high ? "high" : "low"}, ₹${formatPrice(q.ltp, inst.tick)}.`,
         detail: [`${up ? "Up" : "Down"} ${pct(Math.abs(q.changePct / 100))} ${session}.`, why(reasons)].filter(Boolean).join(" "),
-        href: hrefOf(id),
+        href: hrefById(id),
         tone: high ? "up" : "down",
         score: weight(65, 55) + Math.min(z, 4) * 3,
       })
@@ -215,7 +214,7 @@ export function buildFeed(input: FeedInput): FeedItem[] {
         instrumentId: id,
         title: `${nameOf(id, { article: false })} ${past ? "closed" : "is"} ${up ? "up" : "down"} ${pct(Math.abs(q.changePct / 100))} ${session}, about ${formatNumber(z, 1)} times its usual daily move.`,
         detail: why(reasons),
-        href: hrefOf(id),
+        href: hrefById(id),
         tone: up ? "up" : "down",
         score: weight(40, 55) + Math.min(z, 5) * 6,
       })
@@ -235,7 +234,7 @@ export function buildFeed(input: FeedInput): FeedItem[] {
       instrumentId: e.instrumentId,
       title: e.kind === "RESULTS" ? `${name} reports results ${when(e.date, now)}.` : `${name} goes ex-dividend ${when(e.date, now)}.`,
       detail: [e.detail, why(interests.get(e.instrumentId))].filter(Boolean).join(" · ") || undefined,
-      href: hrefOf(e.instrumentId),
+      href: hrefById(e.instrumentId),
       tone: "neutral",
       score: weight(70, 45) - days * 2,
     })
@@ -276,7 +275,7 @@ export function buildFeed(input: FeedInput): FeedItem[] {
       at: now,
       instrumentId: top.inst.id,
       title: `In ${sector}, which you follow, ${top.inst.name} moved most: ${up ? "up" : "down"} ${pct(Math.abs(top.q.changePct / 100))}.`,
-      href: hrefOf(top.inst.id),
+      href: hrefById(top.inst.id),
       tone: up ? "up" : "down",
       score: 30 + Math.min(top.z, 4) * 4,
     })

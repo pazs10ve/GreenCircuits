@@ -40,7 +40,7 @@ export async function comingUp(db: Db, today = istToday(), days = 30): Promise<M
     ...corp.map((e) => ({
       date: e.event_date,
       kind: e.event_type === "RESULTS" ? ("RESULTS" as const) : ("DIVIDEND" as const),
-      title: `${e.trading_symbol} ${e.event_type === "RESULTS" ? "results" : "ex-dividend"}`,
+      title: `${getInstrument(e.id)?.name ?? e.trading_symbol} ${e.event_type === "RESULTS" ? "results" : "goes ex-dividend"}`,
       detail: e.purpose ?? "",
       instrumentId: e.id,
     })),

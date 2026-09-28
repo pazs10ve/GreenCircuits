@@ -111,7 +111,12 @@ export async function seedFixedIncome(db: Db): Promise<Record<string, number>> {
     { date: istDate(new Date(now.getTime() - 365 * 86400000)), key: "yearAgo" as const },
   ]
   await db.deleteFrom("fi.yield_curve_point").where("curve", "=", "GSEC_PAR").where("as_of", "in", asOf.map((a) => a.date)).execute()
-  const points = asOf.flatMap((a) => curve.map((p) => ({ curve: "GSEC_PAR", as_of: a.date, tenor_years: p.tenor, yield_pct: Math.round(p[a.key] * 1e6) / 1e6 })))
+  const points = asOf.flatMap((a) =>
+    curve.flatMap((p) => {
+      const value = p[a.key]
+      return value == null ? [] : [{ curve: "GSEC_PAR", as_of: a.date, tenor_years: p.tenor, yield_pct: Math.round(value * 1e6) / 1e6 }]
+    }),
+  )
   await insertMany(db, "fi.yield_curve_point", points)
 
   return { bonds: bonds.length, issuers: newIssuers.length, curvePoints: points.length }

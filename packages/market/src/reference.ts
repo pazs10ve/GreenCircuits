@@ -246,8 +246,9 @@ export function getBonds(now = new Date()): Bond[] {
 export interface CurvePoint {
   tenor: number
   today: number
-  monthAgo: number
-  yearAgo: number
+  /** Null where there's no curve from then: real data only builds its history a day at a time. */
+  monthAgo: number | null
+  yearAgo: number | null
 }
 
 export function yieldCurve(): CurvePoint[] {
@@ -305,7 +306,7 @@ export function upcomingEvents(now = new Date()): MarketEvent[] {
     events.push({
       date: weekday(addDays(today, 2 + i * 2 + Math.floor(rng() * 2))),
       kind: "RESULTS",
-      title: `${inst.symbol} results`,
+      title: `${inst.name} results`,
       detail: "Q2 FY27 board meeting",
       instrumentId: inst.id,
     })
@@ -314,7 +315,7 @@ export function upcomingEvents(now = new Date()): MarketEvent[] {
     events.push({
       date: weekday(addDays(today, 6 + Math.floor(rng() * 10))),
       kind: "DIVIDEND",
-      title: `${inst.symbol} ex-dividend`,
+      title: `${inst.name} goes ex-dividend`,
       detail: `Interim dividend ₹${roundTo(between(rng, 2, 25), 0.5)} per share`,
       instrumentId: inst.id,
     })

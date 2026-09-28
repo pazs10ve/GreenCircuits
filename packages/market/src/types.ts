@@ -1,6 +1,7 @@
 export type Exchange = "NSE" | "BSE" | "MCX"
 
-export type InstrumentKind = "EQUITY" | "INDEX" | "COMMODITY" | "CURRENCY"
+/** ETFs, REITs and InvITs are listed funds: they trade like shares but aren't companies. */
+export type InstrumentKind = "EQUITY" | "INDEX" | "COMMODITY" | "CURRENCY" | "ETF" | "REIT" | "INVIT"
 
 export type Sector =
   | "Financials"
@@ -13,6 +14,7 @@ export type Sector =
   | "Industrials"
   | "Telecom"
   | "Utilities"
+  | "Realty"
 
 export interface Instrument {
   id: number
@@ -23,6 +25,8 @@ export interface Instrument {
   kind: InstrumentKind
   sector?: Sector
   industry?: string
+  /** Equities: the ISIN, which outlives a change of symbol. */
+  isin?: string
   /** Simulator anchor: yesterday's close. */
   prevClose: number
   /** Annualised volatility used by the simulator. */
@@ -38,8 +42,14 @@ export interface Instrument {
   /** Quotation unit for commodities, e.g. "₹ / 10 g". */
   unit?: string
   isFo?: boolean
-  /** Index ids this equity belongs to (sample membership). */
+  /** Index ids this equity belongs to. */
   indices?: number[]
+  /** ETFs: what the fund holds, broadly ("Broad market", "Gold", "Liquid"). */
+  category?: string
+  /** ETFs: what the fund tracks, as NSE names it ("Nifty 50", "GOLD"). */
+  underlying?: string
+  /** ETFs: the instrument the fund follows, when the site has it; the simulator moves the two together. */
+  tracks?: number
 }
 
 export type DataSource = "LIVE" | "DELAYED" | "EOD" | "SIMULATED"

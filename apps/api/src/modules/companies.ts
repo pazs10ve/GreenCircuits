@@ -45,6 +45,7 @@ export async function loadCompany(db: Db, slug: string) {
       "s.face_value",
       "iss.id as issuer_id",
       "iss.description",
+      "iss.website",
       "ind.parent_id as sector_id",
     ])
     .where("i.kind", "=", "LISTING")
@@ -185,6 +186,7 @@ export async function loadCompany(db: Db, slug: string) {
   const f: Fundamentals = {
     symbol: instrument.symbol,
     about: row.description ?? "",
+    website: row.website ?? undefined,
     faceValue: row.face_value ?? 10,
     bookValue,
     ttmRevenue: ttm.reduce((s, q) => s + q.revenue, 0),
@@ -234,7 +236,8 @@ export async function loadCompany(db: Db, slug: string) {
     events: events.map((e) => ({
       date: e.event_date,
       kind: e.event_type === "RESULTS" ? ("RESULTS" as const) : ("DIVIDEND" as const),
-      title: `${instrument.symbol} ${e.event_type === "RESULTS" ? "results" : "record date"}`,
+      // On the company's own page: no need to name it again.
+      title: e.event_type === "RESULTS" ? "Quarterly results" : "Dividend record date",
       detail: e.purpose ?? "",
       instrumentId: instrument.id,
     })),

@@ -47,9 +47,10 @@ export function timer() {
 /**
  * Upsert rows with fixed ids into a table whose id is GENERATED ALWAYS AS
  * IDENTITY. Kysely has no OVERRIDING SYSTEM VALUE, so this one is raw SQL;
- * every value is still a bound parameter.
+ * every value is still a bound parameter. `newOnly` inserts only ids the table
+ * doesn't have, leaving existing rows as they are.
  */
-export async function upsertFixedIds(db: Db, table: string, rows: Record<string, unknown>[]): Promise<number> {
+export async function upsertFixedIds(db: Db, table: string, rows: Record<string, unknown>[], { newOnly = false } = {}): Promise<number> {
   if (rows.length === 0) return 0
   // Rows may carry different optional columns (an index has no security_id); use them all.
   const cols = [...new Set(rows.flatMap((r) => Object.keys(r)))]
@@ -60,9 +61,11 @@ export async function upsertFixedIds(db: Db, table: string, rows: Record<string,
       INSERT INTO ${sql.table(table)} (${sql.join(cols.map((c) => sql.ref(c)))})
       OVERRIDING SYSTEM VALUE
       VALUES ${sql.join(chunk.map((r) => sql`(${sql.join(cols.map((c) => r[c] ?? null))})`))}
-      ON CONFLICT (id) DO UPDATE SET ${sql.join(
-        cols.filter((c) => c !== "id").map((c) => sql`${sql.ref(c)} = excluded.${sql.ref(c)}`),
-      )}
+      ON CONFLICT (id) ${
+        newOnly
+          ? sql`DO NOTHING`
+          : sql`DO UPDATE SET ${sql.join(cols.filter((c) => c !== "id").map((c) => sql`${sql.ref(c)} = excluded.${sql.ref(c)}`))}`
+      }
     `.execute(db)
   }
   return rows.length

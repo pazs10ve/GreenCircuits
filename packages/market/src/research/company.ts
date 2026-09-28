@@ -116,10 +116,15 @@ export function buildProfile(inst: Pick<Instrument, "sector">, f: Fundamentals, 
       unit: "× earnings",
       verdict: p <= 30 ? "Cheaper than usual" : p >= 70 ? "Pricier than usual" : "About its usual price",
       tone: p <= 30 ? "good" : p >= 70 ? "caution" : "neutral",
+      // At the extremes a rounded share would claim "100% of days", which is never quite true.
       detail:
-        p >= 50
-          ? `Higher than on ${formatNumber(p, 0)}% of days in the last ${pe.years} years`
-          : `Lower than on ${formatNumber(100 - p, 0)}% of days in the last ${pe.years} years`,
+        p >= 99.5
+          ? `Near its highest in ${pe.years} years`
+          : p <= 0.5
+            ? `Near its lowest in ${pe.years} years`
+            : p >= 50
+              ? `Higher than on ${formatNumber(p, 0)}% of days in the last ${pe.years} years`
+              : `Lower than on ${formatNumber(100 - p, 0)}% of days in the last ${pe.years} years`,
     })
   }
 
@@ -174,6 +179,10 @@ export function buildProfile(inst: Pick<Instrument, "sector">, f: Fundamentals, 
   const yearAgo = sh.at(-5) ?? sh[0]!
   const fpiMove = now.fpi - yearAgo.fpi
   const promoterMove = now.promoter - yearAgo.promoter
+  // NSE's summary pattern gives only promoters and the public; foreign and fund holdings are then unknown, not zero.
+  const split = sh.some((s) => s.fpi > 0 || s.dii > 0)
+  const moved = (whose: string, d: number) =>
+    Math.abs(d) < 0.05 ? `${whose} stake unchanged in a year` : `${whose} stake ${d > 0 ? "up" : "down"} ${formatNumber(Math.abs(d), 1)} points in a year`
   let verdict: string
   let tone: Tone = "neutral"
   if (now.promoter === 0) verdict = "Widely held, no promoter"
@@ -183,19 +192,19 @@ export function buildProfile(inst: Pick<Instrument, "sector">, f: Fundamentals, 
   } else if (promoterMove < -1) {
     verdict = "Promoters have been selling"
     tone = "caution"
-  } else if (fpiMove > 1) {
+  } else if (split && fpiMove > 1) {
     verdict = "Foreign investors buying"
     tone = "good"
-  } else if (fpiMove < -1) verdict = "Foreign investors trimming"
+  } else if (split && fpiMove < -1) verdict = "Foreign investors trimming"
   else verdict = "Steady ownership"
   pillars.push({
     id: "ownership",
     label: "Ownership",
-    figure: now.promoter > 0 ? `${formatNumber(now.promoter, 1)}%` : `${formatNumber(now.fpi, 0)}%`,
-    unit: now.promoter > 0 ? "held by promoters" : "held by foreign investors",
+    figure: now.promoter > 0 ? `${formatNumber(now.promoter, 1)}%` : split ? `${formatNumber(now.fpi, 0)}%` : "100%",
+    unit: now.promoter > 0 ? "held by promoters" : split ? "held by foreign investors" : "held by the public",
     verdict,
     tone,
-    detail: `Foreign investors ${fpiMove >= 0 ? "+" : "−"}${formatNumber(Math.abs(fpiMove), 1)} points in a year`,
+    detail: split ? moved("Foreign investors'", fpiMove) : now.promoter > 0 ? moved("Promoters'", promoterMove) : "Owned by funds, foreign investors and the public",
   })
 
   return { f, pe, sector, pillars }

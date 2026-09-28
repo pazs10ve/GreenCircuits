@@ -59,7 +59,7 @@ export const referenceRoutes: FastifyPluginAsyncZod = async (app) => {
         (eb) =>
           eb
             .selectFrom("fi.price_daily")
-            .select(["security_id", "clean_price", "ytm_pct", "trade_date"])
+            .select(["security_id", "clean_price", "ytm_pct", "trade_date", "trades"])
             .distinctOn("security_id")
             .orderBy("security_id")
             .orderBy("trade_date", "desc")
@@ -80,8 +80,11 @@ export const referenceRoutes: FastifyPluginAsyncZod = async (app) => {
         "b.coupon_rate_pct",
         "b.maturity_date",
         "b.coupon_frequency",
+        "b.face_value",
         "p.clean_price",
         "p.ytm_pct",
+        "p.trade_date",
+        "p.trades",
         "r.rating",
         "r.agency",
       ])

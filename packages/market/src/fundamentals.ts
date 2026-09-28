@@ -1,5 +1,5 @@
 import { between, gaussian, rngFor } from "./random"
-import { EQUITIES, marketCapCr } from "./catalog"
+import { EQUITIES, INDEX, marketCapCr, sizeBand, type SizeBand } from "./catalog"
 import { dailyCandles } from "./history"
 import type { Instrument, Sector } from "./types"
 
@@ -30,6 +30,7 @@ const PROFILE: Record<Sector, SectorProfile> = {
   Industrials: { ps: [1.6, 6], opm: [10, 22], npm: [6, 14], roe: [12, 22], growth: [10, 20], debtEquity: [0.2, 0.9], payout: [15, 35] },
   Telecom: { ps: [4.5, 6.5], opm: [48, 54], npm: [10, 17], roe: [18, 26], growth: [12, 18], debtEquity: [1.2, 1.8], payout: [15, 30] },
   Utilities: { ps: [1.6, 3], opm: [28, 38], npm: [11, 16], roe: [11, 15], growth: [6, 11], debtEquity: [1.2, 1.7], payout: [35, 55] },
+  Realty: { ps: [4, 10], opm: [24, 40], npm: [14, 26], roe: [8, 15], growth: [10, 24], debtEquity: [0.1, 0.7], payout: [5, 25] },
 }
 
 const PROMOTER: Record<string, number> = {
@@ -94,6 +95,8 @@ export interface Shareholding {
 export interface Fundamentals {
   symbol: string
   about: string
+  /** The company's own site, when the data has it. */
+  website?: string
   faceValue: number
   bookValue: number
   ttmRevenue: number
@@ -208,7 +211,8 @@ export function getFundamentals(inst: Instrument): Fundamentals {
     return { label: a.label, operating, investing, financing, net: operating + investing + financing }
   })
 
-  const promoter = PROMOTER[inst.symbol] ?? 45
+  // Its own generator, so the draw doesn't shift the rest of a company's figures.
+  const promoter = PROMOTER[inst.symbol] ?? Math.round(between(rngFor(inst.symbol, 0x9a0), 28, 72) * 10) / 10
   const pledgedBase = inst.symbol.startsWith("ADANI") ? 4.5 : 0
   const shareholding: Shareholding[] = QUARTER_LABELS.map((label, i) => {
     const drift = (i - QUARTER_LABELS.length + 1) * 0.15
@@ -234,9 +238,16 @@ export function getFundamentals(inst: Instrument): Fundamentals {
   const bookValue = netWorth / shares
   const dps = epsTtm * (between(rng, ...p.payout) / 100)
 
+  const index = inst.indices?.includes(INDEX.NIFTY)
+    ? "the Nifty 50"
+    : inst.indices?.includes(INDEX.NEXT50)
+      ? "the Nifty Next 50"
+      : inst.indices?.includes(INDEX.NIFTY500)
+        ? "the Nifty 500"
+        : null
   const f: Fundamentals = {
     symbol: inst.symbol,
-    about: `${inst.name} operates in ${inst.industry?.toLowerCase() ?? "its industry"}, within the ${inst.sector?.toLowerCase()} sector. Listed on NSE and BSE and part of the Nifty 50.`,
+    about: `${inst.name} operates in ${inst.industry?.toLowerCase() ?? "its industry"}, within the ${inst.sector?.toLowerCase()} sector. Listed on NSE and BSE${index ? ` and part of ${index}` : ""}.`,
     faceValue,
     bookValue,
     ttmRevenue,
@@ -287,6 +298,8 @@ export interface ScreenRow {
   symbol: string
   name: string
   sector: Sector
+  /** SEBI's large, mid or small, from index membership; null for a stock outside the Nifty 500. */
+  size: SizeBand | null
   mcapCr: number | null
   pe: number | null
   pb: number | null
@@ -328,6 +341,7 @@ export function screenerSnapshot(): ScreenRow[] {
       symbol: inst.symbol,
       name: inst.name,
       sector: inst.sector!,
+      size: sizeBand(inst.indices),
       mcapCr: marketCapCr(inst, inst.prevClose),
       pe: f.pe,
       pb: f.pb,

@@ -7,20 +7,26 @@ import type { Quote } from "@greencircuits/market/types"
 
 /**
  * Real prices from Yahoo Finance, for running GreenCircuits locally (ADR 0007),
- * chosen with FEED_PROVIDER=yahoo or by default once real data is loaded. It polls Yahoo's batch endpoint (20 symbols a request)
- * every minute while NSE is open, and every 15 minutes otherwise, because gold,
- * crude and the rupee trade longer. Quotes reach Valkey and the gateway exactly
- * as the simulator's do. One-minute closes go to md.candle_1m and today's
- * daily bar to md.candle_1d, so the history keeps growing while this runs.
- * Needs the real-data loader first (pnpm data:real), which records each
+ * chosen with FEED_PROVIDER=yahoo or by default once real data is loaded. It
+ * polls every minute while NSE is open, and every 15 minutes otherwise,
+ * because gold, crude and the rupee trade longer. A poll asks Yahoo's quote
+ * endpoint for 150 symbols at a time; on start, the spark endpoint (20 at a
+ * time, with the day's one-minute closes) backfills today's bars, and it
+ * stands in if the quote endpoint refuses. Quotes reach Valkey and the gateway
+ * exactly as the simulator's do. One-minute closes go to md.candle_1m and
+ * today's daily bar to md.candle_1d, so the history keeps growing while this
+ * runs. Needs the real-data loader first (pnpm data:real), which records each
  * instrument's Yahoo symbol.
  */
 
 const SPARK = "https://query1.finance.yahoo.com/v7/finance/spark"
+const QUOTE = "https://query2.finance.yahoo.com/v7/finance/quote"
 const USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
 const OPEN_EVERY_MS = 60_000
 const CLOSED_EVERY_MS = 15 * 60_000
 const BATCH = 20
+const QUOTE_BATCH = 150
+const QUOTE_FIELDS = "regularMarketPrice,regularMarketPreviousClose,regularMarketOpen,regularMarketDayHigh,regularMarketDayLow,regularMarketVolume,regularMarketTime"
 
 interface Listed {
   id: number
@@ -34,6 +40,8 @@ interface Listed {
 interface Series {
   price: number
   previousClose: number
+  /** The day's open, when the endpoint says; else the first minute's close stands in. */
+  open?: number
   high: number
   low: number
   volume: number
@@ -78,6 +86,76 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 const roundTo = (v: number, tick: number) => Math.round(Math.round(v / tick) * tick * 1e4) / 1e4
 const localDay = (seconds: number, gmtoffset: number) => new Date((seconds + gmtoffset) * 1000).toISOString().slice(0, 10)
 
+/** Yahoo's quote endpoint wants a session cookie and the crumb that goes with it. */
+class YahooSession {
+  private cookie = ""
+  private crumb = ""
+
+  async refresh(): Promise<void> {
+    // fc.yahoo.com answers 404 but sets the session cookie; the crumb is fetched with it.
+    const home = await fetch("https://fc.yahoo.com", { headers: { "user-agent": USER_AGENT }, redirect: "manual", signal: AbortSignal.timeout(15_000) })
+    this.cookie = home.headers
+      .getSetCookie()
+      .map((c) => c.split(";")[0])
+      .join("; ")
+    const res = await fetch("https://query2.finance.yahoo.com/v1/test/getcrumb", {
+      headers: { "user-agent": USER_AGENT, cookie: this.cookie },
+      signal: AbortSignal.timeout(15_000),
+    })
+    if (!res.ok) throw new Error(`Yahoo's crumb: ${res.status}`)
+    this.crumb = (await res.text()).trim()
+  }
+
+  async get(symbols: string[], retried = false): Promise<Response> {
+    if (!this.crumb) await this.refresh()
+    const url = `${QUOTE}?symbols=${symbols.map(encodeURIComponent).join(",")}&fields=${QUOTE_FIELDS}&crumb=${encodeURIComponent(this.crumb)}`
+    const res = await fetch(url, { headers: { "user-agent": USER_AGENT, cookie: this.cookie, accept: "application/json" }, signal: AbortSignal.timeout(20_000) })
+    if ((res.status === 401 || res.status === 403) && !retried) {
+      await this.refresh()
+      return this.get(symbols, true)
+    }
+    return res
+  }
+}
+
+interface QuoteResult {
+  symbol: string
+  regularMarketPrice?: number
+  regularMarketPreviousClose?: number
+  regularMarketOpen?: number
+  regularMarketDayHigh?: number
+  regularMarketDayLow?: number
+  regularMarketVolume?: number
+  regularMarketTime?: number
+  gmtOffSetMilliseconds?: number
+}
+
+/** The latest price of up to 150 symbols a request. Each quote's one "bar" is the price at its time. */
+async function batchQuotes(session: YahooSession, symbols: string[]): Promise<Map<string, Series>> {
+  const out = new Map<string, Series>()
+  for (let i = 0; i < symbols.length; i += QUOTE_BATCH) {
+    const res = await session.get(symbols.slice(i, i + QUOTE_BATCH))
+    if (!res.ok) throw new Error(`Yahoo's quote endpoint answered ${res.status}`)
+    const body = (await res.json()) as { quoteResponse?: { result?: QuoteResult[] } }
+    for (const q of body.quoteResponse?.result ?? []) {
+      if (!q.regularMarketPrice || !q.regularMarketTime) continue
+      out.set(q.symbol, {
+        price: q.regularMarketPrice,
+        previousClose: q.regularMarketPreviousClose ?? q.regularMarketPrice,
+        open: q.regularMarketOpen,
+        high: q.regularMarketDayHigh ?? q.regularMarketPrice,
+        low: q.regularMarketDayLow ?? q.regularMarketPrice,
+        volume: q.regularMarketVolume ?? 0,
+        time: q.regularMarketTime,
+        gmtoffset: Math.round((q.gmtOffSetMilliseconds ?? 0) / 1000),
+        bars: [{ t: q.regularMarketTime, close: q.regularMarketPrice }],
+      })
+    }
+    await sleep(250)
+  }
+  return out
+}
+
 async function spark(symbols: string[]): Promise<Map<string, Series>> {
   const out = new Map<string, Series>()
   for (let i = 0; i < symbols.length; i += BATCH) {
@@ -116,7 +194,7 @@ function toQuote(inst: Listed, s: Series, scale: number, previous?: Quote): Quot
   const px = (v: number) => roundTo(v * scale, inst.tick)
   const ltp = px(s.price)
   const prevClose = px(s.previousClose)
-  const open = px(s.bars[0]?.close ?? s.previousClose)
+  const open = px(s.open ?? s.bars[0]?.close ?? s.previousClose)
   const change = ltp - prevClose
   return {
     id: inst.id,
@@ -148,18 +226,53 @@ export async function runYahooFeed(db: Db, valkey: Redis, log: Log, port: number
   if (rows.length === 0) throw new Error("No instrument has a Yahoo symbol yet. Load real data first: pnpm data:real")
   const listed: Listed[] = rows.map((r) => ({ id: r.id, kind: r.kind, tick: r.tick_size, yahoo: r.yahoo, usdPerUnit: r.usd_per_unit }))
   const symbols = listed.map((l) => l.yahoo)
+  const stockIds = new Set(listed.filter((l) => l.kind === "LISTING").map((l) => l.id))
+
+  // Each listed security's last close stored before today. NSE's price bands keep a day's move within 20%, so a
+  // quote far from it is a fault in Yahoo's data (it has served an ETF's index level as its price), not news.
+  let reference = new Map<number, number>()
+  let referenceDay = ""
+  const rejected = new Set<number>()
+  const refreshReference = async () => {
+    const day = new Date(Date.now() + 5.5 * 3_600_000).toISOString().slice(0, 10)
+    if (day === referenceDay) return
+    const { rows } = await sql<{ instrument_id: string; close: number }>`
+      SELECT DISTINCT ON (instrument_id) instrument_id, close FROM md.candle_1d
+      WHERE instrument_id = ANY(${[...stockIds]}::bigint[]) AND trade_date < ${day}::date
+      ORDER BY instrument_id, trade_date DESC`.execute(db)
+    reference = new Map(rows.map((r) => [Number(r.instrument_id), r.close]))
+    referenceDay = day
+    rejected.clear()
+  }
 
   // The simulator's one-minute bars would sit under the real ones on the intraday charts.
   await db.deleteFrom("md.candle_1m").where("ts", ">=", new Date(Date.now() - 7 * 86_400_000)).execute()
 
   const last = new Map<number, Quote>()
+  /** The newest minute written for each instrument: later polls rewrite only from there on, not the whole day. */
+  const written = new Map<number, number>()
   let source: Source = "EOD"
   let lastPoll = 0
   let failures = 0
   const startedAt = Date.now()
 
+  const session = new YahooSession()
+  let backfilled = false
   const poll = async () => {
-    const series = await spark(symbols)
+    await refreshReference()
+    // The first poll backfills today's minutes from spark; later ones need only the latest price.
+    let series: Map<string, Series>
+    if (!backfilled) {
+      series = await spark(symbols)
+      backfilled = true
+    } else {
+      try {
+        series = await batchQuotes(session, symbols)
+      } catch (err) {
+        log("quote endpoint failed; using spark", { error: (err as Error).message })
+        series = await spark(symbols)
+      }
+    }
     // Dollar commodities convert at this same poll's rupee rate.
     const fx = series.get("USDINR=X")?.price
     const quotes: Quote[] = []
@@ -171,10 +284,23 @@ export async function runYahooFeed(db: Db, valkey: Redis, log: Log, port: number
       if (inst.usdPerUnit && !fx) continue
       const scale = inst.usdPerUnit ? inst.usdPerUnit * fx! : 1
       const q = toQuote(inst, s, scale, last.get(inst.id))
+      const ref = reference.get(inst.id)
+      if (ref && Math.abs(Math.log(q.ltp / ref)) > Math.log(1.3)) {
+        if (!rejected.has(inst.id)) log("ignoring a quote too far from the last close", { symbol: inst.yahoo, ltp: q.ltp, lastClose: ref })
+        rejected.add(inst.id)
+        continue
+      }
       quotes.push(q)
-      for (const b of s.bars) {
-        const close = roundTo(b.close * scale, inst.tick)
-        minuteBars.push({ instrument_id: inst.id, ts: new Date(Math.floor(b.t / 60) * 60_000), open: close, high: close, low: close, close, volume: 0 })
+      // While a market trades, Yahoo's last bar is the minute in progress, stamped with the latest trade, and it
+      // can fall in the same minute as the bar before it. One row per minute, the latest close winning.
+      const byMinute = new Map<number, number>()
+      for (const b of s.bars) byMinute.set(Math.floor(b.t / 60) * 60_000, b.close)
+      // The minute written last may still have been in progress, so it's written again with the rest.
+      const from = written.get(inst.id) ?? 0
+      for (const [ms, raw] of byMinute) {
+        if (ms < from) continue
+        const close = roundTo(raw * scale, inst.tick)
+        minuteBars.push({ instrument_id: inst.id, ts: new Date(ms), open: close, high: close, low: close, close, volume: 0 })
       }
       dailyBars.push({
         instrument_id: inst.id,
@@ -227,13 +353,14 @@ export async function runYahooFeed(db: Db, valkey: Redis, log: Log, port: number
         })),
       )
       .execute()
-    const stocks = quotes.filter((q) => q.id >= 100 && q.id < 300)
+    const stocks = quotes.filter((q) => stockIds.has(q.id))
     if (stocks.length) {
       await sql`
         UPDATE scr.equity_snapshot AS es SET price = v.price, change_pct = v.change_pct, price_updated_at = now()
         FROM (VALUES ${sql.join(stocks.map((q) => sql`(${q.id}::bigint, ${q.ltp}::float8, ${q.changePct}::float8)`))}) AS v(id, price, change_pct)
         WHERE es.instrument_id = v.id`.execute(db)
     }
+    for (const b of minuteBars) written.set(b.instrument_id, Math.max(written.get(b.instrument_id) ?? 0, b.ts.getTime()))
     lastPoll = now
     failures = 0
     return { quotes: quotes.length, changed: changed.length, bars: minuteBars.length }
@@ -250,22 +377,24 @@ export async function runYahooFeed(db: Db, valkey: Redis, log: Log, port: number
   }).listen(port)
 
   let timer: ReturnType<typeof setTimeout> | undefined
-  const schedule = () => {
-    const wait = nseOpen() ? OPEN_EVERY_MS : CLOSED_EVERY_MS
+  // A poll of the whole universe takes a while (a batch of 20 at a time), so the wait counts from its start.
+  const schedule = (started: number) => {
+    const wait = Math.max(5_000, (nseOpen() ? OPEN_EVERY_MS : CLOSED_EVERY_MS) - (Date.now() - started))
     timer = setTimeout(async () => {
+      const start = Date.now()
       try {
         const r = await poll()
-        log("polled", { source, ...r })
+        log("polled", { source, ms: Date.now() - start, ...r })
       } catch (err) {
         failures++
         log("poll failed", { error: (err as Error).message, failures })
         // Back off when Yahoo pushes back, up to fifteen minutes.
         await sleep(Math.min(15 * 60_000, 30_000 * 2 ** Math.min(failures, 5)))
       }
-      schedule()
+      schedule(start)
     }, wait)
   }
-  schedule()
+  schedule(startedAt)
 
   for (const signal of ["SIGINT", "SIGTERM"] as const) {
     process.once(signal, async () => {

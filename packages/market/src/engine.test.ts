@@ -56,4 +56,17 @@ describe("the market simulator", () => {
       expect(quotes.get(indexId)!.ltp).toBeCloseTo(index.prevClose * ratio, 1)
     }
   })
+
+  it("moves an ETF with what it tracks, within a small tracking gap", () => {
+    const engine = createEngine(seed, 0)
+    for (let n = 0; n < 600; n++) engine.step()
+    const quotes = new Map(engine.snapshot().map((q) => [q.id, q]))
+    const trackers = INSTRUMENTS.filter((i) => i.kind === "ETF" && i.tracks != null)
+    expect(trackers.length).toBeGreaterThan(50)
+    for (const etf of trackers) {
+      const target = byId.get(etf.tracks!)!
+      const implied = (quotes.get(target.id)!.ltp / target.prevClose) * etf.prevClose
+      expect(Math.abs(quotes.get(etf.id)!.ltp / implied - 1), etf.symbol).toBeLessThan(0.01)
+    }
+  })
 })

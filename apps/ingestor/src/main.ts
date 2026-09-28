@@ -156,6 +156,8 @@ async function main() {
     }
   }, FLUSH_MS)
 
+  const stockIds = new Set(universe.filter((i) => i.kind === "EQUITY").map((i) => i.id))
+
   // Bars and the screener's live columns, every few seconds.
   const writer = setInterval(async () => {
     try {
@@ -167,7 +169,7 @@ async function main() {
 
   const snapshot = setInterval(async () => {
     try {
-      const all = (await valkey.hvals(KEYS.quotes)).map((v) => JSON.parse(v) as Quote).filter((q) => q.id >= 100 && q.id < 300)
+      const all = (await valkey.hvals(KEYS.quotes)).map((v) => JSON.parse(v) as Quote).filter((q) => stockIds.has(q.id))
       if (all.length === 0) return
       await sql`
         UPDATE scr.equity_snapshot AS es SET price = v.price, change_pct = v.change_pct, price_updated_at = now()

@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "next typegen && tsc --noEmit -p ."
+    "typecheck": "next typegen && tsc --noEmit -p .",
+    "test": "vitest run"
   },
   "dependencies": {
     "@greencircuits/backtest": "workspace:*",
@@ -40,6 +41,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.6",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^5.0.2"
   }
 }

@@ -24,6 +24,13 @@ async function main() {
     console.log(`  ${name.padEnd(14)} ${t().padStart(6)}  ${JSON.stringify(result)}`)
   }
   try {
+    if (process.argv.includes("--new-only")) {
+      // Keeps whatever the database holds, real data included; the real-data loader then fills the newcomers.
+      console.log("Adding instruments the database doesn't have yet")
+      await step("reference", () => seedReference(db, { newOnly: true }))
+      console.log(`Done in ${total()}. Load their prices with: pnpm data:real --only membership,prices,funds,snapshot`)
+      return
+    }
     console.log("Seeding the demo universe")
     await step("reference", () => seedReference(db))
     await step("daily bars", () => seedCandles(db))

@@ -1,6 +1,6 @@
 import { sql } from "kysely"
 import { z } from "zod"
-import { INDEX, getInstrument } from "@greencircuits/market/catalog"
+import { INDEX, getInstrument, sizeBand } from "@greencircuits/market/catalog"
 import type { ScreenRow } from "@greencircuits/market/fundamentals"
 import { balancedMix, sipVsDip } from "@greencircuits/market/research/experiments"
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod"
@@ -28,9 +28,10 @@ export const universeRoutes: FastifyPluginAsyncZod = async (app) => {
       reply.header("cache-control", "public, max-age=60")
       return cached(app.valkey, `gc:universe:${istToday()}`, 300, async () => {
         const [ranges, starts, betas, eps, members] = await Promise.all([
-          sql<{ instrument_id: number; high52: number; low52: number; sessions: number; spark: number[] }>`
+          sql<{ instrument_id: number; high52: number; low52: number; sessions: number; spark: number[]; year_ago: number | null }>`
             SELECT instrument_id, max(high) AS high52, min(low) AS low52, count(*)::int AS sessions,
-                   array_agg(close ORDER BY trade_date) FILTER (WHERE rn <= 30) AS spark
+                   array_agg(close ORDER BY trade_date) FILTER (WHERE rn <= 30) AS spark,
+                   max(close) FILTER (WHERE rn = 250) AS year_ago
             FROM (${lastYear}) t WHERE rn <= 250 GROUP BY instrument_id`.execute(app.db),
           sql<{ instrument_id: number; since: string }>`
             SELECT instrument_id, min(trade_date)::text AS since FROM md.candle_1d GROUP BY instrument_id`.execute(app.db),
@@ -51,6 +52,7 @@ export const universeRoutes: FastifyPluginAsyncZod = async (app) => {
             sessions: r.sessions,
             since: since.get(r.instrument_id)!,
             beta: beta.get(r.instrument_id) ?? null,
+            yearAgo: r.year_ago,
           })),
           eps: Object.fromEntries(eps.filter((e) => e.eps_ttm != null).map((e) => [e.instrument_id, e.eps_ttm!])),
           members: byIndex,
@@ -68,11 +70,14 @@ export const universeRoutes: FastifyPluginAsyncZod = async (app) => {
       for (const r of rows) {
         const inst = getInstrument(r.instrument_id)
         if (!inst?.sector) continue
+        // Postgres sends bigint arrays as strings. The database's membership is the latest the loaders saw.
+        const indexIds = r.index_ids?.length ? r.index_ids.map(Number) : inst.indices
         out.push({
           id: r.instrument_id,
           symbol: inst.symbol,
           name: inst.name,
           sector: inst.sector,
+          size: sizeBand(indexIds),
           mcapCr: r.mcap_cr,
           pe: r.pe_ttm,
           pb: r.pb,

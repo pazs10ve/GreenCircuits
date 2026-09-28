@@ -813,6 +813,30 @@ export interface MdParticipantOi {
   trade_date: string;
 }
 
+export interface MfNav {
+  nav: Numeric;
+  nav_date: string;
+  scheme_code: number;
+}
+
+export interface MfScheme {
+  amc: string;
+  amfi_category: string;
+  asset_class: string;
+  cagr_10y_pct: number | null;
+  cagr_3y_pct: number | null;
+  cagr_5y_pct: number | null;
+  category: string;
+  code: number;
+  isin: string | null;
+  launched_on: string | null;
+  name: string;
+  nav: Numeric | null;
+  nav_date: string | null;
+  return_1y_pct: number | null;
+  updated_at: Generated<Timestamp>;
+}
+
 export interface OpsAuditLog {
   action: string;
   actor_id: string | null;
@@ -1154,6 +1178,8 @@ export interface DB {
   "md.large_deal": MdLargeDeal;
   "md.option_eod": MdOptionEod;
   "md.participant_oi": MdParticipantOi;
+  "mf.nav": MfNav;
+  "mf.scheme": MfScheme;
   "ops.audit_log": OpsAuditLog;
   "ops.data_quality_issue": OpsDataQualityIssue;
   "ops.job_run": OpsJobRun;
