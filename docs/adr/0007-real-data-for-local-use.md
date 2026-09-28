@@ -41,6 +41,11 @@ Some of it is approximate, and the site says where:
   - bonds;
   - the sample portfolio.
 
+*Update, 2026-09-28: the loader gained two steps, and bonds are no longer sample data.*
+- *`funds` loads mutual fund NAVs from AMFI, with each scheme's history from mfapi.in (a free mirror of AMFI's data), and listed ETFs' NAVs from NSE.*
+- *`bonds` loads the bonds traded on NSE and fits the government's yield curve to them.*
+- *Both are snapshots from when the loader ran.*
+
 ## Consequences
 
 - The brief, company pages, screener and lab can be checked against what actually happened.

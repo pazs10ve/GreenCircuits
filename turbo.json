@@ -15,7 +15,10 @@
       "cache": false,
       "persistent": true,
       "passThroughEnv": [
-        "FEED_PROVIDER"
+        "FEED_PROVIDER",
+        "DATABASE_URL",
+        "VALKEY_URL",
+        "WEB_ORIGINS"
       ]
     },
     "lint": {},

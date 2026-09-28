@@ -26,8 +26,11 @@ The Python side of GreenCircuits, managed with [uv](https://docs.astral.sh/uv/) 
   - `events`: results dates and dividends;
   - `flows`: FII and DII;
   - `ipos`;
+  - `funds`: mutual fund NAVs and returns (AMFI and mfapi.in), and listed ETFs' NAVs (NSE);
+  - `bonds`: bonds traded on NSE, and the government's yield curve;
   - `snapshot`: the screener table.
-- `sources.py` turns each free source into plain Python values: Yahoo Finance, NSE's website JSON and niftyindices.com.
+- `sources.py` turns each free source into plain Python values: Yahoo Finance, NSE's website JSON, niftyindices.com, AMFI and mfapi.in.
+- `bonds.py` reads a bond's coupon and maturity from its NSE symbol, prices it and fits a Nelson–Siegel curve to the government's bonds.
 - `http.py` is a polite client. It paces requests per host, retries 429s and 5xx responses, and caches each response for the day in `data/cache/`.
 
 ```bash
